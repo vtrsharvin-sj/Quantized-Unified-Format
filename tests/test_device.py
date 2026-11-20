@@ -4,8 +4,12 @@ from __future__ import annotations
 
 import subprocess
 import sys
-import tomllib
 import types
+
+try:
+    import tomllib
+except ModuleNotFoundError:  # Python 3.10
+    import tomli as tomllib  # type: ignore
 from pathlib import Path
 
 import pytest
