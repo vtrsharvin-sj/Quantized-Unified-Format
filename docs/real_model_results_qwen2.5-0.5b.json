@@ -1,0 +1,59 @@
+{
+  "model": "Qwen/Qwen2.5-0.5B",
+  "samples": 32,
+  "seq_len": 512,
+  "tokenizer": {
+    "chars": 10966424,
+    "hf_seconds": 8.441418099915609,
+    "tokens": 2518423,
+    "gigatoken_seconds": 0.229467700002715,
+    "gigatoken_matches_hf": true,
+    "speedup": 36.78695563609054,
+    "gigatoken_version": "0.11.0"
+  },
+  "convert": {
+    "reused": true
+  },
+  "quf_bytes": 469483072,
+  "run": {
+    "cpu": {
+      "rc": 0,
+      "seconds": 11.46183229982853,
+      "output": " ______.\nA. Paris\nB. London\nC. Rome\nD. Moscow\nAnswer:\nA\n\nWhich of the following is NOT a characteristic of the\nquf: Selected backend cpu: --device cpu was requested\n"
+    },
+    "cuda": {
+      "rc": 0,
+      "seconds": 8.685048199957237,
+      "output": " ______.\nA. Paris\nB. London\nC. Rome\nD. Moscow\nAnswer:\nA\n\nWhich of the following is NOT a characteristic of the\nquf: Selected backend torch_gpu: cached fp16 weights fit and the fused backend is not faster\n"
+    }
+  },
+  "bench": {
+    "rc": 0,
+    "seconds": 135.82795099983923,
+    "tail": "orch_dtype` is deprecated! Use `dtype` instead!\nW1118 22:34:35.059000 30640 torch\\distributed\\elastic\\multiprocessing\\redirects.py:29] NOTE: Redirects are currently not supported in Windows or MacOs.\n\nLoading weights:   0%|          | 0/290 [00:00<?, ?it/s]\nLoading weights:  16%|#6        | 47/290 [00:00<00:00, 453.73it/s]\nLoading weights:  32%|###2      | 93/290 [00:00<00:00, 429.26it/s]\nLoading weights:  47%|####6     | 136/290 [00:00<00:00, 338.41it/s]\nLoading weights:  59%|#####9    | 172/290 [00:00<00:00, 304.62it/s]\nLoading weights:  70%|#######   | 204/290 [00:00<00:00, 277.34it/s]\nLoading weights:  80%|########  | 233/290 [00:00<00:00, 273.53it/s]\nLoading weights:  91%|######### | 263/290 [00:00<00:00, 255.09it/s]\nLoading weights: 100%|##########| 290/290 [00:00<00:00, 301.64it/s]\n",
+    "result": {
+      "backend": "torch_gpu",
+      "dataset": "wikitext-2-raw-v1",
+      "device_name": "NVIDIA GeForce RTX 5080 Laptop GPU",
+      "file_size_bytes": 469483072,
+      "fp16_perplexity": 13.070290181970144,
+      "gguf_size_bytes": null,
+      "gguf_tokens_per_second": null,
+      "perplexity": 14.176741777814204,
+      "ppl_target_percent": 3.0,
+      "relative_ppl_increase": 0.08465394267759696,
+      "software_versions": {
+        "cuda": "12.8",
+        "datasets": "5.2.0",
+        "gigatoken": "0.11.0",
+        "gptqmodel": "not installed",
+        "python": "3.13.0rc2",
+        "quf": "0.1.0",
+        "tokenizers": "0.23.3",
+        "torch": "2.11.0+cu128",
+        "transformers": "5.23.0"
+      },
+      "tokens_per_second": 16.681630610921165
+    }
+  }
+}

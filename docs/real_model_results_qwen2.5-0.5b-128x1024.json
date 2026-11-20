@@ -1,0 +1,50 @@
+{
+  "model": "Qwen/Qwen2.5-0.5B",
+  "samples": 128,
+  "seq_len": 1024,
+  "convert": {
+    "reused": true
+  },
+  "quf_bytes": 469483072,
+  "run": {
+    "cpu": {
+      "rc": 0,
+      "seconds": 10.527378000086173,
+      "output": " Paris. The capital of the United States is Washington, D.C. The capital of the United Kingdom is London. The capital of the United States is Washington,\nquf: Selected backend cpu: --device cpu was requested\n"
+    },
+    "cuda": {
+      "rc": 0,
+      "seconds": 8.670772299868986,
+      "output": " Paris. The capital of the United States is Washington, D.C. The capital of the United Kingdom is London. The capital of the United States is Washington,\nquf: Selected backend torch_gpu: cached fp16 weights fit and the fused backend is not faster\n"
+    }
+  },
+  "bench": {
+    "rc": 0,
+    "seconds": 143.06030409992673,
+    "tail": "ading weights:   0%|          | 0/290 [00:00<?, ?it/s]\nLoading weights:  11%|#1        | 33/290 [00:00<00:00, 290.44it/s]\nLoading weights:  22%|##1       | 63/290 [00:00<00:00, 284.14it/s]\nLoading weights:  32%|###2      | 93/290 [00:00<00:00, 263.72it/s]\nLoading weights:  41%|####1     | 120/290 [00:00<00:00, 248.22it/s]\nLoading weights:  50%|#####     | 145/290 [00:00<00:00, 244.56it/s]\nLoading weights:  59%|#####8    | 170/290 [00:00<00:00, 244.33it/s]\nLoading weights:  67%|######7   | 195/290 [00:00<00:00, 235.77it/s]\nLoading weights:  76%|#######6  | 221/290 [00:00<00:00, 241.96it/s]\nLoading weights:  85%|########4 | 246/290 [00:00<00:00, 239.53it/s]\nLoading weights:  93%|#########3| 270/290 [00:01<00:00, 234.51it/s]\nLoading weights: 100%|##########| 290/290 [00:01<00:00, 250.29it/s]\n",
+    "result": {
+      "backend": "torch_gpu",
+      "dataset": "wikitext-2-raw-v1",
+      "device_name": "NVIDIA GeForce RTX 5080 Laptop GPU",
+      "file_size_bytes": 469483072,
+      "fp16_perplexity": 13.070290181970144,
+      "gguf_size_bytes": null,
+      "gguf_tokens_per_second": null,
+      "perplexity": 14.03840390721055,
+      "ppl_target_percent": 3.0,
+      "relative_ppl_increase": 0.07406979583176154,
+      "software_versions": {
+        "cuda": "12.8",
+        "datasets": "5.2.0",
+        "gigatoken": "0.11.0",
+        "gptqmodel": "not installed",
+        "python": "3.13.0rc2",
+        "quf": "0.1.0",
+        "tokenizers": "0.23.3",
+        "torch": "2.11.0+cu128",
+        "transformers": "5.23.0"
+      },
+      "tokens_per_second": 14.64296739053996
+    }
+  }
+}

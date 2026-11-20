@@ -1,0 +1,24 @@
+{
+  "backend": "torch_gpu",
+  "dataset": "wikitext-2-raw-v1",
+  "device_name": "NVIDIA GeForce RTX 5080 Laptop GPU",
+  "file_size_bytes": 469483072,
+  "fp16_perplexity": 13.070290181970144,
+  "gguf_size_bytes": null,
+  "gguf_tokens_per_second": null,
+  "perplexity": 14.03840390721055,
+  "ppl_target_percent": 3.0,
+  "relative_ppl_increase": 0.07406979583176154,
+  "software_versions": {
+    "cuda": "12.8",
+    "datasets": "5.2.0",
+    "gigatoken": "0.11.0",
+    "gptqmodel": "not installed",
+    "python": "3.13.0rc2",
+    "quf": "0.1.0",
+    "tokenizers": "0.23.3",
+    "torch": "2.11.0+cu128",
+    "transformers": "5.23.0"
+  },
+  "tokens_per_second": 14.64296739053996
+}

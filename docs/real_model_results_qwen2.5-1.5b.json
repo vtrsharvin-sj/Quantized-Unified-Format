@@ -1,0 +1,61 @@
+{
+  "model": "Qwen/Qwen2.5-1.5B",
+  "samples": 128,
+  "seq_len": 1024,
+  "tokenizer": {
+    "chars": 10966424,
+    "hf_seconds": 9.006199900060892,
+    "tokens": 2518423,
+    "gigatoken_seconds": 0.26977170002646744,
+    "gigatoken_matches_hf": true,
+    "speedup": 33.38452439294888,
+    "gigatoken_version": "0.11.0"
+  },
+  "convert": {
+    "rc": 0,
+    "seconds": 629.4054423000198,
+    "tail": "[00:00<00:02, 102.56it/s]\nLoading weights:  28%|##8       | 95/338 [00:00<00:02, 85.85it/s] \nLoading weights:  31%|###1      | 105/338 [00:01<00:02, 87.83it/s]\nLoading weights:  35%|###4      | 117/338 [00:01<00:02, 94.34it/s]\nLoading weights:  38%|###7      | 127/338 [00:01<00:02, 92.57it/s]\nLoading weights:  41%|####      | 137/338 [00:01<00:02, 83.99it/s]\nLoading weights:  43%|####3     | 146/338 [00:01<00:02, 82.15it/s]\nLoading weights:  46%|####5     | 155/338 [00:01<00:02, 82.75it/s]\nLoading weights:  49%|####9     | 167/338 [00:01<00:02, 75.83it/s]\nLoading weights:  53%|#####3    | 180/338 [00:01<00:01, 83.03it/s]\nLoading weights:  57%|#####6    | 191/338 [00:02<00:01, 89.28it/s]\nLoading weights:  59%|#####9    | 201/338 [00:02<00:01, 75.20it/s]\nLoading weights:  63%|######3   | 213/338 [00:02<00:01, 79.20it/s]\nLoading weights:  67%|######6   | 225/338 [00:02<00:01, 79.47it/s]\nLoading weights:  70%|#######   | 237/338 [00:02<00:01, 72.05it/s]\nLoading weights:  74%|#######4  | 251/338 [00:02<00:01, 71.91it/s]\nLoading weights:  77%|#######7  | 261/338 [00:03<00:01, 70.45it/s]\nLoading weights:  81%|########  | 273/338 [00:03<00:00, 72.18it/s]\nLoading weights:  85%|########4 | 287/338 [00:03<00:00, 75.74it/s]\nLoading weights:  89%|########8 | 300/338 [00:03<00:00, 78.42it/s]\nLoading weights:  92%|#########2| 311/338 [00:03<00:00, 76.90it/s]\nLoading weights:  95%|#########5| 322/338 [00:03<00:00, 82.37it/s]\nLoading weights: 100%|##########| 338/338 [00:03<00:00, 87.19it/s]\n"
+  },
+  "quf_bytes": 1158904640,
+  "run": {
+    "cpu": {
+      "rc": 0,
+      "seconds": 20.27812539995648,
+      "output": " Paris. Paris is the capital of France. Paris is the capital of France. Paris is the capital of France. Paris is the capital of France. Paris is\nquf: Selected backend cpu: --device cpu was requested\n"
+    },
+    "cuda": {
+      "rc": 0,
+      "seconds": 8.739514800021425,
+      "output": " Paris. Paris is the capital of France. Paris is the capital of France. Paris is the capital of France. Paris is the capital of France. Paris is\nquf: Selected backend torch_gpu: cached fp16 weights fit and the fused backend is not faster\n"
+    }
+  },
+  "bench": {
+    "rc": 0,
+    "seconds": 497.5865820001345,
+    "tail": "ing weights:  67%|######6   | 225/338 [00:02<00:01, 77.22it/s]\nLoading weights:  69%|######8   | 233/338 [00:02<00:01, 75.29it/s]\nLoading weights:  71%|#######1  | 241/338 [00:02<00:01, 71.54it/s]\nLoading weights:  74%|#######4  | 251/338 [00:03<00:01, 72.64it/s]\nLoading weights:  77%|#######7  | 261/338 [00:03<00:00, 77.11it/s]\nLoading weights:  81%|########1 | 275/338 [00:03<00:00, 87.34it/s]\nLoading weights:  84%|########4 | 284/338 [00:03<00:00, 83.55it/s]\nLoading weights:  87%|########6 | 293/338 [00:03<00:00, 70.48it/s]\nLoading weights:  89%|########9 | 301/338 [00:03<00:00, 67.00it/s]\nLoading weights:  91%|#########1| 308/338 [00:03<00:00, 63.11it/s]\nLoading weights:  95%|#########4| 321/338 [00:04<00:00, 60.65it/s]\nLoading weights: 100%|##########| 338/338 [00:04<00:00, 82.28it/s]\n",
+    "result": {
+      "backend": "torch_gpu",
+      "dataset": "wikitext-2-raw-v1",
+      "device_name": "NVIDIA GeForce RTX 5080 Laptop GPU",
+      "file_size_bytes": 1158904640,
+      "fp16_perplexity": 9.265000854444182,
+      "gguf_size_bytes": null,
+      "gguf_tokens_per_second": null,
+      "perplexity": 9.821476868623751,
+      "ppl_target_percent": 3.0,
+      "relative_ppl_increase": 0.060062165446281846,
+      "software_versions": {
+        "cuda": "12.8",
+        "datasets": "5.2.0",
+        "gigatoken": "0.11.0",
+        "gptqmodel": "not installed",
+        "python": "3.13.0rc2",
+        "quf": "0.1.0",
+        "tokenizers": "0.23.3",
+        "torch": "2.11.0+cu128",
+        "transformers": "5.23.0"
+      },
+      "tokens_per_second": 5.962932325482974
+    }
+  }
+}

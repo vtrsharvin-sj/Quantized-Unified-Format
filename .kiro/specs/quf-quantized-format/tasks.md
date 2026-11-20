@@ -1,0 +1,591 @@
+# Implementation Plan: QUF Quantized Unified Format
+
+## Overview
+
+The implementation language is Python (as used in the design). Property-based tests use Hypothesis with at least 100 examples per property, and each test carries the tag `Feature: quf-quantized-format, Property N: <property text>`. Work proceeds in ten stages. Each stage ends in something runnable, and later stages build on earlier ones. Marlin on compute capability 12.0 is unverified until the spike in task 1, and Torch_GPU is the fallback GPU Backend. Qwen2ForCausalLM is supported first, with Qwen3ForCausalLM added through the architecture allow-list.
+
+## Tasks
+
+- [x] 1. Package scaffold, device detection, and environment spike
+  - Demo: `python -c "import quf; print(quf.__version__)"` works with no extras installed, `quf.device.detect_devices()` prints the RTX 5080 details, and docs/ENV.md records the spike results.
+  - [x] 1.1 Create the package scaffold
+    - Create `pyproject.toml` with the `quf` package, the `quf` console script, and extras `cuda` and `convert`
+    - Create `quf/__init__.py` with `__version__` and lazy optional imports
+    - Create `tests/conftest.py` with the Hypothesis profile (`max_examples >= 100`) and the `gpu` and `convert` markers, where `gpu` tests skip when no NVIDIA GPU is available
+    - _Requirements: 1.1, 1.2, 1.5, 13.1, 13.6_
+
+  - [x] 1.2 Implement device detection
+    - Create `quf/device.py` with `DeviceInfo` and `detect_devices()`, importing `torch` inside the function
+    - Return `DeviceInfo(False, None, None, None)` when torch is missing or CUDA is unavailable
+    - _Requirements: 1.3, 1.4_
+
+  - [x]* 1.3 Write unit tests for the package and device detection
+    - Test `__version__`, declared extras, and import with extras absent
+    - Test `detect_devices` with mocked `torch.cuda` for the GPU and no-GPU cases
+    - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5_
+
+  - [x] 1.4 Implement the environment spike script and docs/ENV.md
+    - Create `scripts/env_spike.py` that reports CUDA toolkit, PyTorch, GPTQModel, and gigatoken versions, runs a PyTorch CUDA kernel, a Marlin matmul, and a gigatoken tokenize call
+    - Write docs/ENV.md with the results for Windows and WSL, including the failure message and the Torch_GPU designation if Marlin fails on compute capability 12.0
+    - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5_
+
+- [x] 2. QUF v1 format: writer, reader, and validation
+  - Demo: write a small tensor set to a `.quf` file, read it back bit-identically, and see a clear error for each kind of corrupted file.
+  - [x] 2.1 Define constants, header schema, and errors
+    - Create `quf/format/constants.py` (magic `QUF1`, version 1, align 64, dtype codes)
+    - Create `quf/format/schema.py` with `QUFHeader`, `TensorEntry`, and JSON (de)serialization with required-field checks
+    - Define `QUFFormatError` and its subclasses `InvalidMagicError`, `UnsupportedVersionError`, `TruncatedHeaderError`, `TensorBoundsError`, `HeaderSchemaError`
+    - _Requirements: 3.2, 3.3, 3.7, 4.2, 4.3, 4.4, 4.5, 4.6_
+
+  - [x] 2.2 Implement the Writer
+    - Create `quf/format/writer.py` with `write_quf(path, header, tensors)`
+    - Write magic, version, header length, JSON header, zero padding, and tensors at absolute offsets that are multiples of 64
+    - Store quantized weights as int32 Packed_Int4 with fp16 scales, include qzeros when asymmetric, and keep embedding and lm_head as fp16
+    - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7_
+
+  - [x] 2.3 Implement the Reader
+    - Create `quf/format/reader.py` with `QUFReader` that validates in this order: magic, version, header length, JSON parse, required fields, per-tensor alignment and bounds
+    - Return the parsed header and zero-copy memory-mapped tensor views, opening the file read-only
+    - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 9.5_
+
+  - [x]* 2.4 Write property test for the written file layout
+    - **Property 1: Written file layout invariant**
+    - **Validates: Requirements 3.1, 3.2, 3.3, 3.4, 3.6, 3.7, 7.3, 7.4**
+
+  - [x]* 2.5 Write property test for the write/read round trip
+    - **Property 2: Write/read round trip**
+    - **Validates: Requirements 3.5, 4.1, 4.7**
+
+  - [x]* 2.6 Write property test for corrupted file rejection
+    - **Property 3: Reader rejects corrupted files**
+    - **Validates: Requirements 4.2, 4.3, 4.4, 4.5, 4.6**
+
+  - [x] 2.7 Write FORMAT.md
+    - Specify the byte layout, header fields, tensor naming, dtypes, and the canonical Packed_Int4 order (value `i` in bits `4*(i%8)`, least significant first)
+    - _Requirements: 3.8, 5.2_
+
+- [x] 3. 4-bit group quantizer, packer, and reference dequantizer
+  - Demo: quantize a random 512x256 matrix, pack it, dequantize it, and print the maximum error against half the group scale.
+  - [x] 3.1 Implement pack and unpack
+    - Create `quf/quant/pack.py` with `pack_int4` and `unpack_int4` using the canonical order (8 values per int32)
+    - _Requirements: 5.2_
+
+  - [x] 3.2 Implement the quantizer and Reference_Dequantizer
+    - Create `quf/quant/quantize.py` with `QuantizedWeight`, `GroupSizeError`, and `quantize_groupwise` (deterministic round-to-nearest, group size 128, symmetric or asymmetric)
+    - Create `quf/quant/dequant.py` with `reference_dequantize` returning fp16 of the original shape, using `w = (q - zero) * scale` with `zero = 8` for symmetric schemes
+    - _Requirements: 5.1, 5.4, 5.6_
+
+  - [x]* 3.3 Write property test for pack/unpack
+    - **Property 4: Pack/unpack round trip**
+    - **Validates: Requirements 5.2, 5.3**
+
+  - [x]* 3.4 Write property test for quantizer output shape and range
+    - **Property 5: Quantizer output shape and range**
+    - **Validates: Requirements 5.1, 5.4**
+
+  - [x]* 3.5 Write property test for the quantization error bound
+    - **Property 6: Quantization error bound**
+    - **Validates: Requirements 5.5**
+
+  - [x]* 3.6 Write property test for group-size violations
+    - **Property 7: Group-size violations rejected**
+    - **Validates: Requirements 5.6**
+
+- [x] 4. Tokenizer wrapper and calibration builder
+  - Demo: encode and decode a sentence with gigatoken (or the logged HF fallback) and build 4 reproducible calibration samples of length 512.
+  - [x] 4.1 Implement TokenizerWrapper
+    - Create `quf/tokenization/wrapper.py` using gigatoken, falling back to Hugging Face `tokenizers` and logging the reason when gigatoken cannot be imported
+    - _Requirements: 6.1, 6.2_
+
+  - [x] 4.2 Implement the Calibration_Builder
+    - Create `quf/tokenization/calibration.py` with `build_calibration` (concatenate tokens, shuffle documents with `random.Random(seed)`, slice non-overlapping windows) and `CalibrationShortfallError`
+    - _Requirements: 6.4, 6.5, 6.6_
+
+  - [x]* 4.3 Write property test for the tokenizer round trip
+    - **Property 8: Tokenizer round trip**
+    - **Validates: Requirements 6.3**
+
+  - [x]* 4.4 Write property test for calibration shape, determinism, and shortfall
+    - **Property 9: Calibration shape, determinism, and shortfall**
+    - **Validates: Requirements 6.4, 6.5, 6.6**
+
+  - [x]* 4.5 Write unit test for the tokenizer fallback
+    - Mock the gigatoken import to fail and assert the fallback and the logged reason
+    - _Requirements: 6.2_
+
+- [x] 5. Calibrated conversion with GPTQModel and the `info` and `convert` commands
+  - Demo: in WSL, run `quf convert Qwen/Qwen2.5-0.5B out.quf`, see the size and ratio printed, then run `quf info out.quf`.
+  - [x] 5.1 Implement GPTQModel invocation and tensor mapping
+    - Create `quf/convert/gptq.py` that runs GPTQModel at 4 bits and group size 128 and maps `qweight`, `scales`, and `qzeros` to the canonical Packed_Int4 layout
+    - Raise an error naming `quf[convert]` when GPTQModel is missing
+    - _Requirements: 7.1, 7.2_
+
+  - [x] 5.2 Implement the Converter
+    - Create `quf/convert/converter.py` with `convert_checkpoint` and `ConvertResult`
+    - Check the output path and the architecture allow-list (`Qwen2ForCausalLM`, extensible to `Qwen3ForCausalLM`) before heavy work
+    - Store model config, tokenizer info, and fp16 embedding and lm_head in the header, and delete the partial file on failure after creation
+    - Define `UnsupportedArchitectureError` and `OutputExistsError`
+    - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8_
+
+  - [x] 5.3 Implement the CLI skeleton with `info` and `convert`
+    - Create `quf/cli.py` with `main(argv) -> int`, subparsers, `--help`, and error mapping to exit status 1
+    - Implement `quf info` (model config, quantization scheme, tensor count, file size) and `quf convert` (dataset, sample count, sequence length, seed, overwrite options)
+    - _Requirements: 7.1, 7.2, 7.5, 12.1, 12.2, 12.3, 12.4, 12.5_
+
+  - [x]* 5.4 Write property test for output preservation
+    - **Property 15: Existing output is preserved**
+    - **Validates: Requirements 7.7**
+
+  - [x]* 5.5 Write property test for `info` output completeness
+    - **Property 16: Info output completeness**
+    - **Validates: Requirements 12.2**
+
+  - [x]* 5.6 Write unit tests for the Converter
+    - Use a stubbed GPTQModel to test size and ratio output, non-Qwen rejection, and partial-file cleanup with an injected failure
+    - _Requirements: 7.5, 7.6, 7.8_
+
+- [x] 6. CPU runtime and generation
+  - Demo: `quf run tiny.quf --device cpu --prompt "Hello" --max-new-tokens 16 --temperature 0` streams text on a machine without a GPU.
+  - [x] 6.1 Implement the Backend protocol, CPU Backend, and QUFLinear
+    - Create `quf/runtime/backends/base.py`, `quf/runtime/backends/cpu.py`, and `quf/runtime/linear.py`
+    - The CPU Backend dequantizes with the Reference_Dequantizer and multiplies in PyTorch
+    - _Requirements: 8.2_
+
+  - [x] 6.2 Implement the Qwen2 decoder and KV_Cache
+    - Create `quf/runtime/model.py` with `KVCache`, and `QUFModel.load` and `forward` (RMSNorm, rotary embeddings, grouped-query attention, SwiGLU, all projections through QUFLinear)
+    - _Requirements: 8.1, 8.3, 8.10_
+
+  - [x] 6.3 Implement sampling and the generation loop
+    - Create `quf/runtime/generate.py` with `generate`, `ContextLengthError`, seeded `torch.Generator` sampling, greedy decoding at temperature 0, top-k, top-p, streaming callback, and EOS stop
+    - _Requirements: 8.1, 8.3, 8.4, 8.5, 8.6, 8.7, 8.8, 8.9_
+
+  - [x] 6.4 Add the `run` command to the CLI
+    - Add `quf run` with options for maximum new tokens, temperature, top-k, top-p, seed, and streaming
+    - _Requirements: 8.1, 8.4, 8.5, 8.8, 12.1_
+
+  - [x]* 6.5 Write property test for backend output versus the reference (CPU)
+    - **Property 10: Backend output matches the reference**
+    - Parametrize over available Backends, with the CPU variant here and GPU variants added in task 7
+    - **Validates: Requirements 8.2, 9.2, 9.4**
+
+  - [x]* 6.6 Write property test for KV_Cache equivalence
+    - **Property 11: KV_Cache equivalence**
+    - **Validates: Requirements 8.3, 8.10**
+
+  - [x]* 6.7 Write property test for sampling determinism and greedy decoding
+    - **Property 12: Sampling determinism and greedy decoding**
+    - **Validates: Requirements 8.6, 8.7**
+
+  - [x]* 6.8 Write property test for the context length check
+    - **Property 13: Context length check**
+    - **Validates: Requirements 8.8**
+
+  - [x]* 6.9 Write unit tests for the runtime
+    - Test end-to-end `quf run` on a tiny random Qwen-shaped QUF_File, streaming, option parsing, and EOS stop
+    - _Requirements: 8.1, 8.4, 8.5, 8.9_
+
+- [x] 7. CUDA backends: Torch_GPU and Marlin
+  - Demo: on the RTX 5080, `quf run` generates tokens through Torch_GPU, and the Marlin self-test reports pass or fail with its message.
+  - [x] 7.1 Implement the Torch_GPU Backend
+    - Create `quf/runtime/backends/torch_gpu.py` that dequantizes with the Reference_Dequantizer on the GPU and multiplies on the GPU
+    - _Requirements: 9.3, 9.4_
+
+  - [x] 7.2 Implement the Marlin Backend, self-test, and GPU out-of-memory handling
+    - Create `quf/runtime/backends/marlin.py` that repacks canonical Packed_Int4 into the Marlin layout in memory only and provides a Marlin self-test comparing against the reference result
+    - In `quf/runtime/model.py`, catch CUDA out-of-memory at load and raise `GPUMemoryError(required, available)` with required bytes computed from the Tensor_Table plus a KV_Cache estimate
+    - _Requirements: 9.1, 9.2, 9.5, 9.6_
+
+  - [x]* 7.3 Extend the Property 10 test with GPU variants
+    - **Property 10: Backend output matches the reference**
+    - Add Torch_GPU and Marlin variants marked `gpu`
+    - **Validates: Requirements 8.2, 9.2, 9.4**
+
+  - [x]* 7.4 Write GPU unit and integration tests
+    - Test the Marlin repack at load, the unchanged file hash after load, and the out-of-memory message with a mocked allocator
+    - _Requirements: 9.1, 9.5, 9.6_
+
+- [x] 8. Automatic backend selection
+  - Demo: `quf run --device auto` logs the selected Backend and reason, and `--device cuda` on a machine without a GPU exits with "no NVIDIA GPU was found".
+  - [x] 8.1 Implement the Backend_Selector
+    - Create `quf/runtime/selector.py` with the pure function `select_backend`, `BackendChoice`, and `NoGPUError`
+    - Call the Marlin self-test only when a GPU is present and compute capability is 8.0 or higher, and treat an exception as failure
+    - _Requirements: 10.2, 10.3, 10.4, 10.5, 10.6, 10.7_
+
+  - [x] 8.2 Wire selection into model loading and the CLI
+    - Add `--device {auto,cpu,cuda}` to `run` and `bench`, log the selected Backend and reason, and load the chosen Backend in `QUFModel.load`
+    - _Requirements: 10.1, 10.8_
+
+  - [x]* 8.3 Write property test for backend selection rules
+    - **Property 14: Backend selection rules**
+    - **Validates: Requirements 10.2, 10.3, 10.4, 10.5, 10.6, 10.7**
+
+  - [x]* 8.4 Write unit tests for selection logging and the CLI option
+    - Test the log message, accepted `--device` values, and the nonzero exit for `cuda` without a GPU
+    - _Requirements: 10.1, 10.7, 10.8_
+
+- [x] 9. Benchmarks and accuracy evaluation
+  - Demo: `quf bench model.quf --out results.json` writes WikiText perplexity, file size, tokens per second, Backend, device name, and software versions.
+  - [x] 9.1 Implement the Benchmark_Suite
+    - Create `quf/bench/suite.py` with `perplexity`, `run_bench`, `BenchResult`, `DatasetLoadError`, optional fp16 reference and GGUF Q4 comparison, and JSON output
+    - Report the relative perplexity increase next to the documented 3 percent target without asserting it
+    - _Requirements: 11.1, 11.2, 11.3, 11.4, 11.6, 11.7_
+
+  - [x] 9.2 Implement the lm-evaluation-harness adapter
+    - Create `quf/bench/lm_eval_adapter.py` subclassing the harness `LM` base with `loglikelihood`, `loglikelihood_rolling`, and `generate_until`
+    - _Requirements: 11.5_
+
+  - [x] 9.3 Add the `bench` command to the CLI
+    - Add `quf bench` with options for the fp16 reference, the GGUF file, the output JSON path, and `--device`
+    - _Requirements: 11.1, 11.6, 12.1_
+
+  - [x]* 9.4 Write property test for the benchmark results JSON round trip
+    - **Property 17: Benchmark results JSON round trip**
+    - **Validates: Requirements 11.6**
+
+  - [x]* 9.5 Write unit tests for the Benchmark_Suite
+    - Use a stub model to test reported fields and the dataset load failure message
+    - _Requirements: 11.1, 11.2, 11.3, 11.7_
+
+- [x] 10. Packaging, documentation, and CI
+  - Demo: `pip install .` followed by `pytest -m "not gpu and not convert"` passes on a CPU-only machine, and the CI workflow builds a wheel.
+  - [x] 10.1 Write the README
+    - Describe installation (including `quf[cuda]` and `quf[convert]`), conversion, running, benchmarking, and the 3 percent perplexity target
+    - Confirm docs/ENV.md and FORMAT.md are included in the package
+    - _Requirements: 13.1, 13.2, 13.3_
+
+  - [x] 10.2 Create the CI workflow
+    - Create `.github/workflows/ci.yml` that builds a wheel and runs `pytest -m "not gpu and not convert"` on a CPU runner
+    - _Requirements: 13.4, 13.5, 13.6_
+
+  - [x]* 10.3 Write CLI unit tests
+    - Test the four subcommands, `--help` exiting with status 0, the unknown subcommand listing valid subcommands, and `info` on a corrupt file
+    - _Requirements: 12.1, 12.3, 12.4, 12.5_
+
+  - [x] 10.4 Final checkpoint - Ensure all tests pass
+    - Ensure all tests pass, ask the user if questions arise.
+
+- [x] 11. Native GPTQ quantizer and converter (Windows-native, no GPTQModel)
+  - Demo: `quf convert Qwen/Qwen2.5-0.5B out.quf` runs on native Windows using transformers and gigatoken-tokenized calibration, then `quf info out.quf` reads the result.
+  - [x] 11.1 Implement the Native_GPTQ core
+    - Create `quf/quant/gptq.py` with `HessianAccumulator`, `gptq_quantize` (damping, group size 128, asymmetric and symmetric, act-order off, blockwise error propagation, Cholesky retry with `GPTQError`), and device choice (CUDA if available, else CPU)
+    - Return a `QuantizedWeight` in the canonical Packed_Int4 layout
+    - _Requirements: 14.1, 14.2, 14.3, 14.8, 14.9_
+
+  - [x] 11.2 Implement sequential model quantization
+    - Add `quantize_model_sequential` that captures layer inputs, fills Hessians with forward hooks, quantizes each decoder layer's linears in groups, and feeds quantized outputs to the next layer
+    - _Requirements: 14.4_
+
+  - [x] 11.3 Replace GPTQModel in the Converter and packaging extras
+    - Update `quf/convert/converter.py` to load with transformers, build calibration with `build_calibration`, and call `quantize_model_sequential`
+    - Remove `quf/convert/gptq.py` GPTQModel usage and drop GPTQModel from the `convert` extra in `pyproject.toml` (list transformers, datasets, accelerate, gigatoken)
+    - Update existing converter unit tests that stub GPTQModel to stub the native quantizer
+    - _Requirements: 14.4, 14.5, 14.6_
+
+  - [x] 11.4 Write property test for GPTQ versus round-to-nearest
+    - **Property 18: GPTQ error is no worse than round-to-nearest**
+    - **Validates: Requirements 14.7**
+
+  - [x] 11.5 Write property test for GPTQ output shape, range, and layout
+    - **Property 19: GPTQ output shape, range, and layout**
+    - **Validates: Requirements 14.1, 14.2, 14.8**
+
+  - [x] 11.6 Write unit tests for the Native_GPTQ
+    - Test the Hessian accumulator against `2 X^T X / n`, the Cholesky retry path, and sequential quantization of a tiny random Qwen-shaped model written through the Converter and read by `quf info`
+    - _Requirements: 14.4, 14.5, 14.9_
+
+- [x] 12. Windows-native GPU backend and real-model verification
+  - Demo: `quf run` and `quf bench` on a converted Qwen2.5-0.5B work on CPU and on the RTX 5080, with real numbers in docs/RESULTS.md.
+  - [x] 12.1 Implement the TorchGPUFused backend
+    - Create `quf/runtime/backends/torch_fused.py` that keeps packed int32, scales, and zeros on the GPU and unpacks, dequantizes, and multiplies in one function, optionally wrapped in `torch.compile` and falling back to eager when compile or Triton is unavailable
+    - Leave `torch_gpu.py` output unchanged
+    - _Requirements: 15.2, 15.3, 15.6_
+
+  - [x] 12.2 Update the Backend_Selector, CLI, and Marlin handling
+    - Extend `select_backend` with the memory estimate, the `prefer_fused` flag, and fallback to the cached backend when the fused load or self-test fails
+    - Make Marlin a lazily imported optional module selectable only with `--backend marlin`, with an error naming the optional package when it is missing
+    - Update existing selector tests and docs/ENV.md accordingly
+    - _Requirements: 15.1, 15.4, 15.5, 15.7_
+
+  - [x] 12.3 Write property test for the fused backend
+    - **Property 20: Fused backend matches the reference**
+    - Eager variant on CPU, plus a `gpu`-marked CUDA variant
+    - **Validates: Requirements 15.2, 15.3, 15.6**
+
+  - [x] 12.4 Write property test for extended backend selection
+    - **Property 21: Extended backend selection rules**
+    - **Validates: Requirements 15.1, 15.4, 15.5, 15.7**
+
+  - [x] 12.5 Measure backends on the RTX 5080
+    - Create `scripts/bench_backends.py` that measures decode tokens per second for the cached and fused backends, run it on the RTX 5080 (sm_120), confirm the Torch_GPU Property 10 test still passes, and record the numbers and the selector decision
+    - If the fused path is not faster, keep the cached backend as the default and say so in the results
+    - _Requirements: 15.4, 15.6_
+
+  - [x] 12.6 Run the real-model verification
+    - Create `scripts/verify_real_model.py`, convert Qwen/Qwen2.5-0.5B, run `quf run` on CPU and CUDA with a fixed prompt and seed, and run `quf bench` for WikiText-2 perplexity against fp16, file size, and tokens per second
+    - Verify gigatoken installs and works on Windows, or record the fallback
+    - Repeat with Qwen/Qwen2.5-1.5B if time permits
+    - Write docs/RESULTS.md and add the results table to the README
+    - _Requirements: 16.1, 16.2, 16.3, 16.4, 16.5, 16.6_
+
+- [x] 13. PyPI packaging for native Windows
+  - Demo: a wheel built from the repository installs into a fresh venv, and `quf --help` and `quf info` run.
+  - [x] 13.1 Update pyproject metadata and add LICENSE
+    - Move `torch` to base dependencies, add the MIT license and `LICENSE` file, set the author to vtrsharvin-sj, add `[project.urls]` for https://github.com/vtrsharvin-sj/Quantized-Model-Format, add classifiers, and remove the `cuda` extra (or leave it empty) without bumping the version
+    - Add a unit test that reads `pyproject.toml` and checks these fields
+    - _Requirements: 17.1, 17.2_
+
+  - [x] 13.2 Update the README and docs for Windows-native use
+    - State that QUF runs natively on Windows, remove all WSL instructions and GPTQModel references from the README, docs/ENV.md, and CI notes, and describe the native converter and backends
+    - _Requirements: 17.3_
+
+  - [x] 13.3 Build and smoke test the package
+    - Build the sdist and wheel with `python -m build`, run `twine check dist/*`, install the wheel into a fresh venv, and run `quf --help` and `quf info` on a small QUF_File
+    - Do not upload to PyPI
+    - _Requirements: 17.4, 17.5, 17.6_
+
+- [x] 14. Final checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [x] 15. Accuracy diagnosis
+  - Demo: `python scripts/diagnose_accuracy.py` prints a ranked table of per-module quantization error and the perplexity of each ablation subset for Qwen2.5-0.5B, and docs/ACCURACY.md records the findings.
+  - [x] 15.1 Implement the Sensitivity_Analyzer and Ablation_Harness
+    - Create `quf/analysis/__init__.py` and `quf/analysis/sensitivity.py` with `ModuleError`, `module_errors`, `ablate`, and `standard_subsets`
+    - `ablate` quantizes only the named modules, keeps all others in fp16, and calls the existing `perplexity`
+    - _Requirements: 18.1, 18.2, 18.3_
+
+  - [x] 15.2 Write tests for the analyzer and harness
+    - **Property 22: Ablation changes only the selected modules**
+    - Unit test that `module_errors` returns one entry per decoder linear module on a tiny random Qwen-shaped model
+    - **Validates: Requirements 18.1, 18.2**
+
+  - [x] 15.3 Audit `quf/quant/gptq.py` and fix defects
+    - Check Hessian accumulation, damping and dead columns, calibration length, sequential and true-sequential ordering, fp16 scale rounding before error propagation, and tied embedding handling
+    - Add a unit test for each checked item, and a regression test for each defect found
+    - Record perplexity before and after each fix on Qwen2.5-0.5B
+    - _Requirements: 18.5, 18.6_
+
+  - [x] 15.4 Run the diagnosis on Qwen2.5-0.5B and write docs/ACCURACY.md
+    - Create `scripts/diagnose_accuracy.py` that runs `module_errors` and `ablate` on first layer, last layer, all `v_proj`, all `down_proj`, remaining linears, and reports whether the tied embedding is fp16 in the converted file
+    - Write docs/ACCURACY.md with the audit result, the tables, the modules ranked by perplexity impact, and the Upgrades selected from the ranking
+    - _Requirements: 18.3, 18.4, 18.5, 18.7_
+
+- [x] 16. Quantizer upgrades and format 2
+  - Demo: `quf convert Qwen/Qwen2.5-0.5B out.quf --group-size 64 --act-order --clip-search --mixed "lm_head=fp16"` writes a version 2 file that `quf info` and `quf run` read on cpu and cuda, and a default-settings conversion without upgrades still writes a version 1 file.
+  - [x] 16.1 Extend the format for group size, g_idx, and int8 and fp16 modules
+    - Add the `int8` dtype and version 2 to `quf/format/constants.py`, `group_size`, `act_order`, and `modules` fields to `schema.py`, and `required_version` to the Writer
+    - Update the Reader to read versions 1 and 2, default a missing group size to 128, and validate group size, g_idx range and length, and module precision strings
+    - Update FORMAT.md with the version 2 additions
+    - Add a version 1 fixture written by 0.1.0 and a test that the Reader reads it as group size 128
+    - _Requirements: 19.1, 19.2, 19.3, 19.4, 19.5, 19.7, 19.8, 20.2, 20.6_
+
+  - [x] 16.2 Add group size, MSE clipping, g_idx dequantization, and int8 to the quantizer
+    - Update `quantize_groupwise` and `GroupSizeError` for group sizes 32, 64, 128 and remove the fixed 128 checks in the writer and reader paths
+    - Create `quf/quant/clip.py` with the clipping-ratio grid that includes 1.0, and add the `clip_search` option
+    - Update `reference_dequantize` to take `g_idx`, and add `quantize_int8` and `dequantize_int8`
+    - _Requirements: 19.1, 19.6, 20.4, 21.1, 21.2, 21.4, 22.3_
+
+  - [x] 16.3 Add act-order, group size, and clipping to Native_GPTQ
+    - Update `gptq_quantize` and `quantize_model_sequential` with `group_size`, `act_order`, and `clip_search`, returning `g_idx` and keeping stored weights in original column order
+    - Add a helper that returns the act-order permutation and g_idx from the Hessian diagonal
+    - _Requirements: 20.1, 20.2, 21.3, 21.4_
+
+  - [x] 16.4 Support g_idx, group sizes, int8, and fp16 modules in all backends
+    - Add the shared `expand_groups` helper and update `QUFLinear.prepare` and the CPU, Torch_GPU cached, and Torch_GPU_Fused backends
+    - Keep Marlin explicit-only and have it raise a clear error for g_idx and int8 modules
+    - Keep Torch_GPU output for version 1 files unchanged
+    - _Requirements: 20.4, 20.5, 22.3, 22.4_
+
+  - [x] 16.5 Implement mixed precision in the Converter and `info`
+    - Create `PrecisionPlan` with glob patterns, add `--mixed`, `--group-size`, `--act-order`, and `--clip-search` to `quf convert`, and write the module precision map
+    - Create `SizeReport`, print it at conversion and in `quf info`
+    - _Requirements: 19.1, 22.1, 22.2, 22.5, 22.6_
+
+  - [x] 16.6 Implement multi-source calibration and new defaults
+    - Add `CalibrationSource` and multi-source `build_calibration` with per-source shares and the shortfall error naming the source
+    - Set the default to 128 samples of length 2048 from wikitext-2 train and one second English text source, add `--legacy-calibration` for the 0.1.0 settings, and document the sources
+    - _Requirements: 23.1, 23.2, 23.3, 23.4_
+
+  - [x] 16.7 Write property and unit tests for the new format features
+    - **Property 23: Header group size and version round trip** (includes the g_idx round trip)
+    - **Property 24: Group-size and g_idx validation**
+    - **Property 25: Backend output matches the reference for all precisions** (cpu and torch_fused eager here, `gpu` variants for torch_gpu and torch_fused on CUDA)
+    - **Property 26: MSE clipping is no worse than round-to-nearest and keeps the layout**
+    - **Property 27: Act-order processes columns in descending Hessian diagonal**
+    - **Property 28: Size accounting equals tensor bytes**
+    - **Property 29: Multi-source calibration shape, shares, and determinism**
+    - Unit tests for the 0.1.0 fixture, the default of 128 by 2048, and the module-pattern selection
+    - **Validates: Requirements 19.1, 19.2, 19.3, 19.4, 19.5, 19.6, 20.1, 20.2, 20.3, 20.4, 20.5, 20.6, 21.1, 21.2, 21.4, 22.1, 22.3, 22.4, 22.5, 22.6, 23.2, 23.3, 23.4**
+
+  - [x] 16.8 Evaluate each Upgrade by perplexity and set defaults
+    - Create `scripts/eval_upgrades.py` that converts Qwen2.5-0.5B with the 0.1.0 settings plus one Upgrade at a time (act-order, clip search, group size 64 and 32, mixed precision from the diagnosis, new calibration) and then the combination of the kept Upgrades, and measures WikiText-2 perplexity and file size with all other settings fixed
+    - Set each Upgrade default on only if it lowered perplexity, record both values for every Upgrade in docs/ACCURACY.md, and record the reason when an Upgrade stays off
+    - _Requirements: 23.5, 24.1, 24.2_
+
+- [x] 17. Evaluation and results
+  - Demo: `python scripts/bench_accuracy.py` writes JSON and docs/RESULTS.md shows perplexity, size, and tokens per second for Qwen2.5-0.5B and Qwen2.5-1.5B under fp16, 0.1.0 settings, 0.2.0 settings, and RTN.
+  - [x] 17.1 Implement the evaluation matrix script
+    - Create `scripts/bench_accuracy.py` that converts and benchmarks fp16 reference, 0.1.0 settings, 0.2.0 defaults, and the RTN_Baseline through the Converter, and writes JSON with device names and software versions
+    - Add the GGUF_Baseline step with Q4_K_M and Q4_0 through llama-cpp-python only if a prebuilt wheel installs on Windows, and otherwise record "not run" with the pip error
+    - _Requirements: 24.3, 24.4_
+
+  - [x] 17.2 Run the matrix on Qwen2.5-0.5B
+    - Record perplexity, file size, tokens per second, relative perplexity increase against fp16, and whether the 3 percent target was reached
+    - _Requirements: 24.3, 24.6_
+
+  - [x] 17.3 Convert and run the matrix on Qwen2.5-1.5B
+    - Convert Qwen2.5-1.5B with the 0.1.0 settings, the 0.2.0 defaults, and RTN, and record the same fields
+    - _Requirements: 24.3, 24.6_
+
+  - [x] 17.4 Run lm-evaluation-harness on one or two tasks if available
+    - Use the existing adapter on fp16 and the 0.2.0 default file only if lm-eval is installed or installs with one command, and otherwise record that it was not run and why
+    - _Requirements: 24.5_
+
+  - [x] 17.5 Update README and docs/RESULTS.md
+    - Replace or extend the results tables with the measured numbers only, state the 3 percent target as reached or not reached, and document the new options
+    - _Requirements: 24.3, 24.4, 24.5, 24.6_
+
+- [x] 18. Release 0.2.0
+  - Demo: a wheel built from the repository installs into a fresh venv and `quf --help` and `quf info` run on a version 1 file and a version 2 file.
+  - [x] 18.1 Bump version and write the changelog
+    - Set version 0.2.0 in `pyproject.toml` and `quf/__init__.py`, create CHANGELOG.md with the Upgrades kept, the measured perplexity change, and the format version note, and add a unit test that the two version strings match
+    - _Requirements: 25.1, 25.2_
+
+  - [x] 18.2 Run the full test suite
+    - Run `pytest -m "not gpu and not convert"` and the `gpu` tests on the RTX 5080, and fix failures
+    - _Requirements: 25.5_
+
+  - [x] 18.3 Build, check, and smoke test the package
+    - Remove old `dist/`, run `python -m build`, run `twine check dist/*`, install the wheel into a fresh venv, and run `quf --help` and `quf info` on a version 1 file and a version 2 file
+    - Do not upload to PyPI and do not write any token to disk
+    - _Requirements: 25.3, 25.4, 25.6_
+
+- [x] 19. Final checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [ ] 20. GGUF comparison (verified)
+  - Demo: `python scripts/bench_accuracy.py --protocol llama` reports GGUF perplexity matching llama-perplexity.exe.
+  - [x] 20.1 Validate the GGUF path against llama-perplexity.exe
+    - Download the llama.cpp Windows release (CUDA if available), run it on the same text and context, and add an f16 or Q8_0 row that must be within 0.5% of fp16
+    - _Requirements: 26.1, 26.2, 26.5_
+
+  - [x] 20.2 Fix the discrepancy
+    - Check BOS handling, context and batch settings, second-half scoring, logits_all, and the GGUF tokenizer, then add the `--protocol` switch
+    - _Requirements: 26.1, 26.3_
+
+  - [~] 20.3 Re-run Q4_K_M, Q4_0, and Q8_0 for 0.5B and 1.5B
+    - Use one Eval_Protocol for QUF and GGUF, and record file size and GPU tokens per second
+    - _Requirements: 26.3, 26.4_
+
+- [ ] 21. Batched lm-evaluation-harness adapter
+  - Demo: hellaswag and arc_easy run on Qwen2.5-0.5B in minutes and report accuracy with stderr.
+  - [x] 21.1 Batch loglikelihood requests
+    - Pad batches, reuse repeated contexts, and run on GPU in `quf/bench/lm_eval_adapter.py`
+    - _Requirements: 27.1, 27.2_
+
+  - [x] 21.2 Write property test for batched equivalence
+    - **Property 30: Batched log-likelihood equals single-request log-likelihood**
+    - **Validates: Requirements 27.1, 27.2, 27.3**
+
+  - [~] 21.3 Run hellaswag and arc_easy
+    - Use limit 500 and a fixed seed for fp16 and QUF defaults on 0.5B, and on 1.5B if under about 20 minutes, and record accuracy with stderr
+    - _Requirements: 27.4_
+
+- [ ] 22. Decode speed on 0.5B
+  - Demo: the new defaults decode at a speed consistent with the other 0.5B settings.
+  - [x] 22.1 Profile g_idx and int8 decode
+    - Profile torch_gpu and cpu for re-gathering or per-call dequantization
+    - _Requirements: 28.2_
+
+  - [x] 22.2 Cache fp16 weights and add a regression test
+    - Fix any real slowdown and test that the prepared torch_gpu weight for g_idx and int8 modules is a cached fp16 tensor
+    - _Requirements: 28.2_
+
+  - [~] 22.3 Stabilize the tokens per second measurement
+    - Add warm-up, at least 5 repeats, and the median, then re-measure all rows for both models
+    - _Requirements: 28.1, 28.3_
+
+  - [~] 22.4 Write property test for median timing
+    - **Property 31: Median timing is order-independent**
+    - **Validates: Requirements 28.1**
+
+- [ ] 23. CI and GitHub
+  - Demo: the GitHub Actions run is green on ubuntu-latest and windows-latest.
+  - [x] 23.1 Initialise git and scan for secrets
+    - Confirm `.gitignore` excludes .quf files, eval_cache, dist, logs, venvs, and secrets, and scan for `pypi-` before staging
+    - _Requirements: 29.1, 29.2_
+
+  - [-] 23.2 Commit and push to main
+    - Run `git ls-remote` first and stop and report if the remote has commits, never force-push, and store no tokens
+    - _Requirements: 29.3, 29.4_
+
+  - [~] 23.3 Confirm GitHub Actions passes
+    - Fix failures on ubuntu-latest and windows-latest and push again
+    - _Requirements: 29.5_
+
+- [ ] 24. Release 0.2.1
+  - Demo: the 0.2.1 wheel installs in a fresh venv and `quf --help` and `quf info` run.
+  - [~] 24.1 Update docs with verified numbers
+    - Update README, docs, and RESULTS.md and remove the "not run (unverified)" markers now verified
+    - _Requirements: 30.3_
+
+  - [~] 24.2 Bump version, changelog, build, and smoke test
+    - Set 0.2.1 in `pyproject.toml` and `quf/__init__.py`, update CHANGELOG.md, rebuild, run `twine check`, and smoke test; do not upload
+    - _Requirements: 30.1, 30.2, 30.4_
+
+- [~] 25. Final checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+
+## Notes
+
+- Tasks 20 to 25 add the 0.2.1 verification work and all sub-tasks are required
+- Tasks 15 to 19 add the 0.2.0 accuracy upgrade. All of their sub-tasks are required, including tests
+- Tasks 11 to 14 extend the plan for native Windows and supersede the WSL and GPTQModel notes below
+- Tasks marked with `*` are optional and can be skipped for a faster MVP
+- Each task references specific requirements for traceability
+- Property tests validate the universal correctness properties from the design, and unit tests validate specific examples and edge cases
+- Requirements 6.1 (gigatoken tokenization) and Requirement 2 are verified manually through the spike and recorded in docs/ENV.md
+- Conversion and Marlin tests run in WSL and are marked `convert` or `gpu`, so CI skips them
+
+## Task Dependency Graph
+
+```json
+{
+  "waves": [
+    { "id": 0, "tasks": ["1.1"] },
+    { "id": 1, "tasks": ["1.2", "2.1", "3.1", "4.1"] },
+    { "id": 2, "tasks": ["1.3", "1.4", "2.2", "2.3", "3.2", "4.2"] },
+    { "id": 3, "tasks": ["2.4", "2.5", "2.6", "2.7", "3.3", "3.4", "3.5", "3.6", "4.3", "4.4", "4.5", "5.1", "6.1", "8.1", "10.2"] },
+    { "id": 4, "tasks": ["5.2", "6.2", "6.5", "7.1", "8.3"] },
+    { "id": 5, "tasks": ["5.3", "6.3", "6.6", "7.2"] },
+    { "id": 6, "tasks": ["5.4", "5.5", "5.6", "6.4", "6.7", "6.8", "7.3", "7.4", "9.1", "9.2"] },
+    { "id": 7, "tasks": ["6.9", "8.2", "9.4"] },
+    { "id": 8, "tasks": ["8.4", "9.3"] },
+    { "id": 9, "tasks": ["9.5", "10.1", "10.3"] },
+    { "id": 10, "tasks": ["11.1", "12.1", "13.1"] },
+    { "id": 11, "tasks": ["11.2", "12.2", "11.4", "11.5", "12.3"] },
+    { "id": 12, "tasks": ["11.3", "12.4"] },
+    { "id": 13, "tasks": ["11.6", "12.5"] },
+    { "id": 14, "tasks": ["12.6"] },
+    { "id": 15, "tasks": ["13.2"] },
+    { "id": 16, "tasks": ["13.3"] },
+    { "id": 17, "tasks": ["15.1", "15.3", "16.1"] },
+    { "id": 18, "tasks": ["15.2", "16.2", "16.6"] },
+    { "id": 19, "tasks": ["15.4", "16.3", "16.4"] },
+    { "id": 20, "tasks": ["16.5"] },
+    { "id": 21, "tasks": ["16.7"] },
+    { "id": 22, "tasks": ["16.8"] },
+    { "id": 23, "tasks": ["17.1"] },
+    { "id": 24, "tasks": ["17.2"] },
+    { "id": 25, "tasks": ["17.3", "17.4"] },
+    { "id": 26, "tasks": ["17.5", "18.1"] },
+    { "id": 27, "tasks": ["18.2"] },
+    { "id": 28, "tasks": ["18.3"] },
+    { "id": 29, "tasks": ["20.1", "21.1", "22.1", "23.1"] },
+    { "id": 30, "tasks": ["20.2", "21.2", "22.2", "23.2"] },
+    { "id": 31, "tasks": ["20.3", "21.3", "22.3", "22.4", "23.3"] },
+    { "id": 32, "tasks": ["24.1"] },
+    { "id": 33, "tasks": ["24.2"] },
+    { "id": 34, "tasks": ["25"] }
+  ]
+}
+```

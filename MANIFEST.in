@@ -1,0 +1,10 @@
+include README.md
+include CHANGELOG.md
+recursive-include docs *.md
+prune eval_cache
+prune dist
+prune .hypothesis
+prune .pytest_cache
+prune .kiro
+prune .github
+global-exclude *.quf *.log *.err *.pyc __pycache__

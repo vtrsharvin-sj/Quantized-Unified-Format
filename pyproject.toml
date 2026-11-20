@@ -1,0 +1,70 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "quf"
+version = "0.2.0"
+description = "QUF: Quantized Unified Format for 4-bit quantized decoder-only LLMs"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "vtrsharvin-sj" }]
+keywords = ["quantization", "llm", "gptq", "4-bit", "pytorch"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "numpy>=1.24",
+    "torch>=2.7",
+    "tokenizers",
+]
+
+[project.urls]
+Homepage = "https://github.com/vtrsharvin-sj/Quantized-Model-Format"
+Repository = "https://github.com/vtrsharvin-sj/Quantized-Model-Format"
+Issues = "https://github.com/vtrsharvin-sj/Quantized-Model-Format/issues"
+
+[project.optional-dependencies]
+# Kept as an empty extra so `pip install quf[cuda]` still resolves; torch is a base dependency.
+cuda = []
+convert = [
+    "torch>=2.7",
+    "transformers",
+    "datasets",
+    "accelerate",
+    "gigatoken",
+    "tokenizers",
+    "safetensors",
+    "huggingface_hub",
+]
+test = [
+    "pytest>=7",
+    "hypothesis>=6",
+]
+
+[project.scripts]
+quf = "quf.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["quf*"]
+
+[tool.setuptools.data-files]
+"share/doc/quf" = ["README.md", "docs/ENV.md", "docs/FORMAT.md"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "gpu: requires an NVIDIA GPU (skipped when none is available)",
+    "convert: requires the convert extra and a real model conversion",
+]
