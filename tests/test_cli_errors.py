@@ -112,6 +112,14 @@ def test_missing_convert_extras_precheck(capsys, tmp_path, monkeypatch):
     _assert_clean_error(code, err, "quf[convert]")
 
 
+def _skip_extras_check(monkeypatch):
+    # These tests target Hugging Face error mapping, which runs after the
+    # convert-extras pre-check; bypass it so they also run without [convert].
+    import quf.cli as cli
+
+    monkeypatch.setattr(cli, "_check_convert_extras", lambda: None)
+
+
 def test_nonexistent_model_id(capsys, tmp_path, monkeypatch):
     import quf.convert.converter as conv
 
@@ -123,6 +131,7 @@ def test_nonexistent_model_id(capsys, tmp_path, monkeypatch):
 
     monkeypatch.setattr(conv, "convert_checkpoint", boom)
     monkeypatch.setattr(conv, "read_source_config", boom)
+    _skip_extras_check(monkeypatch)
     code, err = _run(capsys, ["convert", "no/such-model", str(tmp_path / "o.quf")])
     _assert_clean_error(code, err, "not found on Hugging Face")
 
@@ -138,6 +147,7 @@ def test_no_network(capsys, tmp_path, monkeypatch):
 
     monkeypatch.setattr(conv, "convert_checkpoint", boom)
     monkeypatch.setattr(conv, "read_source_config", boom)
+    _skip_extras_check(monkeypatch)
     code, err = _run(capsys, ["convert", "org/model", str(tmp_path / "o.quf")])
     _assert_clean_error(code, err, "network")
 

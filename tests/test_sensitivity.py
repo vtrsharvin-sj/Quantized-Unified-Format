@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import pytest
 import torch
-from hypothesis import HealthCheck, given, settings
+
+pytest.importorskip("transformers")  # tiny Qwen2 models need the [convert] extra
+
+from hypothesis import HealthCheck, given, settings  # noqa: E402
 from hypothesis import strategies as st
 
 from quf.analysis.sensitivity import (
