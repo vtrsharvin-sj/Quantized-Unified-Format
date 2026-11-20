@@ -29,6 +29,9 @@ _config = st.dictionaries(
 )
 
 
+_RESERVED_QUANT_KEYS = {"modules", "bits", "group_size", "symmetric"}
+
+
 @given(
     model_config=_config,
     extra_quant=_config,
@@ -37,7 +40,8 @@ _config = st.dictionaries(
 )
 def test_info_output_completeness(model_config, extra_quant, n_tensors, data):
     """**Validates: Requirements 12.2**"""
-    quantization = dict(extra_quant)
+    # Avoid keys the validator gives structured meaning to (e.g. "modules").
+    quantization = {k: v for k, v in extra_quant.items() if k not in _RESERVED_QUANT_KEYS}
     quantization.update({"bits": 4, "group_size": GROUP_SIZE, "symmetric": False})
 
     tensors = {}
