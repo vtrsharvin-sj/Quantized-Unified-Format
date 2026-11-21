@@ -176,3 +176,42 @@ def test_cli_convert_passes_options(tmp_path, cpu_run, monkeypatch):
         assert q["modules"]["model.layers.1.self_attn.q_proj"] == "int8"
         assert q["modules"]["model.layers.0.mlp.down_proj"] == "int8"
         assert q["modules"]["model.layers.0.mlp.up_proj"] == "int4"
+
+
+# --- Size_Candidates (task 27.1) ----------------------------------------------
+
+def _int8_modules(preset, names, num_layers=4):
+    plan = PrecisionPlan.from_options(presets=[preset], num_layers=num_layers)
+    return {n for n in names if plan.precision(n) == "int8"}
+
+
+def test_size_candidate_presets_select_expected_modules():
+    names = [f"model.layers.{i}.{p}" for i in range(4)
+             for p in ("self_attn.q_proj", "mlp.up_proj", "mlp.down_proj")]
+    last = {n for n in names if ".layers.3." in n}
+    down = {n for n in names if n.endswith("down_proj")}
+    assert _int8_modules("sensitive", names) == down | last
+    assert _int8_modules("size_a", names) == down  # last layer int4
+    assert _int8_modules("size_b", names) == last  # down_proj int4
+    assert _int8_modules("size_c", names) == set()  # A and B together
+    assert _int8_modules("size_a", names) | _int8_modules("size_b", names) == _int8_modules("sensitive", names)
+
+
+def test_cli_accepts_size_presets_and_records_modules(tmp_path, cpu_run, monkeypatch):
+    d = _tiny_dir(tmp_path)
+    monkeypatch.setattr(C, "load_calibration_texts", lambda ds: TEXTS)
+    expect = {  # preset -> (layer 0 down_proj, layer 1 q_proj)
+        "size_a": ("int8", "int4"), "size_b": ("int4", "int8"), "size_c": ("int4", "int4"),
+    }
+    for preset, (down, last_q) in expect.items():
+        out = tmp_path / f"{preset}.quf"
+        code = main(["convert", str(d), str(out), "--dataset", "x", "--samples", "2", "--seq-len", "8",
+                     "--group-size", "32", "--act-order", "--preset", preset])
+        assert code == 0
+        with QUFReader(out) as r:
+            q = r.header.quantization
+            assert q["group_size"] == 32 and q["act_order"] is True
+            mods = q.get("modules", {})
+            assert mods.get("model.layers.0.mlp.down_proj", "int4") == down
+            assert mods.get("model.layers.1.self_attn.q_proj", "int4") == last_q
+            assert "model.layers.0.self_attn.q_proj.g_idx" in {t.name for t in r.header.tensors}

@@ -56,3 +56,31 @@ Measurements (`out.quf`, 32 tokens, median of 7 to 9 repeats; the GPU was shared
 | lm_head alone, torch_gpu | 1.74 ms | 0.55 ms |
 
 The lm_head cost drops clearly on both devices. End-to-end torch_gpu decode stays inside the run-to-run noise because it is CPU-launch bound (see finding 4); the saved 1 ms of GPU time per token is hidden behind launch overhead. The cpu median is dominated by noise in these runs.
+
+## torch.compile decode path (task 26.4): skipped
+Probe on Windows, torch 2.11.0+cu128, RTX 5080 (sm_120), Python 3.13:
+- Without Triton (the default install): `torch.compile` of a small function raises `TritonMissing` ("Cannot find a working triton installation"). The compiled path cannot run, so it is skipped (Requirement 31.9).
+- With `pip install triton-windows` (3.9.0.post30), compile works. Compiling `QUFModel.decode_step` took about 24 s on first call. Decode medians on `eval_cache/lm/q15.quf`, torch_gpu, 64 tokens, 5 repeats: eager 44.0 tok/s, CUDA graph 144.9 tok/s, torch.compile 129.0 tok/s.
+- The compiled step is about 11 percent slower than the CUDA graph path and adds a Triton dependency plus a compile delay, so no opt-in path was added. triton-windows was uninstalled after the probe.
+
+## Decode speed after the fast path (task 26.8)
+
+Script: `scripts/measure_decode_speed.py`. Files: `quf convert` with the new default preset (size_b), 497,728,832 bytes for Qwen2.5-0.5B and 1,257,449,536 bytes for Qwen2.5-1.5B. RTX 5080 Laptop, Windows native, GPU idle before the run (nvidia-smi 0 percent). Prompt `The quick brown fox`, 128 new tokens, greedy, 2 warm-up runs, median of 7 timed runs. Each run covers prefill, decode, and in graph mode the graph capture, so it is an end-to-end rate. Raw numbers: `docs/bench_accuracy.json`, key `decode_speed`.
+
+| Model | Backend | Median tok/s | Min to max | Speedup vs pre-change v020 |
+|---|---|---|---|---|
+| 0.5B | torch_gpu eager | 57.8 | 56.9 to 59.6 | 1.41x (vs 40.9) |
+| 0.5B | torch_gpu CUDA graph | 255.2 | 251.6 to 258.5 | 6.23x |
+| 0.5B | cpu | 22.8 | 21.8 to 25.8 | no v020 CPU baseline |
+| 1.5B | torch_gpu eager | 46.6 | 43.3 to 48.9 | 1.52x (vs 30.7) |
+| 1.5B | torch_gpu CUDA graph | 82.7 | 81.2 to 84.4 | 2.70x |
+| 0.5B | llama.cpp Q4_K_M (reference) | 764.2 | 760.1 to 770.3 | n/a |
+| 1.5B | llama.cpp Q4_K_M (reference) | 450.8 | 412.4 to 459.4 | n/a |
+
+The llama.cpp rows come from `llama-bench.exe -ngl 99 -p 4 -n 128`. They are a different engine (hand-written CUDA kernels on 4-bit weights) and a different measurement (no Python, no sampling round trip per token), so they show how close the runtime is to GPU speed and are not like for like.
+
+Speed_Target (3x the measured pre-change median, which is the v020 row in `bench_accuracy.json`: 40.9 tok/s for 0.5B and 30.7 tok/s for 1.5B):
+- 0.5B: reached with the CUDA graph (6.23x). Eager decode alone is 1.41x.
+- 1.5B: **not reached**. The CUDA graph gives 2.70x (82.7 tok/s), short of the 92.0 tok/s that 3x needs. Against a flat 40 tok/s baseline it is 2.07x. Eager decode is 1.52x.
+
+Remaining bottleneck (ad hoc probe, not a repeated benchmark): replaying the captured graph alone takes 3.18 ms per token on 0.5B (314 tok/s) and 6.61 ms per token on 1.5B (151 tok/s). On 1.5B the profiler puts 73 percent of GPU time in two fp16 `gemv` kernels (cuBLAS matvec on the cached fp16 weights, about 3 GB read per token, roughly 480 GB/s). The decode step is now GPU-bound on reading fp16 weights, so the next gain needs 4-bit kernels (as in llama.cpp), which the runtime does not have. The end-to-end 1.5B rate (82.7) is also well below the replay rate (151). The gap is about 0.6 s per 128-token run outside the replay and was not isolated here (candidates: per-token argmax and host sync, prefill, graph capture). The run-to-run spread is small (under 4 percent), so the number is stable.

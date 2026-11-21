@@ -16,7 +16,7 @@ from quf.format.reader import QUFReader
 from quf.quant.quantize import QuantizedWeight
 from quf.runtime.backends.base import Int8Weight
 from quf.runtime.errors import GPUMemoryError
-from quf.runtime.linear import QUFLinear
+from quf.runtime.linear import FusedProjection, QUFLinear
 
 logger = logging.getLogger(__name__)
 
@@ -96,6 +96,44 @@ class KVCache:
         return k, v
 
 
+class CacheLengthError(ValueError):
+    """Tokens to cache would exceed the Static_KV_Cache length."""
+
+    def __init__(self, needed: int, cache_len: int):
+        self.needed = needed
+        self.cache_len = cache_len
+        super().__init__(
+            f"sequence length ({needed}) exceeds the static KV cache length ({cache_len})"
+        )
+
+
+class StaticKVCache:
+    """Preallocated per-layer key/value cache of shape ``[1, kv_heads, max_len, head_dim]``.
+
+    Allocated once and updated in place with ``index_copy_``. ``length`` is the number of
+    cached positions. ``token`` and ``position`` are fixed device tensors that the
+    Decode_Step reads, so its tensor shapes are identical on every call.
+    """
+
+    def __init__(self, num_layers, kv_heads, head_dim, max_len, device, dtype):
+        self.max_len = int(max_len)
+        shape = (1, kv_heads, self.max_len, head_dim)
+        self.k = [torch.zeros(shape, dtype=dtype, device=device) for _ in range(num_layers)]
+        self.v = [torch.zeros(shape, dtype=dtype, device=device) for _ in range(num_layers)]
+        self.token = torch.zeros((1, 1), dtype=torch.long, device=device)
+        self.position = torch.zeros((1,), dtype=torch.long, device=device)
+        self.length = 0
+
+    def write(self, layer: int, k: torch.Tensor, v: torch.Tensor, start: int) -> None:
+        """Copy ``k``/``v`` (``[1, kv_heads, t, head_dim]``) into positions ``start..start+t``."""
+        t = int(k.shape[2])
+        if start + t > self.max_len:
+            raise CacheLengthError(start + t, self.max_len)
+        idx = torch.arange(start, start + t, device=k.device)
+        self.k[layer].index_copy_(2, idx, k.to(self.k[layer].dtype))
+        self.v[layer].index_copy_(2, idx, v.to(self.v[layer].dtype))
+
+
 def _rms_norm(x: torch.Tensor, weight: torch.Tensor, eps: float) -> torch.Tensor:
     xf = x.to(torch.float32)
     xf = xf * torch.rsqrt(xf.pow(2).mean(-1, keepdim=True) + eps)
@@ -127,6 +165,7 @@ class QUFModel:
         self.rope_theta = float(cfg.get("rope_theta", 10000.0))
         self.max_position_embeddings = int(cfg["max_position_embeddings"])
         self.dtype = torch.float32 if device.type == "cpu" else torch.float16
+        self.fuse_projections = True
         self.layers: list[_Layer] = []
         self.embed: torch.Tensor
         self.final_norm: torch.Tensor
@@ -142,6 +181,7 @@ class QUFModel:
         backend: str | None = None,
         backend_option: str = "auto",
         prefer_fused: bool = False,
+        fuse_projections: bool = True,
     ) -> "QUFModel":
         """Load a QUF file. ``backend`` names the Backend explicitly (``cpu``, ``torch_gpu``,
         ``torch_fused``, ``marlin``); otherwise the Backend_Selector chooses from
@@ -172,7 +212,7 @@ class QUFModel:
 
             require_marlin()
         try:
-            return cls._load_with(path, backend)
+            return cls._load_with(path, backend, fuse_projections)
         except torch.cuda.OutOfMemoryError:
             raise
         except GPUMemoryError:
@@ -181,15 +221,16 @@ class QUFModel:
             if backend == "torch_fused" and selected_by_selector:
                 logger.debug("fused backend load failure: %s: %s", type(exc).__name__, exc)
                 logger.info("fused backend failed to load, using the cached backend")
-                return cls._load_with(path, "torch_gpu")
+                return cls._load_with(path, "torch_gpu", fuse_projections)
             raise
 
     @classmethod
-    def _load_with(cls, path, backend: str) -> "QUFModel":
+    def _load_with(cls, path, backend: str, fuse_projections: bool = True) -> "QUFModel":
         device = torch.device("cpu" if backend == "cpu" else "cuda")
         be = _make_backend(backend)
         with QUFReader(path) as reader:
             model = cls(reader.header, device, backend)
+            model.fuse_projections = fuse_projections
             try:
                 model._load_tensors(reader, be)
             except torch.cuda.OutOfMemoryError as exc:
@@ -279,12 +320,26 @@ class QUFModel:
             layer.gate = linear(f"{p}.mlp.gate_proj")
             layer.up = linear(f"{p}.mlp.up_proj")
             layer.down = linear(f"{p}.mlp.down_proj")
+            # Fused_Projection (cpu and torch_gpu only): one matmul for q/k/v and one for gate/up.
+            layer.qkv = layer.gate_up = None
+            if self.fuse_projections:
+                if FusedProjection.can_fuse([layer.q, layer.k, layer.v]):
+                    layer.qkv = FusedProjection([layer.q, layer.k, layer.v])
+                if FusedProjection.can_fuse([layer.gate, layer.up]):
+                    layer.gate_up = FusedProjection([layer.gate, layer.up])
             self.layers.append(layer)
 
     # -- forward ----------------------------------------------------------
 
     def new_cache(self) -> KVCache:
         return KVCache(self.num_layers)
+
+    def new_static_cache(self, max_len: int | None = None) -> StaticKVCache:
+        """Allocate a Static_KV_Cache of ``max_len`` positions (default: the context length)."""
+        n = self.max_position_embeddings if max_len is None else int(max_len)
+        return StaticKVCache(
+            self.num_layers, self.num_kv_heads, self.head_dim, n, self.device, self.dtype
+        )
 
     def _rope(self, positions: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         inv_freq = 1.0 / (
@@ -295,14 +350,33 @@ class QUFModel:
         emb = torch.cat([freqs, freqs], dim=-1)
         return emb.cos().to(self.dtype), emb.sin().to(self.dtype)
 
+    @staticmethod
+    def _qkv(layer: _Layer, x):
+        if layer.qkv is not None:
+            return layer.qkv(x)
+        return layer.q(x), layer.k(x), layer.v(x)
+
+    @staticmethod
+    def _mlp(layer: _Layer, m):
+        if layer.gate_up is not None:
+            gate, up = layer.gate_up(m)
+        else:
+            gate, up = layer.gate(m), layer.up(m)
+        return layer.down(F.silu(gate) * up)
+
     def _attention(self, layer: _Layer, idx: int, x, cos, sin, cache: KVCache | None, past: int):
         b, t, _ = x.shape
-        q = layer.q(x).view(b, t, self.num_heads, self.head_dim).transpose(1, 2)
-        k = layer.k(x).view(b, t, self.num_kv_heads, self.head_dim).transpose(1, 2)
-        v = layer.v(x).view(b, t, self.num_kv_heads, self.head_dim).transpose(1, 2)
+        q, k, v = self._qkv(layer, x)
+        q = q.view(b, t, self.num_heads, self.head_dim).transpose(1, 2)
+        k = k.view(b, t, self.num_kv_heads, self.head_dim).transpose(1, 2)
+        v = v.view(b, t, self.num_kv_heads, self.head_dim).transpose(1, 2)
         q = q * cos + _rotate_half(q) * sin
         k = k * cos + _rotate_half(k) * sin
-        if cache is not None:
+        if isinstance(cache, StaticKVCache):
+            cache.write(idx, k, v, past)
+            k = cache.k[idx][:, :, : past + t]
+            v = cache.v[idx][:, :, : past + t]
+        elif cache is not None:
             cache.append(idx, k, v)
             k, v = cache.get(idx)
         s = k.shape[2]
@@ -336,12 +410,66 @@ class QUFModel:
         for i, layer in enumerate(self.layers):
             h = h + self._attention(layer, i, _rms_norm(h, layer.input_norm, self.eps), cos, sin, cache, past)
             m = _rms_norm(h, layer.post_norm, self.eps)
-            h = h + layer.down(F.silu(layer.gate(m)) * layer.up(m))
-        h = _rms_norm(h, self.final_norm, self.eps)
+            h = h + self._mlp(layer, m)
+        if isinstance(cache, StaticKVCache):
+            cache.length = past + t
+        return self._head(h)
 
+    def _head(self, h: torch.Tensor) -> torch.Tensor:
+        h = _rms_norm(h, self.final_norm, self.eps)
         if isinstance(self.lm_head, QUFLinear):
             logits = self.lm_head(h)
         else:
             # fp16 matmul on the GPU (fp32 accumulation inside the kernel), fp32 on the CPU.
             logits = h.to(self.dtype) @ self._lm_head_weight.t()
         return logits.to(torch.float32)
+
+    def _attention_static(self, layer: _Layer, idx: int, x, cos, sin, cache: StaticKVCache, position, mask):
+        """Attention over the whole static cache; the mask hides positions after ``position``."""
+        b, t, _ = x.shape
+        q, k, v = self._qkv(layer, x)
+        q = q.view(b, t, self.num_heads, self.head_dim).transpose(1, 2)
+        k = k.view(b, t, self.num_kv_heads, self.head_dim).transpose(1, 2)
+        v = v.view(b, t, self.num_kv_heads, self.head_dim).transpose(1, 2)
+        q = q * cos + _rotate_half(q) * sin
+        k = k * cos + _rotate_half(k) * sin
+        cache.k[idx].index_copy_(2, position, k.to(cache.k[idx].dtype))
+        cache.v[idx].index_copy_(2, position, v.to(cache.v[idx].dtype))
+        k, v = cache.k[idx], cache.v[idx]
+        rep = self.num_heads // self.num_kv_heads
+        if rep > 1:
+            k = k.repeat_interleave(rep, dim=1)
+            v = v.repeat_interleave(rep, dim=1)
+        scores = (q.to(torch.float32) @ k.to(torch.float32).transpose(-1, -2)) / math.sqrt(self.head_dim)
+        scores = scores.masked_fill(~mask, float("-inf"))
+        attn = torch.softmax(scores, dim=-1).to(v.dtype)
+        out = (attn @ v).transpose(1, 2).reshape(b, t, self.num_heads * self.head_dim)
+        return layer.o(out)
+
+    @torch.no_grad()
+    def decode_step(self, cache: StaticKVCache) -> torch.Tensor:
+        """One fixed-shape decode step. Reads ``cache.token`` ``[1, 1]`` and ``cache.position``
+        ``[1]``, writes that position's key/value in place, returns logits ``[1, 1, vocab]``.
+        All tensor shapes are identical on every call; no host sync happens here."""
+        position = cache.position
+        cos, sin = self._rope(position)
+        mask = torch.arange(cache.max_len, device=position.device)[None, :] <= position[:, None]
+        h = F.embedding(cache.token, self.embed).to(self.dtype)
+        for i, layer in enumerate(self.layers):
+            h = h + self._attention_static(
+                layer, i, _rms_norm(h, layer.input_norm, self.eps), cos, sin, cache, position, mask
+            )
+            m = _rms_norm(h, layer.post_norm, self.eps)
+            h = h + self._mlp(layer, m)
+        return self._head(h)
+
+    @torch.no_grad()
+    def decode_token(self, token_id: int, cache: StaticKVCache) -> torch.Tensor:
+        """Feed one token at ``cache.length`` through ``decode_step`` and advance the cache."""
+        if cache.length + 1 > cache.max_len:
+            raise CacheLengthError(cache.length + 1, cache.max_len)
+        cache.token.fill_(int(token_id))
+        cache.position.fill_(cache.length)
+        logits = self.decode_step(cache)
+        cache.length += 1
+        return logits

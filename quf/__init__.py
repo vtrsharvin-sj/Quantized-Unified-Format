@@ -9,7 +9,7 @@ from __future__ import annotations
 import importlib
 from typing import Any
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 
 _LAZY_SUBMODULES = frozenset(
     {"device", "format", "quant", "tokenization", "convert", "runtime", "bench", "cli"}

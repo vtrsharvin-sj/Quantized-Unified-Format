@@ -773,3 +773,74 @@ For any list of (context, continuation) requests, including repeated contexts an
 For any list of at least 5 timing samples, the reported tokens per second is the median of the per-repeat values and is unchanged by permuting the samples.
 
 **Validates: Requirements 28.1**
+
+## Speed and Size Extension Design (release 0.2.1)
+
+### Decode path
+
+Profiling shows about 25 ms of CPU against 6 ms of GPU per token, so the work is removing launch overhead, not speeding up kernels. Three changes address it, in this order.
+
+1. **Static cache and fixed-shape step.** A `StaticKVCache` holds per-layer key and value tensors of shape `[batch=1, kv_heads, max_len, head_dim]`, allocated once. A `decode_step(token_id, position)` writes the new key and value at `position` with `index_copy_` and attends over the full `max_len` using a mask built from `position`, so shapes never change. Token id and position live in preallocated device tensors that the caller updates in place. Prefill keeps the existing dynamic path and copies its keys and values into the cache. The CPU Backend uses the same cache and the same `decode_step`.
+2. **CUDA graph capture.** `CUDAGraphDecoder` warms up the step on a side stream, captures it with `torch.cuda.CUDAGraph` and `torch.cuda.graph(...)`, then replays it per token after copying the token id and position into the static input tensors and reading logits from the static output tensor. Any exception during capture is caught, logged at INFO with the reason, and the session continues on the eager path. The capture is created once per session and per cache length.
+3. **Fused projections.** At `prepare` time, the Weight_Cache fp16 tensors of q, k, and v are concatenated into one weight (and bias, since Qwen2 has q, k, v biases) and the output is split by the known head widths. Gate and up are concatenated the same way. The unfused weights stay out of memory once fused, so the fp16 cache does not grow. Weights with a G_Idx or int8 are already dequantized into the Weight_Cache, so fusion works on the cached fp16 tensors only.
+
+An optional `torch.compile` decode step is attempted only if a one-time probe compiles a small function on the current machine without Triton. On Windows without Triton the probe is expected to fail, in which case the path is skipped and the reason is written to docs/BACKENDS.md.
+
+```mermaid
+flowchart LR
+    P[Prefill dynamic] --> C[Copy K,V into StaticKVCache]
+    C --> Q{CUDA graph capture ok?}
+    Q -- yes --> G[Replay graph per token]
+    Q -- no --> L[Log INFO] --> E[Eager decode_step per token]
+    G --> O[Static logits tensor]
+    E --> O
+```
+
+### Size study
+
+`scripts/size_study.py` converts each Size_Candidate for both models and evaluates it with `scripts/bench_accuracy.py --protocol llama`, writing JSON and a table in docs/RESULTS.md. Candidates are:
+
+| Candidate | Change from the Sensitive_Preset |
+|---|---|
+| A | last layer at int4 group size 32 instead of int8 |
+| B | down_proj at int4 group size 32 with act-order instead of int8 |
+| C | A and B together |
+| D | int6 or int5 group-wise tensors, only if the cost check below passes |
+
+The int6 or int5 option is added only if it needs a new tensor dtype code, a packer and unpacker, and a dequantizer in the reference path and in both Backends, with no change to Packed_Int4 tensors. The cost check is whether that fits in a small change to `quf/format` and the Backends. If not, candidate D is recorded as not evaluated, with the reason.
+
+The default is chosen by the rule in Requirement 32.4. A new default preset is selected by name through the existing mixed precision plan, so the Reader needs no change unless a new dtype is added. If a new dtype is added, the format version is bumped, Readers read the previous versions unchanged, and a checked-in older fixture covers that.
+
+### Error handling
+
+| Condition | Behavior |
+|---|---|
+| CUDA graph capture raises | Log at INFO, use Eager_Decoder |
+| Prompt plus generation exceeds the cache length | Raise an error naming both lengths |
+| Triton unavailable for `torch.compile` | Skip the compiled path and record the reason |
+| No Size_Candidate meets the 1 percent rule | Keep v020 and record all measurements |
+| New dtype code unknown to an older Reader | Reader raises its existing unsupported-version error |
+
+### Testing strategy
+
+Property tests use Hypothesis with at least 100 examples and the tag `Feature: quf-quantized-format, Property N: <property text>`. Properties 32 and 33 use a tiny random Qwen-shaped model. The CUDA graph variant of Property 32 carries the `gpu` marker and is also run with the shapes of both real models using random weights. The cache and fused-projection tests run on CPU. Real-model speed and size runs are manual scripts excluded from CI.
+
+## Speed and Size Extension Correctness Properties
+
+### Property 32: Graph decode equals eager decode
+
+For any prompt, prompt length, and generation length, and for the shapes of both Qwen2.5-0.5B and Qwen2.5-1.5B, the CUDA_Graph_Decoder selects the same greedy tokens as the Eager_Decoder and produces logits within an absolute tolerance of 1e-2. The CPU Backend with the Static_KV_Cache produces logits within 1e-2 of full-sequence recomputation.
+
+**Validates: Requirements 31.2, 31.3, 31.6, 31.10**
+
+### Property 33: Fused projection equals separate projections
+
+For any set of q, k, v weights and biases, and for any gate and up weights, and any input, the Fused_Projection output split at the head widths equals the separate projection outputs within an absolute tolerance of 1e-3.
+
+**Validates: Requirements 31.5, 31.7**
+
+### Property 34: New bit width round trip (only if a new bit width is added)
+
+For any weight matrix and supported group size, packing at the new bit width, writing and reading the QUF_File, and dequantizing returns the same values as the reference dequantizer within an absolute tolerance of 1e-3, and every older fixture file still reads unchanged.
+
+**Validates: Requirements 32.6, 32.7**

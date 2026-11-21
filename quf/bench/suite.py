@@ -15,6 +15,8 @@ import time
 from dataclasses import asdict, dataclass, field
 from typing import Any, Callable, Optional
 
+from quf.bench.timing import DEFAULT_REPEATS, DEFAULT_WARMUP, TimingStats, time_repeats
+
 logger = logging.getLogger("quf.bench")
 
 DEFAULT_DATASET = "wikitext-2-raw-v1"
@@ -46,6 +48,9 @@ class BenchResult:
     relative_ppl_increase: Optional[float] = None  # fraction, 0.02 == 2 percent
     gguf_size_bytes: Optional[int] = None
     gguf_tokens_per_second: Optional[float] = None
+    tokens_per_second_min: Optional[float] = None
+    tokens_per_second_max: Optional[float] = None
+    tokens_per_second_repeats: Optional[int] = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -128,10 +133,7 @@ def perplexity(
 # -- speed -----------------------------------------------------------------
 
 
-def measure_tokens_per_second(
-    model, tok, prompt: str = "The quick brown fox", max_new_tokens: int = 32
-) -> float:
-    """Greedy generation speed in new tokens per second."""
+def _tps_once(model, tok, prompt: str, max_new_tokens: int) -> float:
     from quf.runtime.generate import generate
 
     prompt_ids = tok.encode(prompt) or [0]
@@ -140,6 +142,28 @@ def measure_tokens_per_second(
     out = generate(model, tok, prompt_ids, max_new_tokens=budget, temperature=0.0)
     elapsed = time.perf_counter() - start
     return len(out) / elapsed if elapsed > 0 and out else 0.0
+
+
+def measure_tps_stats(
+    model,
+    tok,
+    prompt: str = "The quick brown fox",
+    max_new_tokens: int = 32,
+    *,
+    warmup: int = DEFAULT_WARMUP,
+    repeats: int = DEFAULT_REPEATS,
+) -> TimingStats:
+    """Greedy generation speed: warm-up runs, then ``repeats`` timed runs (median, min, max)."""
+    return time_repeats(
+        lambda: _tps_once(model, tok, prompt, max_new_tokens), warmup=warmup, repeats=repeats
+    )
+
+
+def measure_tokens_per_second(
+    model, tok, prompt: str = "The quick brown fox", max_new_tokens: int = 32
+) -> float:
+    """Median greedy generation speed in new tokens per second (see ``measure_tps_stats``)."""
+    return measure_tps_stats(model, tok, prompt, max_new_tokens).median
 
 
 class _HFCausalLM:
@@ -270,7 +294,8 @@ def run_bench(
         tok = _tokenizer_from_header(model.header)
 
     ppl = perplexity(model, tok, dataset, ctx_len, text=text, max_windows=max_windows)
-    tps = measure_tokens_per_second(model, tok, max_new_tokens=max_new_tokens)
+    stats = measure_tps_stats(model, tok, max_new_tokens=max_new_tokens)
+    tps = stats.median
 
     result = BenchResult(
         backend=choice.backend,
@@ -280,6 +305,9 @@ def run_bench(
         file_size_bytes=os.path.getsize(quf_path),
         tokens_per_second=tps,
         dataset=dataset,
+        tokens_per_second_min=stats.min,
+        tokens_per_second_max=stats.max,
+        tokens_per_second_repeats=stats.repeats,
     )
 
     if fp16_ref is not None:

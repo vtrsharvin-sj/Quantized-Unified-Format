@@ -8,7 +8,7 @@ except ModuleNotFoundError:  # Python 3.10
     import tomli as tomllib  # type: ignore
 
 ROOT = Path(__file__).resolve().parent.parent
-REPO_URL = "https://github.com/vtrsharvin-sj/Quantized-Model-Format"
+REPO_URL = "https://github.com/vtrsharvin-sj/Quantized-Unified-Format"
 
 
 def _project() -> dict:
@@ -33,4 +33,4 @@ def test_urls_classifiers_version():
     p = _project()
     assert REPO_URL in p["urls"].values()
     assert p["classifiers"]
-    assert p["version"] == "0.2.0"
+    assert p["version"] == "0.2.1"

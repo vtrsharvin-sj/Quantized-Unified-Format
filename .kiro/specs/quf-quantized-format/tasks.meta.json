@@ -79,6 +79,18 @@
     "21.2 Write property test for batched equivalence": {
       "status": "passed",
       "lastRunTimestamp": 1795183406812
+    },
+    "22.4 Write property test for median timing": {
+      "status": "passed",
+      "lastRunTimestamp": 1795186107609
+    },
+    "26.5 Write property test for graph versus eager decode": {
+      "status": "passed",
+      "lastRunTimestamp": 1795214611820
+    },
+    "26.6 Write property test for fused projections": {
+      "status": "passed",
+      "lastRunTimestamp": 1795214620519
     }
   },
   "executionHistory": {
@@ -1677,6 +1689,21 @@
         "executionId": "20781d6b-0a42-4703-a4c8-9f77da9e07db",
         "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
         "timestamp": 1795180950368
+      },
+      {
+        "executionId": "20781d6b-0a42-4703-a4c8-9f77da9e07db",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795186070877
+      },
+      {
+        "executionId": "6e6ecbd2-14c3-47ce-864d-7b3455c9e355",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795189335702
+      },
+      {
+        "executionId": "6e6ecbd2-14c3-47ce-864d-7b3455c9e355",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795194363518
       }
     ],
     "21.1 Batch loglikelihood requests": [
@@ -1718,6 +1745,16 @@
         "executionId": "20781d6b-0a42-4703-a4c8-9f77da9e07db",
         "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
         "timestamp": 1795180950493
+      },
+      {
+        "executionId": "6e6ecbd2-14c3-47ce-864d-7b3455c9e355",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795194363636
+      },
+      {
+        "executionId": "6e6ecbd2-14c3-47ce-864d-7b3455c9e355",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795195204318
       }
     ],
     "22.1 Profile g_idx and int8 decode": [
@@ -1759,6 +1796,16 @@
         "executionId": "20781d6b-0a42-4703-a4c8-9f77da9e07db",
         "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
         "timestamp": 1795180950603
+      },
+      {
+        "executionId": "20781d6b-0a42-4703-a4c8-9f77da9e07db",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795184744218
+      },
+      {
+        "executionId": "20781d6b-0a42-4703-a4c8-9f77da9e07db",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795186069986
       }
     ],
     "22.4 Write property test for median timing": [
@@ -1766,6 +1813,16 @@
         "executionId": "20781d6b-0a42-4703-a4c8-9f77da9e07db",
         "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
         "timestamp": 1795180950640
+      },
+      {
+        "executionId": "20781d6b-0a42-4703-a4c8-9f77da9e07db",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795184744471
+      },
+      {
+        "executionId": "6e6ecbd2-14c3-47ce-864d-7b3455c9e355",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795189322972
       }
     ],
     "23.1 Initialise git and scan for secrets": [
@@ -1795,6 +1852,11 @@
         "executionId": "20781d6b-0a42-4703-a4c8-9f77da9e07db",
         "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
         "timestamp": 1795184604483
+      },
+      {
+        "executionId": "20781d6b-0a42-4703-a4c8-9f77da9e07db",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795184736587
       }
     ],
     "23.3 Confirm GitHub Actions passes": [
@@ -1802,6 +1864,16 @@
         "executionId": "20781d6b-0a42-4703-a4c8-9f77da9e07db",
         "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
         "timestamp": 1795180950756
+      },
+      {
+        "executionId": "20781d6b-0a42-4703-a4c8-9f77da9e07db",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795184745054
+      },
+      {
+        "executionId": "20781d6b-0a42-4703-a4c8-9f77da9e07db",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795186070211
       }
     ],
     "24.1 Update docs with verified numbers": [
@@ -1809,6 +1881,21 @@
         "executionId": "20781d6b-0a42-4703-a4c8-9f77da9e07db",
         "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
         "timestamp": 1795180950794
+      },
+      {
+        "executionId": "6e6ecbd2-14c3-47ce-864d-7b3455c9e355",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795195204599
+      },
+      {
+        "executionId": "6e6ecbd2-14c3-47ce-864d-7b3455c9e355",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795215841573
+      },
+      {
+        "executionId": "6e6ecbd2-14c3-47ce-864d-7b3455c9e355",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795216035069
       }
     ],
     "24.2 Bump version, changelog, build, and smoke test": [
@@ -1816,6 +1903,21 @@
         "executionId": "20781d6b-0a42-4703-a4c8-9f77da9e07db",
         "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
         "timestamp": 1795180950832
+      },
+      {
+        "executionId": "6e6ecbd2-14c3-47ce-864d-7b3455c9e355",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795195204641
+      },
+      {
+        "executionId": "6e6ecbd2-14c3-47ce-864d-7b3455c9e355",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795216035132
+      },
+      {
+        "executionId": "6e6ecbd2-14c3-47ce-864d-7b3455c9e355",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795217226236
       }
     ],
     "25. Final checkpoint - Ensure all tests pass": [
@@ -1823,6 +1925,274 @@
         "executionId": "20781d6b-0a42-4703-a4c8-9f77da9e07db",
         "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
         "timestamp": 1795180950871
+      },
+      {
+        "executionId": "6e6ecbd2-14c3-47ce-864d-7b3455c9e355",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795195204681
+      },
+      {
+        "executionId": "6e6ecbd2-14c3-47ce-864d-7b3455c9e355",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795217226995
+      },
+      {
+        "executionId": "4c541836-73d9-4640-9c52-02c48a7f993c",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795262678706
+      }
+    ],
+    "23. CI and GitHub": [
+      {
+        "executionId": "20781d6b-0a42-4703-a4c8-9f77da9e07db",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795186070275
+      }
+    ],
+    "22. Decode speed on 0.5B": [
+      {
+        "executionId": "6e6ecbd2-14c3-47ce-864d-7b3455c9e355",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795189323036
+      }
+    ],
+    "20. GGUF comparison (verified)": [
+      {
+        "executionId": "6e6ecbd2-14c3-47ce-864d-7b3455c9e355",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795194363568
+      }
+    ],
+    "21. Batched lm-evaluation-harness adapter": [
+      {
+        "executionId": "6e6ecbd2-14c3-47ce-864d-7b3455c9e355",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795195204385
+      }
+    ],
+    "26.1 Add the Static_KV_Cache and fixed-shape Decode_Step": [
+      {
+        "executionId": "6e6ecbd2-14c3-47ce-864d-7b3455c9e355",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795195204742
+      },
+      {
+        "executionId": "6e6ecbd2-14c3-47ce-864d-7b3455c9e355",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795195212722
+      },
+      {
+        "executionId": "6e6ecbd2-14c3-47ce-864d-7b3455c9e355",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795195656459
+      }
+    ],
+    "26.2 Add Fused_Projection for qkv and gate/up": [
+      {
+        "executionId": "6e6ecbd2-14c3-47ce-864d-7b3455c9e355",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795195204780
+      },
+      {
+        "executionId": "6e6ecbd2-14c3-47ce-864d-7b3455c9e355",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795195665225
+      },
+      {
+        "executionId": "6e6ecbd2-14c3-47ce-864d-7b3455c9e355",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795195916042
+      }
+    ],
+    "26.3 Add the CUDA_Graph_Decoder with eager fallback": [
+      {
+        "executionId": "6e6ecbd2-14c3-47ce-864d-7b3455c9e355",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795195204818
+      },
+      {
+        "executionId": "6e6ecbd2-14c3-47ce-864d-7b3455c9e355",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795195927228
+      },
+      {
+        "executionId": "6e6ecbd2-14c3-47ce-864d-7b3455c9e355",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795214528939
+      }
+    ],
+    "26.4 Probe and optionally add the torch.compile decode path": [
+      {
+        "executionId": "6e6ecbd2-14c3-47ce-864d-7b3455c9e355",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795195204856
+      },
+      {
+        "executionId": "6e6ecbd2-14c3-47ce-864d-7b3455c9e355",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795214536293
+      },
+      {
+        "executionId": "6e6ecbd2-14c3-47ce-864d-7b3455c9e355",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795214788064
+      }
+    ],
+    "26.5 Write property test for graph versus eager decode": [
+      {
+        "executionId": "6e6ecbd2-14c3-47ce-864d-7b3455c9e355",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795195204895
+      },
+      {
+        "executionId": "6e6ecbd2-14c3-47ce-864d-7b3455c9e355",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795214536993
+      },
+      {
+        "executionId": "6e6ecbd2-14c3-47ce-864d-7b3455c9e355",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795214789080
+      }
+    ],
+    "26.6 Write property test for fused projections": [
+      {
+        "executionId": "6e6ecbd2-14c3-47ce-864d-7b3455c9e355",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795195204935
+      },
+      {
+        "executionId": "6e6ecbd2-14c3-47ce-864d-7b3455c9e355",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795214537989
+      },
+      {
+        "executionId": "6e6ecbd2-14c3-47ce-864d-7b3455c9e355",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795214790056
+      }
+    ],
+    "26.7 Write unit tests for the decode path": [
+      {
+        "executionId": "6e6ecbd2-14c3-47ce-864d-7b3455c9e355",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795195204972
+      },
+      {
+        "executionId": "6e6ecbd2-14c3-47ce-864d-7b3455c9e355",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795214539013
+      },
+      {
+        "executionId": "6e6ecbd2-14c3-47ce-864d-7b3455c9e355",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795214791058
+      }
+    ],
+    "26.8 Measure speed and update docs": [
+      {
+        "executionId": "6e6ecbd2-14c3-47ce-864d-7b3455c9e355",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795195205012
+      },
+      {
+        "executionId": "6e6ecbd2-14c3-47ce-864d-7b3455c9e355",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795214797563
+      },
+      {
+        "executionId": "6e6ecbd2-14c3-47ce-864d-7b3455c9e355",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795215835375
+      }
+    ],
+    "27.1 Add the size study script and candidate presets": [
+      {
+        "executionId": "6e6ecbd2-14c3-47ce-864d-7b3455c9e355",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795195205052
+      },
+      {
+        "executionId": "6e6ecbd2-14c3-47ce-864d-7b3455c9e355",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795195212789
+      },
+      {
+        "executionId": "6e6ecbd2-14c3-47ce-864d-7b3455c9e355",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795195656887
+      }
+    ],
+    "27.2 Cost check and optional int6 or int5 group-wise option": [
+      {
+        "executionId": "6e6ecbd2-14c3-47ce-864d-7b3455c9e355",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795195205091
+      },
+      {
+        "executionId": "6e6ecbd2-14c3-47ce-864d-7b3455c9e355",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795195665703
+      },
+      {
+        "executionId": "6e6ecbd2-14c3-47ce-864d-7b3455c9e355",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795195916538
+      }
+    ],
+    "27.3 Run the study on both models and choose the default": [
+      {
+        "executionId": "6e6ecbd2-14c3-47ce-864d-7b3455c9e355",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795195205134
+      },
+      {
+        "executionId": "6e6ecbd2-14c3-47ce-864d-7b3455c9e355",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795195927278
+      },
+      {
+        "executionId": "6e6ecbd2-14c3-47ce-864d-7b3455c9e355",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795214528995
+      }
+    ],
+    "27.4 Write tests for the new default and any new format feature": [
+      {
+        "executionId": "6e6ecbd2-14c3-47ce-864d-7b3455c9e355",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795195205177
+      },
+      {
+        "executionId": "6e6ecbd2-14c3-47ce-864d-7b3455c9e355",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795214539841
+      },
+      {
+        "executionId": "6e6ecbd2-14c3-47ce-864d-7b3455c9e355",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795214791805
+      }
+    ],
+    "27. Size without losing precision": [
+      {
+        "executionId": "6e6ecbd2-14c3-47ce-864d-7b3455c9e355",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795214791864
+      }
+    ],
+    "26. Fast decode path": [
+      {
+        "executionId": "6e6ecbd2-14c3-47ce-864d-7b3455c9e355",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795215835422
+      }
+    ],
+    "24. Release 0.2.1": [
+      {
+        "executionId": "6e6ecbd2-14c3-47ce-864d-7b3455c9e355",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795217226283
       }
     ]
   }

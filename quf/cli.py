@@ -22,7 +22,7 @@ COMMANDS = ("info", "convert", "run", "bench")
 DEFAULT_GROUP_SIZE = 32
 DEFAULT_ACT_ORDER = True
 DEFAULT_CLIP_SEARCH = True
-DEFAULT_PRESET = "sensitive"
+DEFAULT_PRESET = "size_b"
 DEFAULT_MAX_WINDOWS = 40
 
 
@@ -86,10 +86,13 @@ def _build_parser() -> argparse.ArgumentParser:
                              "the last matching rule wins")
     p_conv.add_argument("--int8-modules", action="append", default=[], metavar="PATTERN",
                         help="shortcut for --mixed \"PATTERN=int8\"; repeatable")
-    p_conv.add_argument("--preset", action="append", default=[], choices=("down_proj", "sensitive", "none"),
+    p_conv.add_argument("--preset", action="append", default=[], choices=("down_proj", "sensitive", "size_a", "size_b", "size_c", "none"),
                         help="precision preset from docs/ACCURACY.md: down_proj (all down_proj at int8), "
-                             f"sensitive (down_proj and the last layer at int8; default: {DEFAULT_PRESET} "
-                             "when no --mixed or --int8-modules is given) or none (all int4)")
+                             "sensitive (down_proj and the last layer at int8; the v020 plan), "
+                             "size_a (down_proj int8, last layer int4), "
+                             "size_b (last layer int8, down_proj int4), size_c (all int4 by plan), "
+                             "or none (all int4). "
+                             f"Default when no --preset, --mixed or --int8-modules is given: {DEFAULT_PRESET}")
     p_conv.add_argument("--overwrite", action="store_true",
                         help="replace the output file if it exists")
 
@@ -106,6 +109,9 @@ def _build_parser() -> argparse.ArgumentParser:
     p_run.add_argument("--no-stream", dest="stream", action="store_false",
                        help="print the full text at the end instead of streaming tokens")
     p_run.set_defaults(stream=True)
+    p_run.add_argument("--no-cuda-graph", dest="cuda_graph", action="store_false",
+                       help="decode eagerly instead of replaying a CUDA graph (same as QUF_NO_CUDA_GRAPH=1)")
+    p_run.set_defaults(cuda_graph=True)
     p_run.add_argument("--device", choices=("auto", "cpu", "cuda"), default="auto",
                        help="device to run on; auto picks the best Backend (default: auto)")
     _add_backend_args(p_run)
@@ -345,7 +351,13 @@ def _cmd_bench(args: argparse.Namespace) -> int:
     print(f"Perplexity scope: {scope}")
     print(f"Perplexity ({result.dataset}): {result.perplexity:.4f}")
     print(f"File size: {result.file_size_bytes} bytes")
-    print(f"Tokens per second: {result.tokens_per_second:.2f}")
+    print(
+        f"Tokens per second: {result.tokens_per_second:.2f} (median of "
+        f"{result.tokens_per_second_repeats}, min {result.tokens_per_second_min:.2f}, "
+        f"max {result.tokens_per_second_max:.2f})"
+        if result.tokens_per_second_repeats
+        else f"Tokens per second: {result.tokens_per_second:.2f}"
+    )
     if result.relative_ppl_increase is not None:
         print(f"Relative perplexity increase vs fp16: {100 * result.relative_ppl_increase:.2f}% "
               f"(documented target: at most {PPL_TARGET_PERCENT:.0f}%)")
@@ -400,6 +412,7 @@ def _cmd_run(args: argparse.Namespace) -> int:
             top_p=args.top_p,
             seed=args.seed,
             stream=_write if args.stream else None,
+            cuda_graph=None if args.cuda_graph else False,
         )
         if args.stream:
             sys.stdout.write("\n")

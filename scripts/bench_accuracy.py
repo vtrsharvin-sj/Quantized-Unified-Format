@@ -42,6 +42,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
+from quf.bench.timing import time_repeats  # noqa: E402
+
 CACHE = ROOT / "eval_cache"
 OUT = ROOT / "docs" / "bench_accuracy.json"
 TIME_CAP_S = 25 * 60
@@ -57,6 +59,10 @@ QUF_RUNS = {
     "rtn_g32": (32, False, False, None, "none", "rtn"),
     "v020": (32, True, True, "sensitive", "default", "gptq"),
 }
+# Size_Candidates (task 27.1): v020 settings with a different precision preset. They are run by
+# scripts/size_study.py, not by --drive, so ALL_RUNS does not list them.
+SIZE_RUNS = {f"size_{c}": (32, True, True, f"size_{c}", "default", "gptq") for c in "abc"}
+QUF_RUNS.update(SIZE_RUNS)
 GGUF_RUNS = {"gguf_q4_k_m": ("Q4_K_M", 15), "gguf_q4_0": ("Q4_0", 2), "gguf_q8_0": ("Q8_0", 7)}
 ALL_RUNS = ["fp16", "v010", "rtn_g128", "rtn_g32", "v020", "gguf_q4_k_m", "gguf_q4_0", "gguf_q8_0"]
 CONVERT_SCRIPT_URL = "https://raw.githubusercontent.com/ggml-org/llama.cpp/b6100/convert_hf_to_gguf.py"
@@ -64,6 +70,16 @@ CONVERT_SCRIPT_URL = "https://raw.githubusercontent.com/ggml-org/llama.cpp/b6100
 
 def slug(model: str) -> str:
     return model.split("/")[-1].lower().replace(".", "_")
+
+
+def run_tag(a) -> str:
+    """File-name tag of a run. ``llama`` rows get a suffix so they never overwrite ``full`` files."""
+    return a.run + ("_llama" if getattr(a, "protocol", "full") == "llama" else "")
+
+
+def store_key(protocol: str) -> str:
+    """Key in docs/bench_accuracy.json holding the rows of ``protocol``."""
+    return "models_llama" if protocol == "llama" else "models"
 
 
 # ----------------------------------------------------------------------------- shared helpers
@@ -176,10 +192,14 @@ def ppl_protocol(model, tok, text: str, protocol: str, windows: int = 0) -> floa
     import torch
 
     nll, cnt = 0.0, 0
-    for w in window_ids(tok.encode(text), windows):
+    wins = window_ids(tok.encode(text), windows)
+    t0 = time.perf_counter()
+    for i, w in enumerate(wins, 1):
         logits = model.forward(torch.tensor([w], dtype=torch.long))[0]
         a, b = window_nll(logits, w, protocol)
         nll, cnt = nll + a, cnt + b
+        if i % 20 == 0 or i == len(wins):
+            print(f"  ppl window {i}/{len(wins)} ({time.perf_counter() - t0:.0f}s)", flush=True)
     return math.exp(nll / cnt)
 
 
@@ -225,16 +245,23 @@ def run_fp16(a) -> int:
 
     tok = _hf_tokenizer(a.model)
     m = _HFCausalLM(a.model, "cuda")
-    ppls = _domain_ppls(m, tok, a.protocol, a.windows)
     ids = torch.tensor([tok.encode("The quick brown fox") or [0]], device="cuda")
-    t = time.perf_counter()
-    with torch.no_grad():
-        out = m._m.generate(ids, max_new_tokens=32, min_new_tokens=32, do_sample=False)
-    torch.cuda.synchronize()
-    tps = (out.shape[1] - ids.shape[1]) / (time.perf_counter() - t)
+
+    def once() -> float:
+        t = time.perf_counter()
+        with torch.no_grad():
+            out = m._m.generate(ids, max_new_tokens=32, min_new_tokens=32, do_sample=False)
+        torch.cuda.synchronize()
+        return (out.shape[1] - ids.shape[1]) / (time.perf_counter() - t)
+
+    stats = time_repeats(once)
+    if a.timing_only:
+        _write_result(a, _timing_rec(a, stats, "huggingface fp16 generate (cuda)"), suffix="timing")
+        return 0
+    ppls = _domain_ppls(m, tok, a.protocol, a.windows)
     size = sum(p.numel() * 2 for p in m._m.parameters())
     rec = {"run": a.run, "status": "done", **ppls, "file_size_bytes": size,
-           "tokens_per_second": tps, "backend": "huggingface fp16 generate (cuda)",
+           **_tps_fields(stats), "backend": "huggingface fp16 generate (cuda)",
            "size_note": "fp16 parameter bytes (tied embeddings counted once)"}
     _write_result(a, rec)
     return 0
@@ -249,7 +276,7 @@ def run_quf(a) -> int:
 
     gs, act, clip, preset, calib_kind, method = QUF_RUNS[a.run]
     CACHE.mkdir(exist_ok=True)
-    quf_path = CACHE / f"{slug(a.model)}_{a.run}.quf"
+    quf_path = CACHE / f"{slug(a.model)}_{run_tag(a)}.quf"
     kw = dict(group_size=gs, act_order=act, clip_search=clip, overwrite=True)
     if preset:
         from quf.convert.converter import read_source_config
@@ -279,13 +306,23 @@ def run_quf(a) -> int:
         return box["m"]
 
     t2 = time.perf_counter()
-    r = run_bench(quf_path, out_json=CACHE / f"{slug(a.model)}_{a.run}.bench.json",
+    if a.timing_only:
+        from quf.bench.suite import measure_tps_stats
+
+        m = loader(str(quf_path), "torch_gpu")
+        stats = measure_tps_stats(m, _tokenizer_from_header(m.header))
+        _write_result(a, _timing_rec(a, stats, "torch_gpu"), suffix="timing")
+        quf_path.unlink(missing_ok=True)
+        return 0
+    r = run_bench(quf_path, out_json=CACHE / f"{slug(a.model)}_{run_tag(a)}.bench.json",
                   device="cuda", model_loader=loader)
     model = box["m"]
     ppls = _domain_ppls(model, _tokenizer_from_header(model.header), a.protocol, a.windows)
     rec = {"run": a.run, "status": "done", "group_size": gs, "act_order": act, "clip_search": clip,
            "preset": preset, "calibration": calib_kind, "method": method, **ppls,
            "file_size_bytes": r.file_size_bytes, "tokens_per_second": r.tokens_per_second,
+           "tokens_per_second_min": r.tokens_per_second_min, "tokens_per_second_max": r.tokens_per_second_max,
+           "tokens_per_second_repeats": r.tokens_per_second_repeats,
            "backend": r.backend, "convert_seconds": round(convert_s),
            "bench_seconds": round(time.perf_counter() - t2),
            "size_report": res.report.format() if res.report else None}
@@ -359,15 +396,15 @@ def _check_rope_base(gguf_path: Path, local: str) -> None:
 def run_gguf(a) -> int:
     import ctypes
 
-    import llama_cpp
-    from huggingface_hub import snapshot_download
-
     from quf.bench.suite import load_wikitext
 
     label, ftype = GGUF_RUNS[a.run]
     CACHE.mkdir(exist_ok=True)
     f16 = CACHE / f"{slug(a.model)}-f16.gguf"
-    if not f16.exists():
+    out = CACHE / f"{slug(a.model)}-{label}.gguf"
+    if not out.exists() and not f16.exists():
+        from huggingface_hub import snapshot_download
+
         script = CACHE / "convert_hf_to_gguf.py"
         if not script.exists():
             import urllib.request
@@ -378,12 +415,14 @@ def run_gguf(a) -> int:
         subprocess.run([sys.executable, str(script), local, "--outtype", "f16", "--outfile", str(f16)],
                        check=True)
         _check_rope_base(f16, local)
-    out = CACHE / f"{slug(a.model)}-{label}.gguf"
-    params = llama_cpp.llama_model_quantize_default_params()
-    params.ftype = ftype
-    rc = llama_cpp.llama_model_quantize(str(f16).encode(), str(out).encode(), ctypes.byref(params))
-    if rc != 0:
-        raise RuntimeError(f"llama_model_quantize returned {rc}")
+    if not out.exists():  # reuse an existing quantized file
+        import llama_cpp
+
+        params = llama_cpp.llama_model_quantize_default_params()
+        params.ftype = ftype
+        rc = llama_cpp.llama_model_quantize(str(f16).encode(), str(out).encode(), ctypes.byref(params))
+        if rc != 0:
+            raise RuntimeError(f"llama_model_quantize returned {rc}")
     wiki, c4 = load_wikitext(), c4_heldout_text()
     use_exe = a.protocol == "llama" and a.gguf_backend in ("auto", "exe") and LLAMA_EXE.exists()
     if a.gguf_backend == "exe" and not use_exe:
@@ -394,6 +433,8 @@ def run_gguf(a) -> int:
                 "ppl_c4_heldout": _exe_ppl(out, c4, a.windows, "c4")}
         backend = "llama-perplexity.exe (cuda, -ngl 99)"
     else:
+        import llama_cpp
+
         tok = _hf_tokenizer(a.model)
         gpu = bool(llama_cpp.llama_supports_gpu_offload())
         llm = llama_cpp.Llama(model_path=str(out), n_ctx=CTX, n_batch=CTX, logits_all=True,
@@ -402,20 +443,67 @@ def run_gguf(a) -> int:
                 "ppl_c4_heldout": _gguf_ppl(llm, window_ids(tok.encode(c4), a.windows), CTX, a.protocol)}
         backend = "llama-cpp-python (cuda wheel)" if gpu else "llama-cpp-python (cpu wheel)"
         del llm
-    llm = llama_cpp.Llama(model_path=str(out), n_gpu_layers=-1 if llama_cpp.llama_supports_gpu_offload() else 0,
-                          verbose=False)
     rec = {"run": a.run, "status": "done", "quant": label, **ppls, "protocol": a.protocol,
            "windows": a.windows or "all", "file_size_bytes": out.stat().st_size, "backend": backend}
-    t = time.perf_counter()
-    o = llm("The quick brown fox", max_tokens=32, temperature=0.0)
-    n = int(o["usage"]["completion_tokens"])
-    rec["tokens_per_second"] = n / (time.perf_counter() - t) if n else 0.0
+    if use_exe:
+        rec.update(_bench_tps(out))
+    else:
+        import llama_cpp
+
+        llm = llama_cpp.Llama(model_path=str(out), n_gpu_layers=-1 if llama_cpp.llama_supports_gpu_offload() else 0,
+                              verbose=False)
+        t = time.perf_counter()
+        o = llm("The quick brown fox", max_tokens=32, temperature=0.0)
+        n = int(o["usage"]["completion_tokens"])
+        rec["tokens_per_second"] = n / (time.perf_counter() - t) if n else 0.0
     _write_result(a, rec)
     return 0
 
 
-def _write_result(a, rec: dict) -> None:
-    (CACHE / f"{slug(a.model)}_{a.run}.result.json").write_text(json.dumps(rec, indent=2), encoding="utf-8")
+def _bench_tps(gguf: Path, reps: int = 7) -> dict:
+    """Decode speed from llama-bench.exe on the GPU: 4-token prompt, 32 new tokens, median of ``reps``."""
+    import statistics
+
+    exe = LLAMA_EXE.parent / "llama-bench.exe"
+    p = subprocess.run([str(exe), "-m", str(gguf), "-p", "4", "-n", "32", "-ngl", "99", "-r", str(reps),
+                        "-o", "json"], capture_output=True, text=True, timeout=900, cwd=str(exe.parent))
+    txt = p.stdout
+    rows = json.loads(txt[txt.index("["): txt.rindex("]") + 1])
+    tg = next(r for r in rows if r.get("n_gen") == 32 and not r.get("n_prompt"))
+    s = [float(x) for x in tg["samples_ts"]]
+    return {"tokens_per_second": statistics.median(s), "tokens_per_second_min": min(s),
+            "tokens_per_second_max": max(s), "tokens_per_second_repeats": len(s),
+            "tps_backend": "llama-bench.exe (cuda, -ngl 99, -p 4 -n 32; llama.cpp engine, not QUF runtime)"}
+
+
+def _bench_tps(gguf: Path, reps: int = 7) -> dict:
+    """Decode speed from llama-bench.exe on the GPU: 4-token prompt, 32 new tokens, median of ``reps``."""
+    import statistics
+
+    exe = LLAMA_EXE.parent / "llama-bench.exe"
+    p = subprocess.run([str(exe), "-m", str(gguf), "-p", "4", "-n", "32", "-ngl", "99", "-r", str(reps),
+                        "-o", "json"], capture_output=True, text=True, timeout=900, cwd=str(exe.parent))
+    txt = p.stdout
+    rows = json.loads(txt[txt.index("["): txt.rindex("]") + 1])
+    tg = next(r for r in rows if r.get("n_gen") == 32 and not r.get("n_prompt"))
+    s = [float(x) for x in tg["samples_ts"]]
+    return {"tokens_per_second": statistics.median(s), "tokens_per_second_min": min(s),
+            "tokens_per_second_max": max(s), "tokens_per_second_repeats": len(s),
+            "tps_backend": "llama-bench.exe (cuda, -ngl 99, -p 4 -n 32; llama.cpp engine, not QUF runtime)"}
+
+
+def _tps_fields(stats) -> dict:
+    return {"tokens_per_second": stats.median, "tokens_per_second_min": stats.min,
+            "tokens_per_second_max": stats.max, "tokens_per_second_repeats": stats.repeats}
+
+
+def _timing_rec(a, stats, backend: str) -> dict:
+    return {"run": a.run, "status": "done", **_tps_fields(stats), "tps_samples": list(stats.samples),
+            "tps_backend": backend}
+
+
+def _write_result(a, rec: dict, suffix: str = "result") -> None:
+    (CACHE / f"{slug(a.model)}_{run_tag(a)}.{suffix}.json").write_text(json.dumps(rec, indent=2), encoding="utf-8")
     print("RESULT", json.dumps(rec), flush=True)
 
 
@@ -431,7 +519,7 @@ def _load() -> dict:
 
 def _finalize(d: dict) -> None:
     """Add relative increases against fp16 and the 3 percent verdict to every finished row."""
-    for m in d["models"].values():
+    for m in [*d["models"].values(), *d.get("models_llama", {}).values()]:
         ref = m.get("fp16")
         for name, r in m.items():
             if name == "fp16" or r.get("status") != "done" or not ref or ref.get("status") != "done":
@@ -486,7 +574,7 @@ def setup_gguf(d: dict) -> bool:
 
 def launch(model: str, name: str, d: dict, protocol: str = "full", windows: int = 0,
            gguf_backend: str = "auto"):
-    rows = d["models"].setdefault(model, {})
+    rows = d.setdefault(store_key(protocol), {}).setdefault(model, {})
     old = rows.get(name, {})
     if old.get("status") in ("done", "timeout") and (old.get("protocol"), old.get("windows")) == (
             protocol, windows or "all"):
@@ -494,8 +582,9 @@ def launch(model: str, name: str, d: dict, protocol: str = "full", windows: int 
     cmd = [sys.executable, "-u", str(Path(__file__)), "--run", name, "--model", model,
            "--protocol", protocol, "--windows", str(windows), "--gguf-backend", gguf_backend]
     CACHE.mkdir(exist_ok=True)
-    log = CACHE / f"{slug(model)}_{name}.log"
-    rf = CACHE / f"{slug(model)}_{name}.result.json"
+    tag = name + ("_llama" if protocol == "llama" else "")
+    log = CACHE / f"{slug(model)}_{tag}.log"
+    rf = CACHE / f"{slug(model)}_{tag}.result.json"
     rf.unlink(missing_ok=True)
     print(f"[{time.strftime('%H:%M:%S')}] start {model} {name}", flush=True)
     with open(log, "w", encoding="utf-8") as lf:
@@ -518,6 +607,52 @@ def launch(model: str, name: str, d: dict, protocol: str = "full", windows: int 
           f"c4={rec.get('ppl_c4_heldout')}", flush=True)
 
 
+TPS_KEYS = ("tokens_per_second", "tokens_per_second_min", "tokens_per_second_max",
+            "tokens_per_second_repeats", "tps_samples")
+
+
+def drive_timing(models: list[str], only: list[str] | None) -> int:
+    """Re-measure tokens per second (warm-up, 7 repeats, median) for done fp16 and QUF rows.
+
+    Only the tokens-per-second fields of existing rows are replaced; perplexity fields are
+    left untouched. Each row runs in its own subprocess with the 25 minute cap.
+    """
+    d = _load()
+    for model in models:
+        for name in ["fp16", *QUF_RUNS]:
+            row = d["models"].get(model, {}).get(name)
+            if (only and name not in only) or not row or row.get("status") != "done":
+                continue
+            cmd = [sys.executable, "-u", str(Path(__file__)), "--run", name, "--model", model, "--timing-only"]
+            log = CACHE / f"{slug(model)}_{name}.timing.log"
+            rf = CACHE / f"{slug(model)}_{name}.timing.json"
+            rf.unlink(missing_ok=True)
+            print(f"[{time.strftime('%H:%M:%S')}] timing {model} {name}", flush=True)
+            with open(log, "w", encoding="utf-8") as lf:
+                p = subprocess.Popen(cmd, stdout=lf, stderr=subprocess.STDOUT, cwd=str(ROOT))
+                t = time.time()
+                while p.poll() is None and time.time() - t < TIME_CAP_S:
+                    time.sleep(5)
+                if p.poll() is None:
+                    subprocess.run(["taskkill", "/F", "/T", "/PID", str(p.pid)], capture_output=True)
+                    p.wait()
+                    print(f"  {name}: timeout", flush=True)
+                    continue
+            if p.returncode != 0 or not rf.exists():
+                print(f"  {name}: error rc={p.returncode}, see {log.name}", flush=True)
+                continue
+            rec = json.loads(rf.read_text(encoding="utf-8"))
+            d = _load()  # reload, then touch only the tokens-per-second fields
+            row = d["models"][model][name]
+            row.update({k: rec[k] for k in TPS_KEYS if k in rec})
+            row["tps_measurement"] = "median of 7 timed repeats after 2 warm-up runs (task 22.3)"
+            OUT.write_text(json.dumps(d, indent=2), encoding="utf-8")
+            print(f"  {name}: median {rec['tokens_per_second']:.2f} min {rec['tokens_per_second_min']:.2f} "
+                  f"max {rec['tokens_per_second_max']:.2f}", flush=True)
+    print("timing finished", flush=True)
+    return 0
+
+
 def drive(models: list[str], only: list[str] | None, protocol: str = "full", windows: int = 0,
           gguf_backend: str = "auto", with_gguf: bool = False) -> int:
     d = _load()
@@ -530,7 +665,7 @@ def drive(models: list[str], only: list[str] | None, protocol: str = "full", win
             if name in GGUF_RUNS and with_gguf:
                 launch(model, name, d, protocol, windows, gguf_backend)
                 continue
-            if name in GGUF_RUNS:
+            if name in GGUF_RUNS and protocol == "full":
                 # GGUF rows are unverified and skipped in this matrix (scope cut); no pip install attempted.
                 rows = d["models"].setdefault(model, {})
                 if rows.get(name, {}).get("status") != "done":
@@ -548,7 +683,7 @@ def main() -> int:
     ap.add_argument("--drive", action="store_true")
     ap.add_argument("--models", nargs="+", default=["Qwen/Qwen2.5-0.5B"])
     ap.add_argument("--only", nargs="+", choices=ALL_RUNS)
-    ap.add_argument("--run", choices=ALL_RUNS)
+    ap.add_argument("--run", choices=[*ALL_RUNS, *SIZE_RUNS])
     ap.add_argument("--protocol", choices=PROTOCOLS, default="full",
                     help="full: score every position 1..2047 of each window; llama: second half only, "
                          "as llama-perplexity does. Applied to every row.")
@@ -558,7 +693,13 @@ def main() -> int:
                     help="auto: llama-perplexity.exe (GPU) for --protocol llama, else llama-cpp-python")
     ap.add_argument("--with-gguf", action="store_true", help="include the GGUF rows in --drive")
     ap.add_argument("--model", default="Qwen/Qwen2.5-0.5B")
+    ap.add_argument("--timing-only", action="store_true",
+                    help="measure only tokens per second (median of repeats); no perplexity")
+    ap.add_argument("--drive-timing", action="store_true",
+                    help="re-measure tokens per second of done rows and merge into docs/bench_accuracy.json")
     a = ap.parse_args()
+    if a.drive_timing:
+        return drive_timing(a.models, a.only)
     if a.drive:
         return drive(a.models, a.only, a.protocol, a.windows, a.gguf_backend, a.with_gguf)
     if a.run == "fp16":

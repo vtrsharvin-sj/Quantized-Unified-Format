@@ -8,7 +8,6 @@ from __future__ import annotations
 import argparse
 import collections
 import json
-import statistics
 import sys
 import time
 from pathlib import Path
@@ -17,6 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import torch  # noqa: E402
 
+from quf.bench.timing import median, time_repeats  # noqa: E402
 from quf.runtime import model as model_mod  # noqa: E402
 from quf.runtime.linear import QUFLinear  # noqa: E402
 from quf.runtime.model import QUFModel  # noqa: E402
@@ -44,7 +44,10 @@ def main() -> int:
             lin: QUFLinear = getattr(layer, n)
             inv[(lin.precision, str(lin.prepared.dtype))] += 1
     print("prepared weights (precision, dtype):", dict(inv))
-    print("lm_head:", type(m.lm_head).__name__, getattr(m.lm_head, "dtype", ""), "tied" if m.lm_head is m.embed else "")
+    w = getattr(m, "_lm_head_weight", None)
+    print("lm_head:", "QUFLinear" if isinstance(m.lm_head, QUFLinear) else "dense",
+          "tied" if m.lm_head is m.embed else "untied",
+          "cached weight dtype", getattr(w, "dtype", None), "shape", tuple(getattr(w, "shape", ())))
 
     # --- count prepare calls / gathers during decode
     calls = collections.Counter()
@@ -81,11 +84,10 @@ def main() -> int:
         return (n - 1) / (time.perf_counter() - t)
 
     decode(8)
-    decode(8)
     calls.clear()
-    rates = [decode(args.tokens) for _ in range(args.repeats)]
-    print(f"decode tok/s repeats: {[round(r, 1) for r in rates]}")
-    print(f"MEDIAN {statistics.median(rates):.1f}  min {min(rates):.1f}  max {max(rates):.1f}")
+    stats = time_repeats(lambda: decode(args.tokens), warmup=2, repeats=args.repeats)
+    print(f"decode tok/s repeats: {[round(r, 1) for r in stats.samples]}")
+    print(f"MEDIAN {stats.median:.1f}  min {stats.min:.1f}  max {stats.max:.1f}")
     print("dequant calls during decode:", dict(calls), "(expected {} when cached)")
 
     # --- per-component wall time with sync (distorting but additive)
@@ -139,7 +141,7 @@ def main() -> int:
     def lm():
         if isinstance(m.lm_head, QUFLinear):
             return m.lm_head(h)
-        return h.to(torch.float32) @ m.lm_head.to(torch.float32).t()
+        return h.to(m.dtype) @ m._lm_head_weight.t()  # cached once at load (task 22.2)
     for _ in range(3):
         lm()
     ts = []
@@ -149,7 +151,7 @@ def main() -> int:
         lm()
         sync()
         ts.append(time.perf_counter() - t)
-    print(f"\nlm_head alone: median {statistics.median(ts) * 1000:.2f} ms/token (lm_head dtype {m.lm_head.dtype if not isinstance(m.lm_head, QUFLinear) else 'QUFLinear'})")
+    print(f"\nlm_head alone: median {median(ts) * 1000:.2f} ms/token (cached weight dtype {m._lm_head_weight.dtype if m._lm_head_weight is not None else 'QUFLinear'})")
 
     # --- torch.profiler
     from torch.profiler import ProfilerActivity, profile

@@ -21,7 +21,16 @@ DEFAULT_PRECISION = "int4"
 PRESETS: dict[str, tuple[str, ...]] = {
     "down_proj": ("*.down_proj=int8",),
     "sensitive": ("*.down_proj=int8", "*.layers.{last}.*=int8"),
+    # Size_Candidates (Requirement 32). Each is the ``sensitive`` preset with some int8 rules
+    # dropped. A module without a rule is int4, and the converter's group size 32 and
+    # act-order apply to every int4 module, so "int4 g32" needs no extra rule.
+    "size_a": ("*.down_proj=int8",),  # A: last layer int4 g32 instead of int8
+    "size_b": ("*.layers.{last}.*=int8",),  # B: down_proj int4 g32 + act-order instead of int8
+    "size_c": (),  # C: A and B together, every decoder linear int4 g32
 }
+
+# Presets whose conversion needs group size 32 and act-order to match their definition.
+SIZE_CANDIDATES = ("size_a", "size_b", "size_c")
 
 
 class PrecisionRuleError(ValueError):

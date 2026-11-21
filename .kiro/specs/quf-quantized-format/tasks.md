@@ -462,7 +462,7 @@ The implementation language is Python (as used in the design). Property-based te
 - [x] 19. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 20. GGUF comparison (verified)
+- [x] 20. GGUF comparison (verified)
   - Demo: `python scripts/bench_accuracy.py --protocol llama` reports GGUF perplexity matching llama-perplexity.exe.
   - [x] 20.1 Validate the GGUF path against llama-perplexity.exe
     - Download the llama.cpp Windows release (CUDA if available), run it on the same text and context, and add an f16 or Q8_0 row that must be within 0.5% of fp16
@@ -472,11 +472,11 @@ The implementation language is Python (as used in the design). Property-based te
     - Check BOS handling, context and batch settings, second-half scoring, logits_all, and the GGUF tokenizer, then add the `--protocol` switch
     - _Requirements: 26.1, 26.3_
 
-  - [~] 20.3 Re-run Q4_K_M, Q4_0, and Q8_0 for 0.5B and 1.5B
+  - [x] 20.3 Re-run Q4_K_M, Q4_0, and Q8_0 for 0.5B and 1.5B
     - Use one Eval_Protocol for QUF and GGUF, and record file size and GPU tokens per second
     - _Requirements: 26.3, 26.4_
 
-- [ ] 21. Batched lm-evaluation-harness adapter
+- [x] 21. Batched lm-evaluation-harness adapter
   - Demo: hellaswag and arc_easy run on Qwen2.5-0.5B in minutes and report accuracy with stderr.
   - [x] 21.1 Batch loglikelihood requests
     - Pad batches, reuse repeated contexts, and run on GPU in `quf/bench/lm_eval_adapter.py`
@@ -486,11 +486,11 @@ The implementation language is Python (as used in the design). Property-based te
     - **Property 30: Batched log-likelihood equals single-request log-likelihood**
     - **Validates: Requirements 27.1, 27.2, 27.3**
 
-  - [~] 21.3 Run hellaswag and arc_easy
+  - [x] 21.3 Run hellaswag and arc_easy
     - Use limit 500 and a fixed seed for fp16 and QUF defaults on 0.5B, and on 1.5B if under about 20 minutes, and record accuracy with stderr
     - _Requirements: 27.4_
 
-- [ ] 22. Decode speed on 0.5B
+- [x] 22. Decode speed on 0.5B
   - Demo: the new defaults decode at a speed consistent with the other 0.5B settings.
   - [x] 22.1 Profile g_idx and int8 decode
     - Profile torch_gpu and cpu for re-gathering or per-call dequantization
@@ -500,43 +500,105 @@ The implementation language is Python (as used in the design). Property-based te
     - Fix any real slowdown and test that the prepared torch_gpu weight for g_idx and int8 modules is a cached fp16 tensor
     - _Requirements: 28.2_
 
-  - [~] 22.3 Stabilize the tokens per second measurement
+  - [x] 22.3 Stabilize the tokens per second measurement
     - Add warm-up, at least 5 repeats, and the median, then re-measure all rows for both models
     - _Requirements: 28.1, 28.3_
 
-  - [~] 22.4 Write property test for median timing
+  - [x] 22.4 Write property test for median timing
     - **Property 31: Median timing is order-independent**
     - **Validates: Requirements 28.1**
 
-- [ ] 23. CI and GitHub
+- [x] 23. CI and GitHub
   - Demo: the GitHub Actions run is green on ubuntu-latest and windows-latest.
   - [x] 23.1 Initialise git and scan for secrets
     - Confirm `.gitignore` excludes .quf files, eval_cache, dist, logs, venvs, and secrets, and scan for `pypi-` before staging
     - _Requirements: 29.1, 29.2_
 
-  - [-] 23.2 Commit and push to main
+  - [x] 23.2 Commit and push to main
     - Run `git ls-remote` first and stop and report if the remote has commits, never force-push, and store no tokens
     - _Requirements: 29.3, 29.4_
 
-  - [~] 23.3 Confirm GitHub Actions passes
+  - [x] 23.3 Confirm GitHub Actions passes
     - Fix failures on ubuntu-latest and windows-latest and push again
     - _Requirements: 29.5_
 
-- [ ] 24. Release 0.2.1
+- [x] 24. Release 0.2.1
   - Demo: the 0.2.1 wheel installs in a fresh venv and `quf --help` and `quf info` run.
-  - [~] 24.1 Update docs with verified numbers
+  - [x] 24.1 Update docs with verified numbers
     - Update README, docs, and RESULTS.md and remove the "not run (unverified)" markers now verified
+    - Depends on tasks 26 and 27, so the docs report the measured speed and size numbers from those tasks
     - _Requirements: 30.3_
 
-  - [~] 24.2 Bump version, changelog, build, and smoke test
+  - [x] 24.2 Bump version, changelog, build, and smoke test
     - Set 0.2.1 in `pyproject.toml` and `quf/__init__.py`, update CHANGELOG.md, rebuild, run `twine check`, and smoke test; do not upload
     - _Requirements: 30.1, 30.2, 30.4_
 
-- [~] 25. Final checkpoint - Ensure all tests pass
+- [-] 25. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
+
+- [x] 26. Fast decode path
+  - Demo: `quf bench` on Qwen2.5-0.5B and Qwen2.5-1.5B v020 reports median tokens per second for the eager and CUDA graph decoders, and docs/BACKENDS.md and docs/RESULTS.md show the speedup over the 40 to 50 tokens per second baseline.
+  - Runs before task 24.1 so that release 0.2.1 includes it.
+  - [x] 26.1 Add the Static_KV_Cache and fixed-shape Decode_Step
+    - Preallocate the per-layer cache once, update it in place with `index_copy_`, mask by position, copy prefill keys and values into it, and raise an error naming both lengths when the cache length is exceeded
+    - Use it on both the Torch_GPU and CPU Backends, keeping the CPU Backend correct
+    - _Requirements: 31.1, 31.2, 31.10_
+
+  - [x] 26.2 Add Fused_Projection for qkv and gate/up
+    - Concatenate cached fp16 weights and biases at `prepare` time, split the output by head widths, and free the unfused tensors
+    - _Requirements: 31.5_
+
+  - [x] 26.3 Add the CUDA_Graph_Decoder with eager fallback
+    - Warm up on a side stream, capture with `torch.cuda.graphs`, replay per token with static input and output tensors, and on any capture failure log at INFO and continue with the Eager_Decoder
+    - _Requirements: 31.3, 31.4_
+
+  - [x] 26.4 Probe and optionally add the torch.compile decode path
+    - Add a one-time probe that compiles a small function; enable the compiled path only if the probe passes on Windows without Triton, otherwise skip it and write the reason to docs/BACKENDS.md
+    - _Requirements: 31.8, 31.9_
+
+  - [x] 26.5 Write property test for graph versus eager decode
+    - **Property 32: Graph decode equals eager decode**
+    - Random prompts, lengths, and the shapes of both models with random weights; the CUDA graph variant carries the `gpu` marker and the CPU static-cache variant runs in CI
+    - **Validates: Requirements 31.2, 31.3, 31.6, 31.10**
+
+  - [x] 26.6 Write property test for fused projections
+    - **Property 33: Fused projection equals separate projections**
+    - **Validates: Requirements 31.5, 31.7**
+
+  - [x] 26.7 Write unit tests for the decode path
+    - Cache overflow error, INFO log and eager continuation when capture is forced to fail, fused weights replacing unfused ones, and the compile probe skip path
+    - _Requirements: 31.1, 31.4, 31.5, 31.9_
+
+  - [x] 26.8 Measure speed and update docs
+    - Run the 22.3 timing helper (warm-up, at least 5 repeats, median) on 0.5B and 1.5B v020 for the eager and graph decoders and report each speedup against the 40 to 50 tokens per second baseline
+    - Target at least 3x; if a model misses the target, report the measured number and the remaining bottleneck in docs/BACKENDS.md and docs/RESULTS.md
+    - _Requirements: 31.11, 31.12_
+
+- [x] 27. Size without losing precision
+  - Demo: `python scripts/size_study.py` prints a size and llama-protocol perplexity table for the v020 preset and every candidate on both models, and docs/RESULTS.md records the chosen default.
+  - Runs before task 24.1 so that release 0.2.1 includes it. Keep a candidate only if it helps.
+  - [x] 27.1 Add the size study script and candidate presets
+    - Add candidates A (last layer int4 g32), B (down_proj int4 g32 with act-order instead of int8), and C (A and B) as named mixed precision plans, and a script that converts, sizes, and evaluates them with `--protocol llama`
+    - _Requirements: 32.1, 32.2_
+
+  - [x] 27.2 Cost check and optional int6 or int5 group-wise option
+    - Check whether a new dtype code, packer, unpacker, reference dequantizer, and dequantization in both Backends fit in a small change that leaves Packed_Int4 tensors unchanged; implement it and add it as candidate D only if so, otherwise record candidate D as not evaluated with the reason
+    - If implemented, bump the format version, keep every older file readable, and document it in FORMAT.md
+    - _Requirements: 32.3, 32.6, 32.7_
+
+  - [x] 27.3 Run the study on both models and choose the default
+    - Convert and evaluate the v020 preset and all candidates on Qwen2.5-0.5B and Qwen2.5-1.5B under the llama protocol, adopt the smallest candidate within 1 percent of v020 perplexity on both models, and otherwise keep v020; record every size and perplexity in docs/RESULTS.md
+    - _Requirements: 32.1, 32.4, 32.5, 32.8_
+
+  - [x] 27.4 Write tests for the new default and any new format feature
+    - Test that the chosen preset name resolves to the expected per-module plan and that `quf info` reports it, and for a new dtype add Property 34 and an older-fixture read test
+    - **Property 34: New bit width round trip (only if a new bit width is added)**
+    - **Validates: Requirements 32.6, 32.7**
+    - _Requirements: 32.4, 32.5, 32.6, 32.7_
 
 ## Notes
 
+- Tasks 26 and 27 add the speed and size work. They run before task 24.1, so release 0.2.1 includes them, and all of their sub-tasks are required
 - Tasks 20 to 25 add the 0.2.1 verification work and all sub-tasks are required
 - Tasks 15 to 19 add the 0.2.0 accuracy upgrade. All of their sub-tasks are required, including tests
 - Tasks 11 to 14 extend the plan for native Windows and supersede the WSL and GPTQModel notes below
@@ -583,9 +645,14 @@ The implementation language is Python (as used in the design). Property-based te
     { "id": 29, "tasks": ["20.1", "21.1", "22.1", "23.1"] },
     { "id": 30, "tasks": ["20.2", "21.2", "22.2", "23.2"] },
     { "id": 31, "tasks": ["20.3", "21.3", "22.3", "22.4", "23.3"] },
-    { "id": 32, "tasks": ["24.1"] },
-    { "id": 33, "tasks": ["24.2"] },
-    { "id": 34, "tasks": ["25"] }
+    { "id": 32, "tasks": ["26.1", "27.1"] },
+    { "id": 33, "tasks": ["26.2", "27.2"] },
+    { "id": 34, "tasks": ["26.3", "27.3"] },
+    { "id": 35, "tasks": ["26.4", "26.5", "26.6", "26.7", "27.4"] },
+    { "id": 36, "tasks": ["26.8"] },
+    { "id": 37, "tasks": ["24.1"] },
+    { "id": 38, "tasks": ["24.2"] },
+    { "id": 39, "tasks": ["25"] }
   ]
 }
 ```

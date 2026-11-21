@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "quf"
-version = "0.2.0"
+version = "0.2.1"
 description = "QUF: Quantized Unified Format for 4-bit quantized decoder-only LLMs"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -31,9 +31,9 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/vtrsharvin-sj/Quantized-Model-Format"
-Repository = "https://github.com/vtrsharvin-sj/Quantized-Model-Format"
-Issues = "https://github.com/vtrsharvin-sj/Quantized-Model-Format/issues"
+Homepage = "https://github.com/vtrsharvin-sj/Quantized-Unified-Format"
+Repository = "https://github.com/vtrsharvin-sj/Quantized-Unified-Format"
+Issues = "https://github.com/vtrsharvin-sj/Quantized-Unified-Format/issues"
 
 [project.optional-dependencies]
 # Kept as an empty extra so `pip install quf[cuda]` still resolves; torch is a base dependency.
@@ -51,6 +51,7 @@ convert = [
 test = [
     "pytest>=7",
     "hypothesis>=6",
+    "tomli; python_version < '3.11'",
 ]
 
 [project.scripts]

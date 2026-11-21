@@ -478,3 +478,53 @@ Release 0.1.0 is published. Native GPTQ on Qwen2.5-0.5B (4-bit, group size 128) 
 2. THE build SHALL produce an sdist and a wheel that pass `twine check`, and the installed wheel SHALL run `quf --help` and `quf info`.
 3. THE README, docs, and RESULTS.md SHALL contain only measured numbers and SHALL drop the "not run (unverified)" marker from every row now verified.
 4. THE release tasks SHALL NOT upload to PyPI.
+
+## Speed and Size Extension (release 0.2.1)
+
+QUF decode on Torch_GPU measures about 40 to 50 tokens per second for Qwen2.5-0.5B and Qwen2.5-1.5B, against about 460 to 560 (0.5B) and 140 to 230 (1.5B) tokens per second for llama.cpp GGUF on the same GPU. Profiling in task 22.1 shows decode is CPU kernel-launch bound, at about 25 ms of CPU time against 6 ms of GPU time per token. Perplexity is already competitive under the llama protocol: 0.5B v020 scores 12.033 against 12.043 for Q4_K_M, and 1.5B v020 scores 8.395 against 8.600. File size is the other gap: v020 is 540 MB against 398 MB for Q4_K_M on 0.5B, and 1413 MB against 986 MB on 1.5B. This extension targets decode speed and file size without losing precision. The Results_Doc SHALL report the measured numbers whether or not the targets are reached.
+
+### Glossary additions
+
+- **Static_KV_Cache**: A KV_Cache whose key and value tensors are allocated once for a fixed maximum sequence length and updated in place.
+- **Decode_Step**: The single-token forward pass that reads the Static_KV_Cache and returns the next-token logits, with tensor shapes that do not change between calls.
+- **CUDA_Graph_Decoder**: The Torch_GPU path that captures the Decode_Step with `torch.cuda.graphs` and replays it for each generated token.
+- **Eager_Decoder**: The Torch_GPU and CPU path that runs the Decode_Step as ordinary PyTorch calls.
+- **Fused_Projection**: A single linear layer built at load time by concatenating the cached weights of the query, key, and value projections, or of the gate and up projections.
+- **Sensitive_Preset**: The v020 mixed precision plan that keeps selected modules at int8.
+- **Size_Candidate**: One alternative to the Sensitive_Preset evaluated in Requirement 32.
+- **Llama_Protocol**: The Eval_Protocol that matches llama-perplexity.exe, selected with `--protocol llama`.
+- **Speed_Target**: A median decode rate of at least 3 times the measured pre-change rate, on each of the two models.
+
+### Requirement 31: Fast decode path
+
+**User Story:** As a user with an NVIDIA GPU, I want decode to run close to GPU speed, so that generation is fast.
+
+#### Acceptance Criteria
+
+1. THE Runtime SHALL allocate a Static_KV_Cache once per generation session with a fixed maximum sequence length and update the Static_KV_Cache in place.
+2. THE Runtime SHALL execute each generated token through a Decode_Step whose tensor shapes are identical on every call.
+3. WHEN the Torch_GPU Backend starts a generation session, THE CUDA_Graph_Decoder SHALL capture the Decode_Step with `torch.cuda.graphs` and replay the capture for each subsequent token.
+4. IF CUDA graph capture fails, THEN THE Runtime SHALL log the failure at INFO level and continue with the Eager_Decoder.
+5. WHEN the Torch_GPU Backend prepares a layer, THE Backend SHALL build a Fused_Projection for query, key, and value, and a Fused_Projection for gate and up, from the Weight_Cache.
+6. FOR ALL prompts, prompt lengths, generation lengths, and the shapes of both Qwen2.5-0.5B and Qwen2.5-1.5B, THE CUDA_Graph_Decoder SHALL select the same greedy tokens as the Eager_Decoder and SHALL produce logits within an absolute tolerance of 1e-2 (equivalence property).
+7. FOR ALL prompts, THE Fused_Projection output SHALL equal the concatenation of the separate projection outputs within an absolute tolerance of 1e-3.
+8. WHERE `torch.compile` runs on Windows without Triton, THE Torch_GPU Backend SHALL offer a compiled Decode_Step as an optional path.
+9. IF `torch.compile` does not run on Windows without Triton, THEN THE Results_Doc SHALL record the path as skipped with the reason.
+10. THE CPU Backend SHALL use the Static_KV_Cache and SHALL produce the same logits as before the change within an absolute tolerance of 1e-2.
+11. WHEN the decode rate is measured, THE benchmark SHALL use the median timing helper from Requirement 28 on Qwen2.5-0.5B v020 and Qwen2.5-1.5B v020 and SHALL record the rates for Eager_Decoder and CUDA_Graph_Decoder.
+12. THE Results_Doc SHALL report whether each model reached the Speed_Target and SHALL state the measured speedup when the Speed_Target is not reached.
+
+### Requirement 32: Smaller files at equal precision
+
+**User Story:** As a model distributor, I want smaller files at the same perplexity, so that QUF is competitive with GGUF on size.
+
+#### Acceptance Criteria
+
+1. THE evaluation script SHALL measure file size and WikiText-2 Perplexity under the Llama_Protocol on Qwen2.5-0.5B and Qwen2.5-1.5B for the Sensitive_Preset and for each Size_Candidate.
+2. THE Size_Candidate set SHALL include int4 with group size 32 on the last layer only, and down_proj at group size 32 int4 with act-order in place of int8.
+3. WHERE an int6 or int5 group-wise option can be added to the format and the Backends without changing the Packed_Int4 layout of existing tensors, THE evaluation SHALL include that option as a Size_Candidate.
+4. WHEN a Size_Candidate has a WikiText-2 Perplexity within 1 percent of the v020 Perplexity on both models and a smaller file size than v020 on both models, THE converter SHALL adopt the candidate with the smallest file size as the default preset.
+5. IF no Size_Candidate meets the criteria in 32.4, THEN THE converter SHALL keep the v020 preset as the default and THE Results_Doc SHALL record the measured size and Perplexity of every Size_Candidate.
+6. WHERE a new tensor layout or Header field is added, THE Writer and Reader SHALL round-trip the new layout bit-identically, THE Reader SHALL read every older file unchanged, and FORMAT.md SHALL document the addition.
+7. WHERE a new quantization bit width is added, THE Backends SHALL dequantize the new layout to the same values as the reference dequantizer within an absolute tolerance of 1e-3.
+8. THE Results_Doc SHALL report the size and Perplexity table of all Size_Candidates and the default chosen.

@@ -67,6 +67,8 @@ def generate(
     top_p: float | None = None,
     seed: int = 0,
     stream: Callable[[str], None] | None = None,
+    static_cache: bool = True,
+    cuda_graph: bool | None = None,
 ) -> list[int]:
     """Generate up to ``max_new_tokens`` token ids after ``prompt``.
 
@@ -75,6 +77,13 @@ def generate(
     token is included in the returned ids but is not streamed. When ``stream``
     is given, each newly decoded text fragment is passed to it as soon as the
     token is generated.
+
+    ``static_cache`` (default True) uses the preallocated Static_KV_Cache and the
+    fixed-shape Decode_Step; False uses the growing KVCache path.
+
+    ``cuda_graph`` (default None = on for CUDA models) replays a captured CUDA graph of the
+    Decode_Step after prefill. False, or the ``QUF_NO_CUDA_GRAPH`` environment variable, turns
+    it off. If capture fails, one INFO line gives the reason and decoding continues eagerly.
 
     Raises:
         ContextLengthError: if prompt length + ``max_new_tokens`` exceeds the
@@ -91,12 +100,25 @@ def generate(
     generator = torch.Generator(device=model.device)
     generator.manual_seed(int(seed))
 
-    cache = model.new_cache()
+    use_static = static_cache and hasattr(model, "decode_token")
+    if use_static:
+        cache = model.new_static_cache(len(prompt_ids) + max_new_tokens)
+    else:
+        cache = model.new_cache()
     out: list[int] = []
     emitted = ""
     inputs = torch.tensor([prompt_ids], dtype=torch.long)
-    for _ in range(max_new_tokens):
-        logits = model.forward(inputs, cache)[0, -1]
+    decoder = None
+    for step in range(max_new_tokens):
+        if use_static and step == 1 and max_new_tokens > 1:
+            from quf.runtime.cuda_graph import make_decoder  # noqa: PLC0415
+
+            decoder = make_decoder(model, cache, cuda_graph)
+        if use_static and step > 0:
+            stepper = decoder if decoder is not None else model
+            logits = stepper.decode_token(out[-1], cache)[0, -1]
+        else:
+            logits = model.forward(inputs, cache)[0, -1]
         next_id = sample_next(
             logits, temperature=temperature, top_k=top_k, top_p=top_p, generator=generator
         )

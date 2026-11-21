@@ -120,3 +120,40 @@ A setting is a default only if it lowered perplexity by more than 0.02 against i
 - The new calibration is off because it raised perplexity by 0.07 and took 714 s to convert instead of 259 s. This is a WikiText-2 test, and the reference calibration is WikiText-2 train, so the comparison favors the reference calibration. A C4 or downstream evaluation could rank them differently. It stays available as `--multi-source-calibration`.
 - 3% target: **reached** with the default settings (+2.35%). Without mixed precision the best result is +3.12%, so the 3% target needs the int8 `down_proj` and last layer.
 - Each result is one conversion. The differences between g32 variants (for example 13.5528 and 13.5543) are well inside what a different calibration seed could change, so do not read an order into them.
+
+## Size candidate D: int6 or int5 group-wise
+
+Not evaluated: needs runtime changes.
+
+Cost check (task 27.2). A new precision needs changes in more than `quf/format` and `quf/quant`:
+
+- `quf/runtime/model.py` selects the weight loader by tensor suffix (`.qweight`, `INT8_SUFFIX`) and sizes its GPU cache by those suffixes, so a new suffix needs a new load branch there.
+- `quf/runtime/linear.py` derives `precision` from `QuantizedWeight` or `Int8Weight` only, and `quf/runtime/backends/*` (`prepare`, including the Marlin int4-only check) would need a new weight type or dispatch.
+- Format, writer validation, quantizer, GPTQ and converter would also need a new dtype code, packer, unpacker and version bump.
+
+The runtime changes cannot be avoided, and `quf/runtime/**` was off limits for this task because task 26.2 is editing it. No code was changed and Packed_Int4 tensors are unaffected.
+
+## Size study and default preset (task 27.3, Requirement 32)
+
+Llama protocol (`--protocol llama`), full WikiText-2 test split and the held-out C4 slice, group size 32, act-order, clip search, GPTQ. v020 rows are reused from `docs/bench_accuracy.json` (`models_llama`); candidate rows come from `scripts/size_study.py` and are saved in `docs/size_study.json`.
+
+| Model | Run | Description | File bytes | vs v020 size | wikitext2 ppl | vs v020 | c4 ppl | vs v020 |
+|---|---|---|---:|---:|---:|---:|---:|---:|
+| Qwen/Qwen2.5-0.5B | v020 | sensitive preset (down_proj and last layer int8) | 539605632 | +0.00% | 12.0326 | +0.00% | 18.8441 | +0.00% |
+| Qwen/Qwen2.5-0.5B | size_a | A: last layer int4 g32 | 535153472 | -0.83% | 12.0546 | +0.18% | 18.9052 | +0.32% |
+| Qwen/Qwen2.5-0.5B | size_b | B: down_proj int4 g32 with act-order | 497728832 | -7.76% | 12.0769 | +0.37% | 19.0473 | +1.08% |
+| Qwen/Qwen2.5-0.5B | size_c | C: A and B together | 491449152 | -8.92% | 12.1133 | +0.67% | 19.1446 | +1.59% |
+| Qwen/Qwen2.5-1.5B | v020 | sensitive preset (down_proj and last layer int8) | 1413323520 | +0.00% | 8.3954 | +0.00% | 13.6774 | +0.00% |
+| Qwen/Qwen2.5-1.5B | size_a | A: last layer int4 g32 | 1399383936 | -0.99% | 8.4062 | +0.13% | 13.7026 | +0.18% |
+| Qwen/Qwen2.5-1.5B | size_b | B: down_proj int4 g32 with act-order | 1257449536 | -11.03% | 8.4442 | +0.58% | 13.8663 | +1.38% |
+| Qwen/Qwen2.5-1.5B | size_c | C: A and B together | 1237729024 | -12.42% | 8.4580 | +0.75% | 13.8980 | +1.61% |
+
+
+Candidates: A = last layer int4; B = down_proj int4 with act-order, last layer stays int8; C = A and B (every decoder linear int4). D (int6/int5) was not evaluated, see below.
+
+### Decision
+
+- Requirement 32.4 (wikitext2 within 1% of v020 on both models, smaller file on both): A, B and C all qualify. C is the smallest (-8.9% on 0.5B, -12.4% on 1.5B; wikitext2 +0.67% and +0.75%).
+- Extra check on C4 (should not degrade more than about 1.5%): C reaches +1.59% and +1.61%, so C fails it. B stays at +1.08% and +1.38%.
+- **Default changed from `sensitive` (v020) to `size_b`**: the smallest candidate that also passes the C4 check. It is 7.8% smaller on 0.5B (497,728,832 bytes) and 11.0% smaller on 1.5B (1,257,449,536 bytes), at +0.37% and +0.58% wikitext2 perplexity. `--preset sensitive` restores v020. `--preset size_c` gives the smallest files if the C4 loss of about 1.6% is acceptable.
+- Single conversion per row, so differences of a few hundredths of a percent are within calibration noise.
