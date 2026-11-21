@@ -33,4 +33,4 @@ def test_urls_classifiers_version():
     p = _project()
     assert REPO_URL in p["urls"].values()
     assert p["classifiers"]
-    assert p["version"] == "0.2.1"
+    assert p["version"] == "0.3.0"

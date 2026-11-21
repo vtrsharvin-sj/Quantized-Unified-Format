@@ -69,7 +69,8 @@ def test_layout_property(tmp_path_factory):
     @given(_tensor_sets(), _json_dict, _json_dict, _json_dict)
     def run(ts, model_config, tokenizer, extra_quant):
         symmetric, tensors = ts
-        quant = dict(extra_quant)
+        reserved = {"modules", "bits", "group_size", "symmetric", "act_order"}
+        quant = {k: v for k, v in extra_quant.items() if k not in reserved}
         quant.update({"group_size": GROUP_SIZE, "symmetric": symmetric, "bits": 4})
         header = QUFHeader(model_config, tokenizer, quant, [])
         path = tmp / "m.quf"

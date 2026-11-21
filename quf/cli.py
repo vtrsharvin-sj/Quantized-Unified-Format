@@ -135,8 +135,9 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def _add_backend_args(p: argparse.ArgumentParser) -> None:
-    p.add_argument("--backend", choices=("auto", "cached", "fused", "marlin"), default="auto",
-                   help="GPU backend; auto picks cached or fused, marlin needs the optional gptqmodel package")
+    p.add_argument("--backend", choices=("auto", "cached", "fused", "marlin", "int4"), default="auto",
+                   help="GPU backend; auto picks int4 (Triton) when it works, else cached or fused; int4 forces "
+                        "the Triton backend; marlin needs the optional gptqmodel package")
     p.add_argument("--prefer-fused", action="store_true",
                    help="in auto mode, use the fused backend when it was measured faster")
 
@@ -389,7 +390,8 @@ def _cmd_run(args: argparse.Namespace) -> int:
 
     try:
         model = QUFModel.load(
-            args.path, device_option=args.device, backend_option=args.backend, prefer_fused=args.prefer_fused
+            args.path, device_option=args.device, backend_option=args.backend, prefer_fused=args.prefer_fused,
+            cuda_graph=None if args.cuda_graph else False,
         )
         tok_json = ((model.header.tokenizer or {}).get("files") or {}).get("tokenizer.json")
         if tok_json is None:
@@ -458,7 +460,36 @@ def _cmd_info(args: argparse.Namespace) -> int:
         print(json.dumps(_summarize_modules(header.quantization, args.verbose), indent=2, sort_keys=True))
         print(f"Tensor count: {len(header.tensors)}")
         print(SizeReport.from_header(header, file_bytes=size).format())
+    for line in _backend_report():
+        print(line)
     return 0
+
+
+def _backend_report() -> list[str]:
+    """Lines for ``quf info``: the Triton_Gate result and the Backend the selector would pick."""
+    if os.environ.get("QUF_NO_TRITON", "") == "1":
+        gate = "disabled by QUF_NO_TRITON=1"
+    else:
+        try:
+            from quf.device import detect_devices  # noqa: PLC0415
+
+            if not detect_devices().cuda_available:
+                gate = "no CUDA device"
+            else:
+                from quf.runtime.kernels.triton_kernels import triton_available  # noqa: PLC0415
+
+                ok, reason = triton_available()
+                gate = f"ok ({reason})" if ok else f"failed ({reason})"
+        except Exception as exc:  # noqa: BLE001 - info must not fail on this
+            gate = f"unknown ({type(exc).__name__}: {exc})"
+    try:
+        from quf.device import detect_devices  # noqa: PLC0415
+        from quf.runtime.selector import int4_probe, select_backend  # noqa: PLC0415
+
+        choice = select_backend("auto", detect_devices(), int4_probe=int4_probe).backend
+    except Exception as exc:  # noqa: BLE001
+        choice = f"unknown ({type(exc).__name__}: {exc})"
+    return [f"Triton gate: {gate}", f"Selected backend (auto): {choice}"]
 
 
 def _cmd_convert(args: argparse.Namespace) -> int:

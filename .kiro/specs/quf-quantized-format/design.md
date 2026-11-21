@@ -844,3 +844,96 @@ For any set of q, k, v weights and biases, and for any gate and up weights, and 
 For any weight matrix and supported group size, packing at the new bit width, writing and reading the QUF_File, and dequantizing returns the same values as the reference dequantizer within an absolute tolerance of 1e-3, and every older fixture file still reads unchanged.
 
 **Validates: Requirements 32.6, 32.7**
+
+## Triton Int4 Kernel Extension Design (release 0.3.0)
+
+### Overview
+
+The Int4_Backend applies int4 modules with a Triton W4A16 GEMV kernel that reads Packed_Int4 weights directly. Decode with CUDA graphs is GPU-bound and about 73% of GPU time is fp16 gemv over cached fp16 weights, so reading 4-bit weights instead of 16-bit weights cuts weight traffic by about 4x for those modules.
+
+Decisions and rationale:
+
+| Decision | Rationale |
+|---|---|
+| Triton through the optional extra `quf[fast]` (`triton-windows` on Windows, `triton` on Linux, platform markers) | The wheel stays pure Python. Task 26.4 showed triton-windows 3.9 works with torch 2.11 on sm_120. |
+| No C++/CUDA extension | There is no nvcc, and extensions need per-platform wheels. |
+| Act-order: permute weight columns at load, permute the activation per call | Avoids an indexed gather inside the kernel and keeps loads contiguous. |
+| int8 modules (7 of 168 under size_b) use the cached fp16 path | They are few, and an int8 kernel adds code and risk for little gain. |
+| M at most 16 uses the GEMV kernel, larger M dequantizes into a reused fp16 buffer and runs a matmul | Decode and short prefill are bandwidth-bound, long prefill is compute-bound and cuBLAS is better there. |
+| int4 modules keep packed weights only | GPU memory drops because no fp16 cache exists for them. |
+| Kernels must be CUDA-graph capturable | Decode speed depends on graph replay. |
+
+### Architecture
+
+```mermaid
+flowchart TD
+    CLI[quf run / --backend int4] --> Sel[Backend_Selector]
+    Sel -->|QUF_NO_TRITON=1, no CUDA, gate or self-test fails| TG[Torch_GPU Backend]
+    Sel -->|CUDA, gate and self-test pass| I4[Int4_Backend]
+    I4 --> Gate[Triton_Gate and Self_Test]
+    I4 --> Prep[prepare: Kernel_Layout repack]
+    Prep -->|int4| PK[Packed weights, scales, zeros]
+    Prep -->|int8 or unsupported| FP[Cached fp16 path]
+    PK --> M{M rows}
+    M -->|1 to 16| GEMV[Int4_Kernel GEMV]
+    M -->|above 16| DQ[Dequantize into reused fp16 buffer, then matmul]
+    GEMV --> CG[CUDA_Graph_Decoder]
+```
+
+### Components and Interfaces
+
+- `quf/backends/triton_kernels.py`: the Triton kernels and a thin launcher. `int4_gemv(x, packed, scales, zeros, group_size, out) -> Tensor` writes into a preallocated output. `repack_int4(qweight, scales, zeros, g_idx) -> Int4Layout` builds the Kernel_Layout and the column permutation. `triton_available() -> TritonStatus` is the Triton_Gate and never raises.
+- `quf/backends/triton_int4.py`: the Int4_Backend. `prepare(module)` repacks int4 modules, routes int8 and unsupported modules to the fp16 path, and builds Fused_Projections by concatenating packed tensors along the output dimension. `linear(x, module)` picks the GEMV kernel for M at most 16 and the Prefill_Path otherwise. `self_test()` compares kernel output with the Reference_Dequantizer for group sizes 32, 64, 128, symmetric and asymmetric.
+- `quf/backends/select.py`: `select_backend(has_cuda, triton_ok, self_test_ok, env_no_triton, requested, default_is_int4)` is a pure function returning a backend name and an optional reason string for the single INFO line.
+- CLI: `--backend int4` and the environment variable `QUF_NO_TRITON=1`. `quf info` prints the selected Backend and the Triton_Gate result.
+- `pyproject.toml`: `[project.optional-dependencies] fast = ["triton-windows; sys_platform == 'win32'", "triton; sys_platform == 'linux'"]`.
+
+The Prefill_Path reuses one fp16 buffer sized for the largest int4 module, allocated at prepare time, so no allocation occurs during graph capture. Static output buffers for the GEMV launcher are also allocated at prepare time.
+
+### Data Models
+
+`Int4Layout` (in memory only, the QUF_File format does not change):
+
+- `packed`: int32 or uint8 tensor, two 4-bit values per byte along the input dimension, arranged for contiguous loads per output row block.
+- `scales`: fp16, shape `[N, K / group_size]`.
+- `zeros`: fp16 or packed int4 zero points, absent for symmetric weights.
+- `perm`: int64 column permutation or None, applied to the activation per call when act-order is present.
+- `group_size`: 32, 64, or 128.
+
+Accumulation is fp32 inside the kernel and the result is stored as fp16. The Fused_Projection layout concatenates `packed`, `scales`, and `zeros` along N and splits the output by head widths.
+
+### Error Handling
+
+- Triton_Gate failure (import error, no device, compile error): log one INFO line with the reason and select Torch_GPU. With `--backend int4` the same failure is an error that states the reason.
+- Self_Test mismatch: treated like a Triton_Gate failure.
+- Unsupported module shape or group size: that module uses the cached fp16 path and the module name is logged at INFO level.
+- Graph capture failure: the existing eager fallback from Requirement 31.4 applies.
+- `QUF_NO_TRITON=1`: Triton is never imported.
+
+### Correctness Properties
+
+*A property is a characteristic or behavior that should hold true across all valid executions of a system-essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
+
+### Property 35: Int4 kernel equals the fp32 reference
+
+For any output width, input width, supported group size (32, 64, 128), zero point mode (symmetric or asymmetric), optional g_idx permutation, activation with M from 1 to 16, and fused or unfused layout, the Int4_Kernel output equals the Reference_Dequantizer weight times the activation computed in fp32 within an absolute tolerance of 1e-2 plus a relative tolerance of 2e-3.
+
+**Validates: Requirements 33.1, 33.2, 33.3, 33.4, 33.5, 33.7, 33.8**
+
+### Property 36: Backend selection rules with the int4 backend
+
+For any combination of CUDA presence, Triton_Gate result, Self_Test result, QUF_NO_TRITON value, requested backend, and default decision, the selection function returns a deterministic Backend that follows these rules: no CUDA gives CPU, QUF_NO_TRITON equal to 1 never gives the Int4_Backend, a failed gate or Self_Test gives Torch_GPU with a reason for the default and an error for an explicit `--backend int4`, and a passing gate with the default decision on gives the Int4_Backend.
+
+**Validates: Requirements 34.2, 34.3, 34.4, 34.5, 34.6, 34.8**
+
+### Property 37: Int4 backend greedy tokens equal Torch_GPU
+
+For any prompt, prompt length, and generation length on a tiny model with random quantized weights, the Int4_Backend selects the same greedy tokens as the Torch_GPU_Reference, both with the CUDA_Graph_Decoder and with the Eager_Decoder.
+
+**Validates: Requirements 35.1**
+
+### Testing Strategy
+
+Property-based testing applies because the kernel, the repack, and the selector are functions of structured inputs. Use Hypothesis, with at least 100 iterations per property, and tag each test `Feature: quf-quantized-format, Property N: <text>`. Property 35 and Property 37 need a GPU and Triton, so they carry the `triton` marker and CI skips them. Property 36 is a pure function and runs in CPU CI.
+
+Unit and integration tests cover: the Triton_Gate with a mocked missing import, the Self_Test failure path, int8 fallback routing, the Prefill_Path boundary at M equal to 16 and 17, CUDA graph capture and replay of the kernel, fused weight shapes, the whole-model logits check on the real 0.5B file, and the `quf[fast]` extra metadata. Speed, memory, and perplexity are measured with scripts and recorded in docs/BACKENDS.md and docs/RESULTS.md, not asserted in tests.

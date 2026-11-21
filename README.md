@@ -8,14 +8,14 @@ Supported architectures: `Qwen2ForCausalLM` (first), with `Qwen3ForCausalLM` add
 
 ## Summary
 
-Qwen2.5 on an RTX 5080 Laptop GPU, native Windows. Perplexity uses the `llama` protocol (positions 1024 to 2046 of each 2048-token window, as `llama-perplexity` does) over the full WikiText-2 test split and a held-out C4 slice. "QUF 0.2.1 defaults" is the `size_b` preset.
+Qwen2.5 on an RTX 5080 Laptop GPU, native Windows. Perplexity uses the `llama` protocol (positions 1024 to 2046 of each 2048-token window, as `llama-perplexity` does) over the full WikiText-2 test split and a held-out C4 slice. "QUF 0.3.0 defaults" is the `size_b` preset with the int4 backend.
 
 Qwen/Qwen2.5-0.5B:
 
 | | WikiText-2 ppl | C4 ppl | File size (bytes) | GPU decode tok/s |
 | --- | --- | --- | --- | --- |
 | fp16 | 11.7398 | 18.2394 | 988,065,536 | 45.8 (Hugging Face generate) |
-| QUF 0.2.1 defaults (`size_b`) | 12.0769 (+2.87%) | 19.0473 (+4.43%) | 497,728,832 | 255.2 (QUF, CUDA graph) |
+| QUF 0.3.0 defaults (`size_b`, int4 backend) | 12.0769 (+2.87%) | 19.0473 (+4.43%) | 497,728,832 | 284 (QUF, CUDA graph; 508 MiB GPU after load) |
 | GGUF Q4_K_M | 12.0425 (+2.58%) | 18.7241 (+2.66%) | 397,807,584 | 764.2 (llama.cpp) |
 
 Qwen/Qwen2.5-1.5B:
@@ -23,11 +23,11 @@ Qwen/Qwen2.5-1.5B:
 | | WikiText-2 ppl | C4 ppl | File size (bytes) | GPU decode tok/s |
 | --- | --- | --- | --- | --- |
 | fp16 | 8.2964 | 13.4756 | 3,087,428,608 | 30.2 (Hugging Face generate) |
-| QUF 0.2.1 defaults (`size_b`) | 8.4442 (+1.78%) | 13.8663 (+2.90%) | 1,257,449,536 | 82.7 (QUF, CUDA graph) |
+| QUF 0.3.0 defaults (`size_b`, int4 backend) | 8.4442 (+1.78%) | 13.8663 (+2.90%) | 1,257,449,536 | 146 (QUF, CUDA graph; 1320 MiB GPU after load) |
 | GGUF Q4_K_M | 8.5998 (+3.66%) | 13.9536 (+3.55%) | 986,048,160 | 450.8 (llama.cpp) |
 
 - **tok/s comes from different engines** (Hugging Face generate, the QUF runtime, llama.cpp) with different measurement setups, so it is a rough guide and not a like-for-like comparison.
-- **QUF is slower than llama.cpp**: 255 against 764 tok/s on 0.5B and 83 against 451 tok/s on 1.5B. The QUF runtime decodes from cached fp16 weights and has no 4-bit kernels.
+- **QUF is still slower than llama.cpp**: 284 against 757 tok/s on 0.5B and 146 against 423 tok/s on 1.5B (llama-bench in the same session), which is 2.6 to 2.9x slower. The default int4 backend reads packed 4-bit weights with Triton kernels. It is 1.21x (0.5B) and 1.46x (1.5B) faster than the cached fp16 backend (`torch_gpu`, 234 and 100 tok/s in the same run) and uses 45 to 54 percent of its GPU memory (508 against 947 MiB, 1320 against 2951 MiB), with the same perplexity.
 - **QUF files are larger than GGUF Q4_K_M**: 1.25x on 0.5B and 1.28x on 1.5B. The 0.5B Q4_K_M file is not pure 4-bit K-quant, because several tensors fall back to Q5_0 or Q8_0 (see [docs/RESULTS.md](docs/RESULTS.md)).
 - **Perplexity**: QUF is ahead of Q4_K_M on 1.5B (both texts) and behind it on 0.5B (both texts). The 3% target against fp16 is met on WikiText-2 for both models and on C4 for 1.5B (+2.90%). It is missed on C4 for 0.5B (+4.43%).
 - **lm-evaluation-harness** (hellaswag and arc_easy, 0-shot, 500 examples each): the 0.2.1 default `size_b` files are within one standard error of fp16 on every score except 0.5B arc_easy acc (0.612 against 0.636, 1.1 standard errors). The 0.2.0 `sensitive` files were within one standard error everywhere. Table below.
@@ -68,7 +68,8 @@ quf bench out.quf --out results.json
 | `torch_gpu` backend on RTX 5080 Laptop (compute capability 12.0) | Verified: `quf run` and `quf bench` work on CUDA with a real converted Qwen2.5-0.5B. |
 | `torch_fused` backend | Verified, but slower than `torch_gpu` on this GPU (uses less memory). |
 | gigatoken on Windows | Verified: gigatoken 0.11.0 installs and runs, 36.8x faster than HF `tokenizers` on WikiText-2 with identical ids. |
-| CUDA graph decode | Verified: default on GPU. 255.2 tok/s on 0.5B and 82.7 on 1.5B, against 57.8 and 46.6 eager. Slower than llama.cpp (764 and 451). |
+| `triton_int4` backend | Verified: default on GPU with `pip install "quf[fast]"`. 1.21x (0.5B) and 1.46x (1.5B) faster than `torch_gpu` in graph mode, about half the GPU memory, same perplexity. Slower in eager mode, so `auto` avoids it with `--no-cuda-graph`. |
+| CUDA graph decode | Verified: default on GPU. With the default int4 backend (0.3.0): 284.2 tok/s on 0.5B and 145.6 on 1.5B, against 46.7 and 30.9 eager. With `torch_gpu` in the same run: 234.4 and 99.7 with the graph, 58.4 and 40.6 eager. Slower than llama.cpp (756.5 and 422.8 in that session). The 0.2.1 `torch_gpu` figures (255.2 and 82.7 graph) are in Measured results. |
 | Perplexity target (3 percent) | `llama` protocol, default `size_b`: reached on WikiText-2 for 0.5B (+2.87%) and 1.5B (+1.78%) and on C4 for 1.5B (+2.90%). Missed on C4 for 0.5B (+4.43%). The 0.1.0 settings missed it. |
 | GGUF comparison | Verified: Q4_K_M perplexity from `llama-perplexity` on the GPU, same text and protocol (see Summary). |
 | lm-evaluation-harness scores | Verified on the default `size_b` files: within one standard error of fp16 on hellaswag and arc_easy, except 0.5B arc_easy acc (1.1 standard errors). 0.2.0 `sensitive` rows kept for comparison. |
@@ -87,6 +88,7 @@ pip install quf             # core: format, quantizer, runtime (torch is a base 
 pip install "quf[cuda]"     # same as core; kept so the extra name resolves
 pip install "quf[convert]"  # adds transformers, datasets, accelerate, gigatoken, tokenizers,
                             # safetensors, huggingface_hub for `quf convert`
+pip install "quf[fast]"     # adds Triton; enables the default int4 GPU backend
 pip install "quf[test]"     # pytest and hypothesis
 ```
 
@@ -143,14 +145,15 @@ This prints the model config, quantization scheme, tensor count and file size. A
 quf run out.quf --prompt "Hello" --max-new-tokens 64 --temperature 0
 ```
 
-Options: `--max-new-tokens` (64), `--temperature` (0 means greedy), `--top-k`, `--top-p`, `--seed` (0), `--no-stream`, `--device {auto,cpu,cuda}` (auto), `--backend {auto,cached,fused,marlin}` (auto), `--prefer-fused`, `--no-cuda-graph`.
+Options: `--max-new-tokens` (64), `--temperature` (0 means greedy), `--top-k`, `--top-p`, `--seed` (0), `--no-stream`, `--device {auto,cpu,cuda}` (auto), `--backend {auto,int4,cached,fused,marlin}` (auto), `--prefer-fused`, `--no-cuda-graph`.
 
-**CUDA graph decode.** On a CUDA device, decoding replays a captured CUDA graph by default. `--no-cuda-graph` or the environment variable `QUF_NO_CUDA_GRAPH=1` turns it off and decodes eagerly. If graph capture fails, one INFO line gives the reason and decoding continues eagerly. Median of 7 runs, 128 new tokens, RTX 5080 Laptop: 0.5B 57.8 tok/s eager and 255.2 with the graph, 1.5B 46.6 eager and 82.7 with the graph.
+**CUDA graph decode.** On a CUDA device, decoding replays a captured CUDA graph by default. `--no-cuda-graph` or the environment variable `QUF_NO_CUDA_GRAPH=1` turns it off and decodes eagerly. If graph capture fails, one INFO line gives the reason and decoding continues eagerly. Median of 7 runs, 128 new tokens, RTX 5080 Laptop, default `size_b` files, 0.3.0 measurement. `triton_int4`: 0.5B 46.7 tok/s eager and 284.2 with the graph, 1.5B 30.9 eager and 145.6 with the graph. `torch_gpu`: 0.5B 58.4 eager and 234.4 with the graph, 1.5B 40.6 eager and 99.7 with the graph.
 
 Backends:
 
 - `cpu`: used when no NVIDIA GPU is present.
-- `torch_gpu` (`--backend cached`): dequantizes weights to fp16 at load. Default on GPU when the weights fit in free GPU memory.
+- `triton_int4` (`--backend int4`): keeps packed int4 on the GPU and reads it with Triton kernels. **Default on GPU** when Triton imports and its self-test passes. Install it with `pip install "quf[fast]"`. It is faster than `torch_gpu` in the default CUDA graph mode (1.21x on 0.5B, 1.46x on 1.5B) and uses about half the GPU memory. Without the extra, with `QUF_NO_TRITON=1`, or when the self-test fails, `auto` uses `torch_gpu`. `--backend int4` reports an error with the reason when it is unavailable. Eager decode is slower with int4 than with `torch_gpu`, so `auto` picks `torch_gpu` when `--no-cuda-graph` or `QUF_NO_CUDA_GRAPH=1` is set, and a failed graph capture logs a hint to use `--backend cached`.
+- `torch_gpu` (`--backend cached`): dequantizes weights to fp16 at load. Default on GPU when the int4 backend is unavailable and the weights fit in free GPU memory.
 - `torch_fused` (`--backend fused`): keeps packed int4 on the GPU. Chosen automatically when the cached weights do not fit, or with `--prefer-fused`.
 - `marlin`: optional, only with `--backend marlin`, never automatic. Unverified on this hardware.
 
@@ -201,7 +204,7 @@ What this shows:
 - The Tokens/s column in the tables above is from earlier single short runs on the pre-fast-path decoder (the fp16 row uses Hugging Face generate). Do not read an order into small differences. Current decode speed is in the paragraph below.
 - GGUF Q4_K_M and lm-evaluation-harness results are in the Summary and in [docs/RESULTS.md](docs/RESULTS.md).
 
-Decode speed with the fast path (default `size_b` files, 128 new tokens, median of 7 runs after 2 warm-ups, RTX 5080 Laptop): Qwen2.5-0.5B 57.8 tokens/s eager and 255.2 with the CUDA graph (6.23x the earlier 40.9); Qwen2.5-1.5B 46.6 eager and 82.7 with the CUDA graph (2.70x the earlier 30.7, **below the 3x target**). CPU backend on 0.5B: 22.8. llama.cpp Q4_K_M on the same GPU runs 764 (0.5B) and 451 (1.5B) tokens/s, so QUF is slower; it is also a different engine, so the numbers are not like for like. See [docs/BACKENDS.md](docs/BACKENDS.md). gigatoken tokenized WikiText-2 train in 0.23 s against 8.44 s for HF tokenizers (36.8x, identical ids).
+Decode speed of the 0.2.1 `torch_gpu` fast path (these are 0.2.1 figures, measured before the int4 backend; the 0.3.0 figures are in the Summary and the CUDA graph paragraph above; default `size_b` files, 128 new tokens, median of 7 runs after 2 warm-ups, RTX 5080 Laptop): Qwen2.5-0.5B 57.8 tokens/s eager and 255.2 with the CUDA graph (6.23x the earlier 40.9); Qwen2.5-1.5B 46.6 eager and 82.7 with the CUDA graph (2.70x the earlier 30.7, **below the 3x target**). CPU backend on 0.5B: 22.8. llama.cpp Q4_K_M on the same GPU ran 764 (0.5B) and 451 (1.5B) tokens/s in that earlier session (757 and 423 in the 0.3.0 session), so QUF is slower; it is also a different engine, so the numbers are not like for like. See [docs/BACKENDS.md](docs/BACKENDS.md). gigatoken tokenized WikiText-2 train in 0.23 s against 8.44 s for HF tokenizers (36.8x, identical ids).
 
 ## Documentation
 

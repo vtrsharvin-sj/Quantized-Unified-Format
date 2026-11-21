@@ -30,11 +30,18 @@ def pytest_configure(config: pytest.Config) -> None:
         "markers", "gpu: requires an NVIDIA GPU (skipped when none is available)"
     )
     config.addinivalue_line(
+        "markers", "triton: requires Triton (skipped when unavailable)"
+    )
+    config.addinivalue_line(
+        "markers", "realmodel: needs a real converted model file (skipped when missing)"
+    )
+    config.addinivalue_line(
         "markers", "convert: requires the convert extra and a real model conversion"
     )
 
 
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
+    _skip_triton(items)
     if not any("gpu" in item.keywords for item in items):
         return
     if _nvidia_gpu_available():
@@ -43,3 +50,17 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
     for item in items:
         if "gpu" in item.keywords:
             item.add_marker(skip_gpu)
+
+
+def _skip_triton(items: list[pytest.Item]) -> None:
+    if not any("triton" in item.keywords for item in items):
+        return
+    from quf.runtime.kernels.triton_kernels import triton_available
+
+    ok, reason = triton_available()
+    if ok:
+        return
+    skip = pytest.mark.skip(reason=f"triton unavailable: {reason}")
+    for item in items:
+        if "triton" in item.keywords:
+            item.add_marker(skip)

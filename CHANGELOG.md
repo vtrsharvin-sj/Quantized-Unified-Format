@@ -1,4 +1,18 @@
 # Changelog
+## 0.3.0
+Int4 GPU backend release. The file format is unchanged (versions 1 and 2).
+### Runtime speed and memory
+- **New `triton_int4` backend, default on GPU with `pip install "quf[fast]"`.** It keeps packed int4 weights on the GPU and reads them with Triton kernels. Measured against `torch_gpu` (default `size_b` files, CUDA graph, 128 new tokens, median of 7 runs, RTX 5080 Laptop): Qwen2.5-0.5B 284 against 234 tok/s (1.21x), Qwen2.5-1.5B 146 against 100 tok/s (1.46x).
+- GPU memory after load is 45 to 54 percent of `torch_gpu`: 508 against 947 MiB (0.5B) and 1320 against 2951 MiB (1.5B).
+- Perplexity is identical to `torch_gpu` (full-window WikiText-2 and C4 match bit for bit), and greedy tokens are identical.
+- **Eager-mode guard.** Eager decode is slower with int4 than with `torch_gpu` (46.7 against 58.4 tok/s on 0.5B, 30.9 against 40.6 on 1.5B), so `auto` picks `torch_gpu` when `--no-cuda-graph` or `QUF_NO_CUDA_GRAPH=1` is set. A failed graph capture logs a hint to use `--backend cached`.
+- `quf run --backend int4` forces the Triton backend and reports an error with the reason when it is unavailable. The environment variable `QUF_NO_TRITON=1` disables it, and `auto` then uses `torch_gpu`. `auto` also falls back to `torch_gpu` when Triton is missing or its self-test fails.
+### Logging
+- Quieter per-module logs: the per-module routing summary is logged at DEBUG, and INFO shows a single "Selected backend" line with the reason.
+### Honest gap to llama.cpp
+- QUF is still 2.6 to 2.9x slower than llama.cpp Q4_K_M on the same GPU: 284 against 757 tok/s (0.5B) and 146 against 423 tok/s (1.5B). QUF files are also 1.25x and 1.28x larger than GGUF Q4_K_M. Different engines, so not a like-for-like comparison. Details in `docs/BACKENDS.md` and `docs/bench_accuracy.json`.
+### Packaging
+- New `fast` extra: Triton (`triton-windows` on Windows, `triton` on Linux).
 
 ## 0.2.1
 Decode speed and default-size release. The file format is unchanged (versions 1 and 2).

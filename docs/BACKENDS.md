@@ -1,4 +1,4 @@
-# Backend measurements (task 12.5)
+﻿# Backend measurements (task 12.5)
 
 Model: Qwen2.5-0.5B converted with `quf convert` (469,483,072 bytes). GPU: NVIDIA GeForce RTX 5080 Laptop (sm_120, 16 GiB). torch 2.11.0+cu128, Windows native. Triton is not installed, so `torch_fused` ran in eager mode (no `torch.compile`).
 
@@ -84,3 +84,82 @@ Speed_Target (3x the measured pre-change median, which is the v020 row in `bench
 - 1.5B: **not reached**. The CUDA graph gives 2.70x (82.7 tok/s), short of the 92.0 tok/s that 3x needs. Against a flat 40 tok/s baseline it is 2.07x. Eager decode is 1.52x.
 
 Remaining bottleneck (ad hoc probe, not a repeated benchmark): replaying the captured graph alone takes 3.18 ms per token on 0.5B (314 tok/s) and 6.61 ms per token on 1.5B (151 tok/s). On 1.5B the profiler puts 73 percent of GPU time in two fp16 `gemv` kernels (cuBLAS matvec on the cached fp16 weights, about 3 GB read per token, roughly 480 GB/s). The decode step is now GPU-bound on reading fp16 weights, so the next gain needs 4-bit kernels (as in llama.cpp), which the runtime does not have. The end-to-end 1.5B rate (82.7) is also well below the replay rate (151). The gap is about 0.6 s per 128-token run outside the replay and was not isolated here (candidates: per-token argmax and host sync, prefill, graph capture). The run-to-run spread is small (under 4 percent), so the number is stable.
+
+## Int4 backend measurements and the default decision (tasks 31.1 and 31.2)
+The decision is in the last subsection. Script: `scripts/measure_decode_speed.py --compare torch_gpu triton_int4` (speed), `--memory --backend X` (memory, fresh process each), `scripts/bench_accuracy.py --ppl-quf FILE --backend X --protocol llama` (perplexity). Raw numbers: `docs/bench_accuracy.json`, key `int4_backend`; logs in `eval_cache/int4/`. Files: `eval_cache/lm/sb05.quf` (497,728,832 bytes) and `sb15.quf` (1,257,449,536 bytes), size_b preset. RTX 5080 Laptop, Windows, GPU idle before every step (nvidia-smi 0 MiB), triton-windows. Prompt `The quick brown fox`, 128 new tokens (all runs generated exactly 128), greedy, EOS suppressed, 2 warm-up runs, median of 7, the two backends alternate inside every repeat. End-to-end covers prefill, graph capture, and decode. Steady state is the mean gap between consecutive `decode_token` calls (prefill and capture excluded; includes the per-token argmax and host sync).
+
+### Speed
+| Model | Backend | Mode | End-to-end tok/s (median, min to max) | Steady decode ms/tok | Steady tok/s |
+|---|---|---|---|---|---|
+| 0.5B | torch_gpu | eager | 58.4 (57.0 to 59.2) | 17.08 | 58.5 |
+| 0.5B | triton_int4 | eager | 46.7 (44.4 to 47.6) | 21.38 | 46.8 |
+| 0.5B | torch_gpu | graph | 234.4 (227.9 to 240.1) | 3.625 | 275.9 |
+| 0.5B | triton_int4 | graph | 284.2 (275.9 to 295.5) | 2.654 | 376.8 |
+| 1.5B | torch_gpu | eager | 40.6 (39.1 to 41.6) | 24.60 | 40.6 |
+| 1.5B | triton_int4 | eager | 30.9 (30.1 to 34.3) | 32.33 | 30.9 |
+| 1.5B | torch_gpu | graph | 99.7 (98.1 to 101.1) | 9.157 | 109.2 |
+| 1.5B | triton_int4 | graph | 145.6 (141.2 to 148.5) | 5.779 | 173.0 |
+| 0.5B | llama.cpp Q4_K_M (reference) | n/a | 756.5 (724.7 to 795.5) | n/a | n/a |
+| 1.5B | llama.cpp Q4_K_M (reference) | n/a | 422.8 (410.3 to 451.0) | n/a | n/a |
+
+Graph mode was confirmed active (the capture succeeded) for both backends. llama.cpp numbers come from `llama-bench.exe -ngl 99 -p 4 -n 128`, a different engine, for reference only.
+
+triton_int4 in graph mode beats torch_gpu by 1.21x (0.5B) and 1.46x (1.5B) end to end, and by 1.37x and 1.58x in steady state. In eager mode it is slower than torch_gpu (0.80x and 0.76x): the Triton launches add host overhead that the graph removes.
+
+Note: torch_gpu graph measured 234.4 and 99.7 tok/s here, against 255.2 and 82.7 in task 26.8. The 0.5B figure is 8 percent lower and the 1.5B figure 21 percent higher than the earlier run, so the alternating loop and the earlier separate-process runs do not give identical torch_gpu numbers.
+
+### Speed target (1.5x of 255 and 83 tok/s, graph mode, end to end)
+| Model | Baseline | Required | Measured triton_int4 graph | Speedup | Met |
+|---|---|---|---|---|---|
+| 0.5B | 255 | 382.5 | 284.2 | 1.11x | **No** |
+| 1.5B | 83 | 124.5 | 145.6 | 1.75x | Yes |
+
+The 0.5B steady-state rate (376.8 tok/s) is within 2 percent of 382.5, but the end-to-end rate is what the target uses, and the 128-token run spends about 0.11 s of 0.45 s outside steady decode (prefill and graph capture).
+
+### GPU memory (MiB)
+| Model | Backend | Allocated after load | Device used after load (driver) | Peak allocated, graph generation | Peak reserved | Device used after generation |
+|---|---|---|---|---|---|---|
+| 0.5B | torch_gpu | 947 | 1554 | 976 | 1530 | 1562 |
+| 0.5B | triton_int4 | 508 | 786 | 529 | 750 | 812 |
+| 1.5B | torch_gpu | 2951 | 5018 | 2984 | 4994 | 3920 |
+| 1.5B | triton_int4 | 1320 | 2170 | 1344 | 2134 | 2120 |
+
+"Device used" is the drop in free memory from `torch.cuda.mem_get_info` and includes the CUDA context. The 1.5B torch_gpu value after load (5018) is above the value after generation (3920) because the allocator released a load-time transient. Generation includes the Static_KV_Cache and the CUDA graph. triton_int4 keeps weights packed in int4, so it uses 45 to 54 percent of the torch_gpu memory.
+
+### Perplexity, llama protocol (second half of each 2048 window), full WikiText-2 test and the C4 slice
+| Model | Backend | WikiText-2 | C4 slice | Difference vs torch_gpu |
+|---|---|---|---|---|
+| 0.5B | torch_gpu | 12.0769 | 19.0473 | n/a |
+| 0.5B | triton_int4 | 12.0769 | 19.0473 | 0.000 percent (both) |
+| 1.5B | torch_gpu | 8.4442 | 13.8663 | n/a |
+| 1.5B | triton_int4 | 8.4442 | 13.8663 | 0.000 percent (both) |
+
+Both models pass the 0.1 percent check. The values are identical because prefill with more than 16 rows dequantizes each weight to fp16 and calls `F.linear`, so a full-window forward does not run the Triton GEMV kernels. To check the kernels themselves, the first two WikiText-2 windows were also scored token by token through `decode_token` (M=1, the Triton GEMV path), same llama scoring:
+
+| Model | torch_gpu | triton_int4 | Difference |
+|---|---|---|---|
+| 0.5B | 12.6420 | 12.6441 | +0.017 percent |
+| 1.5B | 8.7952 | 8.7931 | -0.024 percent |
+
+Both stay within 0.1 percent. This second check covers 2 windows only, not the whole text.
+
+### Result summary
+- triton_int4 meets the speed target on 1.5B (1.75x) and misses it on 0.5B (1.11x).
+- It is faster than torch_gpu in graph mode on both models and slower in eager mode.
+- It passes the 0.1 percent perplexity check on both models and uses about half the GPU memory.
+
+### Default decision (task 31.2)
+**triton_int4 is the default backend on CUDA** (`INT4_DEFAULT_ON = True` in `quf/runtime/selector.py`) when Triton imports and the int4 self-test passes. Reasons:
+- Speed: in the default graph mode it is faster than torch_gpu on both models, 1.21x (284 against 234 tok/s) on 0.5B and 1.46x (146 against 100 tok/s) on 1.5B.
+- Memory: it uses 45 to 54 percent of the torch_gpu GPU memory after load (508 against 947 MiB on 0.5B, 1320 against 2951 MiB on 1.5B).
+- Accuracy: perplexity matches torch_gpu (identical on the full-window runs, within 0.024 percent in the token-by-token kernel check), and greedy tokens are identical.
+- Target: the 1.5x speed target over 255 and 83 tok/s is met on 1.5B (1.75x) and missed on 0.5B (1.11x). The target was not a condition for the default, which needs only that the backend is faster on both models and passes the logits and perplexity checks.
+
+QUF is still 2.6 to 2.9x slower than llama.cpp Q4_K_M on this GPU (284 against 757 tok/s on 0.5B, 146 against 423 tok/s on 1.5B).
+
+**Eager mode is slower.** Without the CUDA graph, triton_int4 decodes at 0.80x (0.5B) and 0.76x (1.5B) of torch_gpu, so the selector guards that case:
+- `auto` selects torch_gpu when the CUDA graph is disabled before selection (`--no-cuda-graph` or `QUF_NO_CUDA_GRAPH=1`). The int4 probe is not called, and the "Selected backend" INFO line says why.
+- If the graph capture fails at run time while triton_int4 is loaded, one INFO line reports the failure, says that eager int4 is slower than torch_gpu, and recommends `--backend cached`. The backend is not swapped, because that would reload the weights.
+- An explicit `--backend int4` is always honored.
+
+Without Triton (`pip install "quf[fast]"` not done), with `QUF_NO_TRITON=1`, or when the self-test fails, `auto` falls back to torch_gpu (or torch_fused when the cached weights do not fit).

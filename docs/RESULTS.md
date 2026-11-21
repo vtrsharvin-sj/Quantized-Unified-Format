@@ -37,6 +37,24 @@ Reading the tables:
 
 Decode path controls: the CUDA graph is the default on CUDA. `quf run --no-cuda-graph` or the environment variable `QUF_NO_CUDA_GRAPH=1` decodes eagerly. Eager decode with the same `size_b` files measured 57.8 tok/s on 0.5B and 46.6 tok/s on 1.5B.
 
+## Int4 backend (triton_int4) and the default decision (task 31.2)
+
+Source: `bench_accuracy.json`, key `int4_backend`. Details: [BACKENDS.md](BACKENDS.md). `size_b` files, 128 new tokens, median of 7 runs, CUDA graph on, RTX 5080 Laptop, `triton-windows`.
+
+| Model | Backend | tok/s | GPU memory after load (MiB) | WikiText-2 ppl | C4 ppl |
+| --- | --- | --- | --- | --- | --- |
+| 0.5B | torch_gpu | 234.4 | 947 | 12.0769 | 19.0473 |
+| 0.5B | triton_int4 | 284.2 (1.21x) | 508 | 12.0769 | 19.0473 |
+| 1.5B | torch_gpu | 99.7 | 2951 | 8.4442 | 13.8663 |
+| 1.5B | triton_int4 | 145.6 (1.46x) | 1320 | 8.4442 | 13.8663 |
+| 0.5B | llama.cpp Q4_K_M | 756.5 | n/a | 12.0425 | 18.7241 |
+| 1.5B | llama.cpp Q4_K_M | 422.8 | n/a | 8.5998 | 13.9536 |
+
+- Decision: triton_int4 is the default on CUDA. It is faster in graph mode, uses 45 to 54 percent of the memory, and gives the same perplexity (a token-by-token check of the kernels differs by at most 0.024 percent) and the same greedy tokens.
+- Speed target (1.5x of 255 and 83 tok/s): met on 1.5B (1.75x), missed on 0.5B (1.11x).
+- QUF remains 2.6 to 2.9x slower than llama.cpp. llama.cpp is a different engine, so this is a guide only.
+- Eager decode with triton_int4 is slower than torch_gpu (0.80x and 0.76x). `auto` therefore picks torch_gpu when the CUDA graph is disabled.
+
 ## Earlier summary: 0.2.0 defaults against fp16, RTN and 0.1.0 (full protocol)
 
 Source: `bench_accuracy.json` (raw data), run on the RTX 5080 Laptop GPU with PyTorch 2.11.0+cu128. Perplexity uses 2048-token windows on the WikiText-2 test split and on a held-out C4 sample (English validation, first ~1.3M characters, never used for calibration). Every position of each window is scored (the `full` protocol), so these numbers are not comparable with the `llama` protocol above. The 3% target is reported against fp16. The "New defaults" rows are the 0.2.0 `sensitive` preset.

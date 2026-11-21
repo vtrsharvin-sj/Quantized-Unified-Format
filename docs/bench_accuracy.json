@@ -1116,5 +1116,559 @@
     }
    }
   }
+ },
+ "int4_backend": {
+  "task": "31.1",
+  "device": "NVIDIA GeForce RTX 5080 Laptop GPU",
+  "settings": "prompt 'The quick brown fox', 128 new tokens, greedy, EOS suppressed, 2 warm-up, median of 7, backends alternate per repeat; steady = mean gap between decode_token calls",
+  "speed": {
+   "sb05": {
+    "file": "sb05.quf",
+    "file_size_bytes": 497728832,
+    "prompt": "The quick brown fox",
+    "new_tokens": 128,
+    "warmup": 2,
+    "repeats": 7,
+    "eos_suppressed": true,
+    "order": "backends alternate within every repeat",
+    "results": {
+     "torch_gpu/eager": {
+      "backend": "torch_gpu",
+      "mode": "eager",
+      "e2e_tok_s": {
+       "median": 58.39617194837035,
+       "min": 57.018640507287756,
+       "max": 59.18271627952566,
+       "repeats": 7,
+       "samples": [
+        59.18271627952566,
+        58.71867232648051,
+        58.90032720977946,
+        58.39617194837035,
+        57.018640507287756,
+        57.98964839484886,
+        57.25680841616591
+       ]
+      },
+      "steady_ms_per_tok": {
+       "median": 17.082343650852433,
+       "min": 16.87218095240597,
+       "max": 17.517248412736485,
+       "repeats": 7,
+       "samples": [
+        16.87218095240597,
+        17.008004761933872,
+        16.950963492115353,
+        17.082343650852433,
+        17.517248412736485,
+        17.22401666668861,
+        17.447691269764967
+       ]
+      },
+      "steady_tok_s_median": 58.53997674084367,
+      "graph_replay_used": [
+       false
+      ],
+      "tokens_generated_per_run": [
+       128
+      ]
+     },
+     "triton_int4/eager": {
+      "backend": "triton_int4",
+      "mode": "eager",
+      "e2e_tok_s": {
+       "median": 46.661165752524056,
+       "min": 44.44297998653252,
+       "max": 47.59167178444947,
+       "repeats": 7,
+       "samples": [
+        46.81538353499821,
+        47.59167178444947,
+        47.12527710029874,
+        46.661165752524056,
+        46.36743058944679,
+        46.3422480009562,
+        44.44297998653252
+       ]
+      },
+      "steady_ms_per_tok": {
+       "median": 21.381868254037627,
+       "min": 20.976537301658748,
+       "max": 22.476704761968918,
+       "repeats": 7,
+       "samples": [
+        21.323746825348483,
+        20.976537301658748,
+        21.187853968253226,
+        21.381868254037627,
+        21.53036666670001,
+        21.51850476192998,
+        22.476704761968918
+       ]
+      },
+      "steady_tok_s_median": 46.76859795968324,
+      "graph_replay_used": [
+       false
+      ],
+      "tokens_generated_per_run": [
+       128
+      ]
+     },
+     "torch_gpu/graph": {
+      "backend": "torch_gpu",
+      "mode": "graph",
+      "e2e_tok_s": {
+       "median": 234.3933835111518,
+       "min": 227.85807005505114,
+       "max": 240.07100100118484,
+       "repeats": 7,
+       "samples": [
+        237.96841899032847,
+        240.07100100118484,
+        231.0759618847171,
+        234.3933835111518,
+        231.78680828891993,
+        234.7036911758107,
+        227.85807005505114
+       ]
+      },
+      "steady_ms_per_tok": {
+       "median": 3.624851587307011,
+       "min": 3.533134126983997,
+       "max": 3.7321460317581936,
+       "repeats": 7,
+       "samples": [
+        3.548861904756262,
+        3.533134126983997,
+        3.66674444445553,
+        3.6115912698155697,
+        3.6602111110354714,
+        3.624851587307011,
+        3.7321460317581936
+       ]
+      },
+      "steady_tok_s_median": 275.87336361622573,
+      "graph_replay_used": [
+       true
+      ],
+      "tokens_generated_per_run": [
+       128
+      ]
+     },
+     "triton_int4/graph": {
+      "backend": "triton_int4",
+      "mode": "graph",
+      "e2e_tok_s": {
+       "median": 284.1954892044421,
+       "min": 275.91219697556005,
+       "max": 295.5219194110654,
+       "repeats": 7,
+       "samples": [
+        289.86715025448996,
+        295.5219194110654,
+        284.1954892044421,
+        289.28639148755997,
+        279.8917256358357,
+        275.91219697556005,
+        283.1073598412672
+       ]
+      },
+      "steady_ms_per_tok": {
+       "median": 2.6536873015824574,
+       "min": 2.575894444441748,
+       "max": 2.8038126984029077,
+       "repeats": 7,
+       "samples": [
+        2.575894444441748,
+        2.579019047617395,
+        2.6536873015824574,
+        2.62263888899248,
+        2.7211611110639446,
+        2.8038126984029077,
+        2.654684920604008
+       ]
+      },
+      "steady_tok_s_median": 376.834150505855,
+      "graph_replay_used": [
+       true
+      ],
+      "tokens_generated_per_run": [
+       128
+      ]
+     }
+    }
+   },
+   "sb15": {
+    "file": "sb15.quf",
+    "file_size_bytes": 1257449536,
+    "prompt": "The quick brown fox",
+    "new_tokens": 128,
+    "warmup": 2,
+    "repeats": 7,
+    "eos_suppressed": true,
+    "order": "backends alternate within every repeat",
+    "results": {
+     "torch_gpu/eager": {
+      "backend": "torch_gpu",
+      "mode": "eager",
+      "e2e_tok_s": {
+       "median": 40.55141433039608,
+       "min": 39.05774532021336,
+       "max": 41.57682040297485,
+       "repeats": 7,
+       "samples": [
+        41.57682040297485,
+        40.94871256913671,
+        40.60796725786342,
+        39.58571691672473,
+        39.65287010102413,
+        39.05774532021336,
+        40.55141433039608
+       ]
+      },
+      "steady_ms_per_tok": {
+       "median": 24.601257142854767,
+       "min": 24.017216666603446,
+       "max": 25.579022222137567,
+       "repeats": 7,
+       "samples": [
+        24.017216666603446,
+        24.385259523807605,
+        24.59125714281866,
+        25.217410317429948,
+        25.175065873005973,
+        25.579022222137567,
+        24.601257142854767
+       ]
+      },
+      "steady_tok_s_median": 40.64832923753418,
+      "graph_replay_used": [
+       false
+      ],
+      "tokens_generated_per_run": [
+       128
+      ]
+     },
+     "triton_int4/eager": {
+      "backend": "triton_int4",
+      "mode": "eager",
+      "e2e_tok_s": {
+       "median": 30.864208694169225,
+       "min": 30.140622723654968,
+       "max": 34.3429130205745,
+       "repeats": 7,
+       "samples": [
+        32.26371310521048,
+        31.240145168133967,
+        30.864208694169225,
+        30.453502616731193,
+        30.140622723654968,
+        30.539794688520487,
+        34.3429130205745
+       ]
+      },
+      "steady_ms_per_tok": {
+       "median": 32.33059444443955,
+       "min": 29.0392817460954,
+       "max": 33.133661904786194,
+       "repeats": 7,
+       "samples": [
+        30.953187301560003,
+        31.96127142857424,
+        32.33059444443955,
+        32.77016507929638,
+        33.133661904786194,
+        32.692135714266136,
+        29.0392817460954
+       ]
+      },
+      "steady_tok_s_median": 30.930455105566033,
+      "graph_replay_used": [
+       false
+      ],
+      "tokens_generated_per_run": [
+       128
+      ]
+     },
+     "torch_gpu/graph": {
+      "backend": "torch_gpu",
+      "mode": "graph",
+      "e2e_tok_s": {
+       "median": 99.71185610534435,
+       "min": 98.05065342631461,
+       "max": 101.12196399121555,
+       "repeats": 7,
+       "samples": [
+        99.78540680487485,
+        100.00780529708162,
+        101.12196399121555,
+        99.71185610534435,
+        98.10279916443939,
+        98.26962544152421,
+        98.05065342631461
+       ]
+      },
+      "steady_ms_per_tok": {
+       "median": 9.157165873076005,
+       "min": 9.012632539596535,
+       "max": 9.350109523756334,
+       "repeats": 7,
+       "samples": [
+        9.112999206413479,
+        9.100116666689116,
+        9.012632539596535,
+        9.157165873076005,
+        9.325130952342915,
+        9.3129698412552,
+        9.350109523756334
+       ]
+      },
+      "steady_tok_s_median": 109.20409369674196,
+      "graph_replay_used": [
+       true
+      ],
+      "tokens_generated_per_run": [
+       128
+      ]
+     },
+     "triton_int4/graph": {
+      "backend": "triton_int4",
+      "mode": "graph",
+      "e2e_tok_s": {
+       "median": 145.6145062979769,
+       "min": 141.16665639162363,
+       "max": 148.50137172407443,
+       "repeats": 7,
+       "samples": [
+        148.50137172407443,
+        146.7814834227913,
+        145.6145062979769,
+        142.43614548580328,
+        141.16665639162363,
+        143.04031747763366,
+        148.00622320011186
+       ]
+      },
+      "steady_ms_per_tok": {
+       "median": 5.779039682469345,
+       "min": 5.632573015833577,
+       "max": 5.907326190416435,
+       "repeats": 7,
+       "samples": [
+        5.632573015833577,
+        5.718469841263464,
+        5.779039682469345,
+        5.889209523812742,
+        5.907326190416435,
+        5.887234920616417,
+        5.664083333353379
+       ]
+      },
+      "steady_tok_s_median": 173.03913019207832,
+      "graph_replay_used": [
+       true
+      ],
+      "tokens_generated_per_run": [
+       128
+      ]
+     }
+    }
+   }
+  },
+  "memory": {
+   "sb05": {
+    "torch_gpu": {
+     "file": "sb05.quf",
+     "backend": "torch_gpu",
+     "after_load": {
+      "allocated_mib": 946.65478515625,
+      "reserved_mib": 1508.0,
+      "device_used_delta_mib": 1554.0
+     },
+     "tokens_generated": 128,
+     "peak_allocated_mib": 976.3134765625,
+     "peak_reserved_mib": 1530.0,
+     "device_used_after_generate_delta_mib": 1562.0,
+     "note": "generation = graph mode, 128 new tokens, EOS suppressed; includes graph capture and KV cache"
+    },
+    "triton_int4": {
+     "file": "sb05.quf",
+     "backend": "triton_int4",
+     "after_load": {
+      "allocated_mib": 507.54638671875,
+      "reserved_mib": 728.0,
+      "device_used_delta_mib": 786.0
+     },
+     "tokens_generated": 128,
+     "peak_allocated_mib": 528.5859375,
+     "peak_reserved_mib": 750.0,
+     "device_used_after_generate_delta_mib": 812.0,
+     "note": "generation = graph mode, 128 new tokens, EOS suppressed; includes graph capture and KV cache"
+    }
+   },
+   "sb15": {
+    "torch_gpu": {
+     "file": "sb15.quf",
+     "backend": "torch_gpu",
+     "after_load": {
+      "allocated_mib": 2950.65185546875,
+      "reserved_mib": 4972.0,
+      "device_used_delta_mib": 5018.0
+     },
+     "tokens_generated": 128,
+     "peak_allocated_mib": 2983.71044921875,
+     "peak_reserved_mib": 4994.0,
+     "device_used_after_generate_delta_mib": 3920.0,
+     "note": "generation = graph mode, 128 new tokens, EOS suppressed; includes graph capture and KV cache"
+    },
+    "triton_int4": {
+     "file": "sb15.quf",
+     "backend": "triton_int4",
+     "after_load": {
+      "allocated_mib": 1319.91552734375,
+      "reserved_mib": 2112.0,
+      "device_used_delta_mib": 2170.0
+     },
+     "tokens_generated": 128,
+     "peak_allocated_mib": 1343.69287109375,
+     "peak_reserved_mib": 2134.0,
+     "device_used_after_generate_delta_mib": 2120.0,
+     "note": "generation = graph mode, 128 new tokens, EOS suppressed; includes graph capture and KV cache"
+    }
+   }
+  },
+  "perplexity_llama_protocol": {
+   "sb05": {
+    "torch_gpu": {
+     "file": "sb05.quf",
+     "backend": "torch_gpu",
+     "ppl_wikitext2": 12.0769038523057,
+     "ppl_c4_heldout": 19.047274450630162,
+     "protocol": "llama",
+     "windows": "all",
+     "seconds": 200
+    },
+    "triton_int4": {
+     "file": "sb05.quf",
+     "backend": "triton_int4",
+     "ppl_wikitext2": 12.0769038523057,
+     "ppl_c4_heldout": 19.047274450630162,
+     "protocol": "llama",
+     "windows": "all",
+     "seconds": 206
+    },
+    "rel_diff_pct_ppl_wikitext2": 0.0,
+    "within_0_1_pct_ppl_wikitext2": true,
+    "rel_diff_pct_ppl_c4_heldout": 0.0,
+    "within_0_1_pct_ppl_c4_heldout": true
+   },
+   "sb15": {
+    "torch_gpu": {
+     "file": "sb15.quf",
+     "backend": "torch_gpu",
+     "ppl_wikitext2": 8.444217877970335,
+     "ppl_c4_heldout": 13.866347370984961,
+     "protocol": "llama",
+     "windows": "all",
+     "seconds": 227
+    },
+    "triton_int4": {
+     "file": "sb15.quf",
+     "backend": "triton_int4",
+     "ppl_wikitext2": 8.444217877970335,
+     "ppl_c4_heldout": 13.866347370984961,
+     "protocol": "llama",
+     "windows": "all",
+     "seconds": 252
+    },
+    "rel_diff_pct_ppl_wikitext2": 0.0,
+    "within_0_1_pct_ppl_wikitext2": true,
+    "rel_diff_pct_ppl_c4_heldout": 0.0,
+    "within_0_1_pct_ppl_c4_heldout": true
+   }
+  },
+  "decode_path_perplexity_2_windows": {
+   "sb05": {
+    "torch_gpu": {
+     "ppl": 12.641968571331633,
+     "windows": 2,
+     "seconds": 81
+    },
+    "triton_int4": {
+     "ppl": 12.644131587225708,
+     "windows": 2,
+     "seconds": 110
+    },
+    "rel_diff_pct": 0.017109802811732244
+   },
+   "sb15": {
+    "torch_gpu": {
+     "ppl": 8.795241859577429,
+     "windows": 2,
+     "seconds": 102
+    },
+    "triton_int4": {
+     "ppl": 8.793123568910747,
+     "windows": 2,
+     "seconds": 123
+    },
+    "rel_diff_pct": -0.02408450728815792
+   }
+  },
+  "llama_cpp_q4_k_m": {
+   "sb05": {
+    "mode": "llama.cpp Q4_K_M (-ngl 99, -p 4)",
+    "file": "qwen2_5-0_5b-Q4_K_M.gguf",
+    "new_tokens": 128,
+    "median": 756.502,
+    "min": 724.667,
+    "max": 795.534,
+    "repeats": 7,
+    "samples": [
+     756.502,
+     755.888,
+     724.667,
+     756.034,
+     781.156,
+     795.534,
+     762.372
+    ]
+   },
+   "sb15": {
+    "mode": "llama.cpp Q4_K_M (-ngl 99, -p 4)",
+    "file": "qwen2_5-1_5b-Q4_K_M.gguf",
+    "new_tokens": 128,
+    "median": 422.815,
+    "min": 410.32,
+    "max": 450.975,
+    "repeats": 7,
+    "samples": [
+     445.523,
+     450.975,
+     414.569,
+     411.117,
+     441.088,
+     422.815,
+     410.32
+    ]
+   }
+  },
+  "speed_target": {
+   "sb05": {
+    "baseline_tok_s": 255.0,
+    "required_tok_s": 382.5,
+    "measured_graph_e2e_tok_s": 284.1954892044421,
+    "speedup_vs_baseline": 1.114492114527224,
+    "met": false
+   },
+   "sb15": {
+    "baseline_tok_s": 83.0,
+    "required_tok_s": 124.5,
+    "measured_graph_e2e_tok_s": 145.6145062979769,
+    "speedup_vs_baseline": 1.7543916421443,
+    "met": true
+   }
+  },
+  "perplexity_note": "Prefill with M>16 dequantizes to fp16 and calls F.linear, so full-window perplexity runs the same math on both backends and matches bit for bit. decode_path_perplexity_2_windows scores teacher-forced tokens through decode_token (M=1, the Triton GEMV kernels)."
  }
 }

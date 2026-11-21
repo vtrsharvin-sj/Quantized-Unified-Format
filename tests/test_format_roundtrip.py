@@ -59,6 +59,8 @@ _names = st.text(
     tensors=st.dictionaries(_names, _tensor(), max_size=6),
 )
 def test_write_read_round_trip(model_config, tokenizer, extra_quant, tensors):
+    reserved = {"modules", "bits", "group_size", "symmetric", "act_order"}
+    extra_quant = {k: v for k, v in extra_quant.items() if k not in reserved}
     quantization = {**extra_quant, "group_size": GROUP_SIZE, "symmetric": True}
     header = QUFHeader(model_config, tokenizer, quantization)
     with tempfile.TemporaryDirectory() as d:

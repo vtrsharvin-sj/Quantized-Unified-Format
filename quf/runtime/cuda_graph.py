@@ -87,7 +87,10 @@ def make_decoder(model: QUFModel, cache: StaticKVCache, enabled: bool | None = N
     try:
         dec.capture()
     except Exception as exc:  # noqa: BLE001
-        logger.info("CUDA graph capture failed, using eager decode: %s: %s", type(exc).__name__, exc)
+        hint = ""
+        if getattr(model, "backend_name", None) == "triton_int4":
+            hint = "; eager int4 is slower than torch_gpu, consider --backend cached"
+        logger.info("CUDA graph capture failed, using eager decode: %s: %s%s", type(exc).__name__, exc, hint)
         try:
             torch.cuda.synchronize()
         except Exception:  # noqa: BLE001

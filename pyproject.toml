@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "quf"
-version = "0.2.1"
+version = "0.3.0"
 description = "QUF: Quantized Unified Format for 4-bit quantized decoder-only LLMs"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -38,6 +38,10 @@ Issues = "https://github.com/vtrsharvin-sj/Quantized-Unified-Format/issues"
 [project.optional-dependencies]
 # Kept as an empty extra so `pip install quf[cuda]` still resolves; torch is a base dependency.
 cuda = []
+fast = [
+    "triton-windows; sys_platform == 'win32'",
+    "triton; sys_platform == 'linux'",
+]
 convert = [
     "torch>=2.7",
     "transformers",

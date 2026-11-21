@@ -18,6 +18,7 @@ class QUFLinear:
         device: Any = "cpu",
         bias: torch.Tensor | None = None,
         g_idx: torch.Tensor | None = None,
+        name: str | None = None,
     ):
         """``qw`` is an int4 ``QuantizedWeight`` (optionally with ``g_idx``), an ``Int8Weight``,
         or an fp16 ``[out, in]`` tensor."""
@@ -32,7 +33,11 @@ class QUFLinear:
         if g_idx is not None and self.precision != "int4":
             raise ValueError("g_idx applies to int4 modules only")
         # Version 1 call shape (no g_idx) stays unchanged for third-party backends.
-        self.prepared = backend.prepare(qw, device) if g_idx is None else backend.prepare(qw, device, g_idx)
+        self.name = name
+        kwargs = {"name": name} if name and getattr(backend, "name", None) == "triton_int4" else {}
+        self.prepared = (
+            backend.prepare(qw, device, **kwargs) if g_idx is None else backend.prepare(qw, device, g_idx, **kwargs)
+        )
         self.bias = bias
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -55,10 +60,14 @@ class FusedProjection:
     """
 
     SUPPORTED_BACKENDS = ("cpu", "torch_gpu")
+    KERNEL_BACKEND = "triton_int4"
 
     @classmethod
     def can_fuse(cls, modules: list[QUFLinear]) -> bool:
         first = modules[0]
+        if getattr(first.backend, "name", None) == cls.KERNEL_BACKEND:
+            # fuse_projections decides per group; it never fails (it falls back to separate calls).
+            return all(m.backend is first.backend and m.in_features == first.in_features for m in modules)
         if getattr(first.backend, "name", None) not in cls.SUPPORTED_BACKENDS:
             return False
         for m in modules:
@@ -76,6 +85,10 @@ class FusedProjection:
             raise ValueError("modules cannot be fused")
         self.backend = modules[0].backend
         self.widths = [int(m.out_features) for m in modules]
+        self._kernel = None
+        if getattr(self.backend, "name", None) == self.KERNEL_BACKEND:
+            self._init_kernel(modules)
+            return
         self.prepared = torch.cat([m.prepared for m in modules], dim=0).contiguous()
         self.bias = None
         if any(m.bias is not None for m in modules):
@@ -95,7 +108,41 @@ class FusedProjection:
                 m.bias = self.bias[start : start + w]
             start += w
 
+    def _init_kernel(self, modules: list[QUFLinear]) -> None:
+        from quf.runtime.kernels.fusion import fuse_projections  # noqa: PLC0415
+
+        self._kernel = fuse_projections([m.prepared for m in modules])
+        self.prepared = self._kernel.fused
+        self.bias = None
+        self._part_modules = modules
+        if self._kernel.is_fused:
+            if any(m.bias is not None for m in modules):
+                dtype = next(m.bias.dtype for m in modules if m.bias is not None)
+                device = next(m.bias.device for m in modules if m.bias is not None)
+                self.bias = torch.cat([
+                    m.bias.to(dtype) if m.bias is not None
+                    else torch.zeros(w, dtype=dtype, device=device)
+                    for m, w in zip(modules, self.widths)
+                ]).contiguous()
+            # Free the unfused weights: the fused one replaces them.
+            for m in modules:
+                m.prepared = None
+                m.bias = None
+
+    def _forward_kernel(self, x: torch.Tensor) -> tuple[torch.Tensor, ...]:
+        from quf.runtime.kernels.dispatch import kernel_linear  # noqa: PLC0415
+        from quf.runtime.kernels.fusion import split_output  # noqa: PLC0415
+
+        if not self._kernel.is_fused:
+            return tuple(m(x) for m in self._part_modules)
+        y = kernel_linear(x, self.prepared)
+        if self.bias is not None:
+            y = y + self.bias.to(device=y.device, dtype=y.dtype)
+        return split_output(y, self.widths)
+
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, ...]:
+        if self._kernel is not None:
+            return self._forward_kernel(x)
         y = self.backend.matmul(x, self.prepared)
         if self.bias is not None:
             y = y + self.bias.to(device=y.device, dtype=y.dtype)

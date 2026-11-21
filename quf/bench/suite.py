@@ -260,7 +260,7 @@ def run_bench(
     dataset cannot be loaded.
     """
     from quf.device import detect_devices
-    from quf.runtime.selector import select_backend
+    from quf.runtime.selector import int4_probe, select_backend
 
     if text is None:
         text = load_wikitext(dataset)  # fail early, naming the dataset
@@ -282,6 +282,7 @@ def run_bench(
         free_bytes=free_bytes,
         prefer_fused=prefer_fused,
         fused_self_test=fused_self_test,
+        int4_probe=int4_probe,
     )
     if model_loader is None:
         from quf.runtime.model import QUFModel

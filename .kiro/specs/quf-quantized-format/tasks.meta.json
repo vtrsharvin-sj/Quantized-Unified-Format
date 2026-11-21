@@ -91,6 +91,18 @@
     "26.6 Write property test for fused projections": {
       "status": "passed",
       "lastRunTimestamp": 1795214620519
+    },
+    "29.3 Write property test for selector rules": {
+      "status": "passed",
+      "lastRunTimestamp": 1795267759198
+    },
+    "30.1 Write property test for kernel equivalence": {
+      "status": "passed",
+      "lastRunTimestamp": 1795267906327
+    },
+    "30.2 Write property test for greedy token equality": {
+      "status": "passed",
+      "lastRunTimestamp": 1795268197116
     }
   },
   "executionHistory": {
@@ -1940,6 +1952,11 @@
         "executionId": "4c541836-73d9-4640-9c52-02c48a7f993c",
         "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
         "timestamp": 1795262678706
+      },
+      {
+        "executionId": "4c541836-73d9-4640-9c52-02c48a7f993c",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795263028096
       }
     ],
     "23. CI and GitHub": [
@@ -2193,6 +2210,301 @@
         "executionId": "6e6ecbd2-14c3-47ce-864d-7b3455c9e355",
         "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
         "timestamp": 1795217226283
+      }
+    ],
+    "28.1 Add the kernel module, layout repack, and Triton gating": [
+      {
+        "executionId": "6c20c8bb-3f07-4a4e-9e0c-8abecbe52b12",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795263765044
+      },
+      {
+        "executionId": "6c20c8bb-3f07-4a4e-9e0c-8abecbe52b12",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795263772696
+      },
+      {
+        "executionId": "6c20c8bb-3f07-4a4e-9e0c-8abecbe52b12",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795263970545
+      }
+    ],
+    "28.2 Add the W4A16 GEMV kernel": [
+      {
+        "executionId": "6c20c8bb-3f07-4a4e-9e0c-8abecbe52b12",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795263765148
+      },
+      {
+        "executionId": "6c20c8bb-3f07-4a4e-9e0c-8abecbe52b12",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795263970729
+      },
+      {
+        "executionId": "6c20c8bb-3f07-4a4e-9e0c-8abecbe52b12",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795264881223
+      }
+    ],
+    "28.3 Add int8 handling": [
+      {
+        "executionId": "6c20c8bb-3f07-4a4e-9e0c-8abecbe52b12",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795263765231
+      },
+      {
+        "executionId": "6c20c8bb-3f07-4a4e-9e0c-8abecbe52b12",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795264881455
+      },
+      {
+        "executionId": "6c20c8bb-3f07-4a4e-9e0c-8abecbe52b12",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795265003705
+      }
+    ],
+    "28.4 Add the prefill path": [
+      {
+        "executionId": "6c20c8bb-3f07-4a4e-9e0c-8abecbe52b12",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795263765307
+      },
+      {
+        "executionId": "6c20c8bb-3f07-4a4e-9e0c-8abecbe52b12",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795265003772
+      },
+      {
+        "executionId": "6c20c8bb-3f07-4a4e-9e0c-8abecbe52b12",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795265514073
+      }
+    ],
+    "28.5 Add fused projection support": [
+      {
+        "executionId": "6c20c8bb-3f07-4a4e-9e0c-8abecbe52b12",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795263765388
+      },
+      {
+        "executionId": "6c20c8bb-3f07-4a4e-9e0c-8abecbe52b12",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795265514920
+      },
+      {
+        "executionId": "6c20c8bb-3f07-4a4e-9e0c-8abecbe52b12",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795265717489
+      }
+    ],
+    "28.6 Check CUDA graph capture": [
+      {
+        "executionId": "6c20c8bb-3f07-4a4e-9e0c-8abecbe52b12",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795263765450
+      },
+      {
+        "executionId": "6c20c8bb-3f07-4a4e-9e0c-8abecbe52b12",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795265717953
+      },
+      {
+        "executionId": "6c20c8bb-3f07-4a4e-9e0c-8abecbe52b12",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795265866048
+      }
+    ],
+    "29.1 Add the triton_int4 backend and startup self-test": [
+      {
+        "executionId": "6c20c8bb-3f07-4a4e-9e0c-8abecbe52b12",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795263765536
+      },
+      {
+        "executionId": "6c20c8bb-3f07-4a4e-9e0c-8abecbe52b12",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795265866691
+      },
+      {
+        "executionId": "6c20c8bb-3f07-4a4e-9e0c-8abecbe52b12",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795267083991
+      }
+    ],
+    "29.2 Add the selector rule, `--backend int4`, and QUF_NO_TRITON": [
+      {
+        "executionId": "6c20c8bb-3f07-4a4e-9e0c-8abecbe52b12",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795263765586
+      },
+      {
+        "executionId": "6c20c8bb-3f07-4a4e-9e0c-8abecbe52b12",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795267084074
+      },
+      {
+        "executionId": "6c20c8bb-3f07-4a4e-9e0c-8abecbe52b12",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795267483875
+      }
+    ],
+    "29.3 Write property test for selector rules": [
+      {
+        "executionId": "6c20c8bb-3f07-4a4e-9e0c-8abecbe52b12",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795263765636
+      },
+      {
+        "executionId": "6c20c8bb-3f07-4a4e-9e0c-8abecbe52b12",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795267483964
+      },
+      {
+        "executionId": "6c20c8bb-3f07-4a4e-9e0c-8abecbe52b12",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795268217641
+      }
+    ],
+    "30.1 Write property test for kernel equivalence": [
+      {
+        "executionId": "6c20c8bb-3f07-4a4e-9e0c-8abecbe52b12",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795263765704
+      },
+      {
+        "executionId": "6c20c8bb-3f07-4a4e-9e0c-8abecbe52b12",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795267484015
+      },
+      {
+        "executionId": "6c20c8bb-3f07-4a4e-9e0c-8abecbe52b12",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795268218490
+      }
+    ],
+    "30.2 Write property test for greedy token equality": [
+      {
+        "executionId": "6c20c8bb-3f07-4a4e-9e0c-8abecbe52b12",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795263765760
+      },
+      {
+        "executionId": "6c20c8bb-3f07-4a4e-9e0c-8abecbe52b12",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795267484162
+      },
+      {
+        "executionId": "6c20c8bb-3f07-4a4e-9e0c-8abecbe52b12",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795268219959
+      }
+    ],
+    "30.3 Add the whole-model logits check and the triton marker": [
+      {
+        "executionId": "6c20c8bb-3f07-4a4e-9e0c-8abecbe52b12",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795263765813
+      },
+      {
+        "executionId": "6c20c8bb-3f07-4a4e-9e0c-8abecbe52b12",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795268220494
+      },
+      {
+        "executionId": "6c20c8bb-3f07-4a4e-9e0c-8abecbe52b12",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795268514542
+      }
+    ],
+    "31.1 Measure speed, memory, and perplexity": [
+      {
+        "executionId": "6c20c8bb-3f07-4a4e-9e0c-8abecbe52b12",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795263765862
+      },
+      {
+        "executionId": "6c20c8bb-3f07-4a4e-9e0c-8abecbe52b12",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795268515036
+      },
+      {
+        "executionId": "6c20c8bb-3f07-4a4e-9e0c-8abecbe52b12",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795270370623
+      }
+    ],
+    "31.2 Decide the default and update the docs": [
+      {
+        "executionId": "6c20c8bb-3f07-4a4e-9e0c-8abecbe52b12",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795263765912
+      },
+      {
+        "executionId": "6c20c8bb-3f07-4a4e-9e0c-8abecbe52b12",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795270370703
+      },
+      {
+        "executionId": "6c20c8bb-3f07-4a4e-9e0c-8abecbe52b12",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795270728813
+      }
+    ],
+    "31.3 Release 0.3.0": [
+      {
+        "executionId": "6c20c8bb-3f07-4a4e-9e0c-8abecbe52b12",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795263765956
+      },
+      {
+        "executionId": "6c20c8bb-3f07-4a4e-9e0c-8abecbe52b12",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795270729220
+      },
+      {
+        "executionId": "6c20c8bb-3f07-4a4e-9e0c-8abecbe52b12",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795271253237
+      }
+    ],
+    "32. Final checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "6c20c8bb-3f07-4a4e-9e0c-8abecbe52b12",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795263766034
+      },
+      {
+        "executionId": "6c20c8bb-3f07-4a4e-9e0c-8abecbe52b12",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795271253370
+      }
+    ],
+    "28. Triton int4 kernels": [
+      {
+        "executionId": "6c20c8bb-3f07-4a4e-9e0c-8abecbe52b12",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795265866111
+      }
+    ],
+    "29. Backend integration": [
+      {
+        "executionId": "6c20c8bb-3f07-4a4e-9e0c-8abecbe52b12",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795268217701
+      }
+    ],
+    "30. Correctness tests": [
+      {
+        "executionId": "6c20c8bb-3f07-4a4e-9e0c-8abecbe52b12",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795268514622
+      }
+    ],
+    "31. Measure and decide": [
+      {
+        "executionId": "6c20c8bb-3f07-4a4e-9e0c-8abecbe52b12",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795271253299
       }
     ]
   }

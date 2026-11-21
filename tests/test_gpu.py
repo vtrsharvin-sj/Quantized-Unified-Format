@@ -99,7 +99,8 @@ def test_auto_selection_falls_back_to_torch_gpu_when_marlin_unavailable(tmp_path
     path = tmp_path / "tiny.quf"
     build_tiny_quf(path)
     model = QUFModel.load(path, "auto")
-    assert model.backend_name == "torch_gpu"
+    # Automatic selection never picks Marlin: triton_int4 when Triton works, else torch_gpu.
+    assert model.backend_name in ("triton_int4", "torch_gpu")
 
 
 def test_marlin_load_keeps_file_unchanged(tmp_path):

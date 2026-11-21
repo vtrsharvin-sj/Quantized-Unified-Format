@@ -533,7 +533,7 @@ The implementation language is Python (as used in the design). Property-based te
     - Set 0.2.1 in `pyproject.toml` and `quf/__init__.py`, update CHANGELOG.md, rebuild, run `twine check`, and smoke test; do not upload
     - _Requirements: 30.1, 30.2, 30.4_
 
-- [-] 25. Final checkpoint - Ensure all tests pass
+- [x] 25. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [x] 26. Fast decode path
@@ -596,6 +596,66 @@ The implementation language is Python (as used in the design). Property-based te
     - **Validates: Requirements 32.6, 32.7**
     - _Requirements: 32.4, 32.5, 32.6, 32.7_
 
+- [x] 28. Triton int4 kernels
+  - Demo: with `quf[fast]` installed, `quf run --backend int4` decodes from packed int4 weights and the kernel matches the reference dequantizer.
+  - [x] 28.1 Add the kernel module, layout repack, and Triton gating
+    - Add `quf/backends/triton_kernels.py` with `triton_available()` (Triton_Gate, never raises) and `repack_int4` that builds the Kernel_Layout, including the one-time column permutation for act-order
+    - Add the `fast` extra to pyproject.toml with `triton-windows` on Windows and `triton` on Linux through platform markers, and keep the wheel pure Python
+    - _Requirements: 33.5, 34.1, 36.1, 36.2, 36.3_
+  - [x] 28.2 Add the W4A16 GEMV kernel
+    - Support group sizes 32, 64, 128, symmetric and asymmetric, M from 1 to 16, fp32 accumulation, fp16 output, writing into a preallocated output
+    - _Requirements: 33.1, 33.2, 33.3, 33.4_
+  - [x] 28.3 Add int8 handling
+    - Route int8 modules and unsupported shapes or group sizes to the cached fp16 path and log the module name at INFO level
+    - _Requirements: 33.6, 33.11_
+  - [x] 28.4 Add the prefill path
+    - For M above 16, dequantize into one reused fp16 buffer allocated at prepare time and run a matmul
+    - _Requirements: 33.7_
+  - [x] 28.5 Add fused projection support
+    - Concatenate packed weights, scales, and zero points along the output dimension for qkv and gate/up, split the output by head widths, and keep only Kernel_Layout tensors for int4 modules
+    - _Requirements: 33.8, 33.10_
+  - [x] 28.6 Check CUDA graph capture
+    - Capture and replay the kernel with no host synchronization and no allocation during capture, and compare replay output with eager output
+    - _Requirements: 33.9_
+- [x] 29. Backend integration
+  - Demo: `quf info` reports the selected Backend and the Triton_Gate result, and the selector falls back to torch_gpu with one INFO line when Triton does not work.
+  - [x] 29.1 Add the triton_int4 backend and startup self-test
+    - Add `quf/backends/triton_int4.py` with `prepare`, `linear`, and a Self_Test against the Reference_Dequantizer for group sizes 32, 64, 128 in both zero point modes, run before any weights load
+    - _Requirements: 33.1, 33.10, 34.1_
+  - [x] 29.2 Add the selector rule, `--backend int4`, and QUF_NO_TRITON
+    - Default to the Int4_Backend on CUDA only when Triton works, the Self_Test passes, and the default decision is on, otherwise use torch_gpu with one INFO line; add `--backend int4` and the QUF_NO_TRITON=1 variable, which prevents any Triton import; report both in `quf info`
+    - _Requirements: 34.2, 34.3, 34.4, 34.5, 34.6, 34.7, 34.8_
+  - [x] 29.3 Write property test for selector rules
+    - **Property 36: Backend selection rules with the int4 backend**
+    - Runs on CPU in CI
+    - **Validates: Requirements 34.2, 34.3, 34.4, 34.5, 34.6, 34.8**
+- [x] 30. Correctness tests
+  - Demo: `pytest -m triton` passes on the GPU machine and `pytest` passes in CPU CI without Triton.
+  - [x] 30.1 Write property test for kernel equivalence
+    - **Property 35: Int4 kernel equals the fp32 reference**
+    - Random shapes, group sizes, symmetric and asymmetric, g_idx, fused layouts, and M from 1 to 16, marked `triton`
+    - **Validates: Requirements 33.1, 33.2, 33.3, 33.4, 33.5, 33.7, 33.8**
+  - [x] 30.2 Write property test for greedy token equality
+    - **Property 37: Int4 backend greedy tokens equal Torch_GPU**
+    - Tiny models with random quantized weights, with and without the CUDA graph, marked `triton`
+    - **Validates: Requirements 35.1**
+  - [x] 30.3 Add the whole-model logits check and the triton marker
+    - Compare logits on the real 0.5B file against torch_gpu, register the `triton` marker, skip Triton tests when Triton is missing, and confirm the CPU CI suite passes without Triton
+    - _Requirements: 35.2, 36.3, 36.4_
+- [x] 31. Measure and decide
+  - Demo: docs/RESULTS.md and docs/BACKENDS.md hold the measured int4 numbers and the default decision, and version 0.3.0 is built and pushed.
+  - [x] 31.1 Measure speed, memory, and perplexity
+    - Run the median timing helper for eager and graph decoders on 0.5B and 1.5B size_b, record GPU memory after load, and run llama-protocol perplexity, which must stay within 0.1% of torch_gpu
+    - Target at least 1.5x of 255 and 83 tok/s; report the measured speedup honestly if the target is missed
+    - _Requirements: 35.3, 35.4, 35.5, 35.6_
+  - [x] 31.2 Decide the default and update the docs
+    - Make the Int4_Backend the default on CUDA only if it is faster on both models and the logits and perplexity checks pass, otherwise keep it opt-in and record why; update docs/BACKENDS.md, docs/RESULTS.md, and the README
+    - _Requirements: 35.7, 35.8, 34.3_
+  - [x] 31.3 Release 0.3.0
+    - Update the CHANGELOG, bump the version to 0.3.0, build, run `twine check`, smoke test in a fresh virtual environment with and without the fast extra, commit, push, and confirm CI passes; do not upload to PyPI
+    - _Requirements: 36.5, 36.6, 36.7_
+- [-] 32. Final checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.
 ## Notes
 
 - Tasks 26 and 27 add the speed and size work. They run before task 24.1, so release 0.2.1 includes them, and all of their sub-tasks are required
@@ -652,7 +712,19 @@ The implementation language is Python (as used in the design). Property-based te
     { "id": 36, "tasks": ["26.8"] },
     { "id": 37, "tasks": ["24.1"] },
     { "id": 38, "tasks": ["24.2"] },
-    { "id": 39, "tasks": ["25"] }
+    { "id": 39, "tasks": ["25"] },
+    { "id": 40, "tasks": ["28.1"] },
+    { "id": 41, "tasks": ["28.2"] },
+    { "id": 42, "tasks": ["28.3", "28.4", "28.5"] },
+    { "id": 43, "tasks": ["28.6"] },
+    { "id": 44, "tasks": ["29.1"] },
+    { "id": 45, "tasks": ["29.2"] },
+    { "id": 46, "tasks": ["29.3", "30.1", "30.2"] },
+    { "id": 47, "tasks": ["30.3"] },
+    { "id": 48, "tasks": ["31.1"] },
+    { "id": 49, "tasks": ["31.2"] },
+    { "id": 50, "tasks": ["31.3"] },
+    { "id": 51, "tasks": ["32"] }
   ]
 }
 ```

@@ -678,6 +678,21 @@ def drive(models: list[str], only: list[str] | None, protocol: str = "full", win
     return 0
 
 
+def ppl_quf_file(a) -> int:
+    """Perplexity of an existing .quf on one backend, same windows and protocol as every other row."""
+    from quf.bench.suite import _tokenizer_from_header
+    from quf.runtime.model import QUFModel
+
+    t0 = time.perf_counter()
+    m = QUFModel.load(a.ppl_quf, device_option="cpu" if a.backend == "cpu" else "cuda", backend=a.backend)
+    ppls = _domain_ppls(m, _tokenizer_from_header(m.header), a.protocol, a.windows)
+    rec = {"file": Path(a.ppl_quf).name, "backend": a.backend, **ppls, "seconds": round(time.perf_counter() - t0)}
+    print("RESULT", json.dumps(rec), flush=True)
+    if a.out:
+        Path(a.out).write_text(json.dumps(rec, indent=2), encoding="utf-8")
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--drive", action="store_true")
@@ -697,7 +712,13 @@ def main() -> int:
                     help="measure only tokens per second (median of repeats); no perplexity")
     ap.add_argument("--drive-timing", action="store_true",
                     help="re-measure tokens per second of done rows and merge into docs/bench_accuracy.json")
+    ap.add_argument("--ppl-quf", help="perplexity of an existing QUF file (WikiText-2 and the C4 slice)")
+    ap.add_argument("--backend", default="torch_gpu", choices=["cpu", "torch_gpu", "torch_fused", "marlin", "triton_int4"],
+                    help="runtime backend for --ppl-quf")
+    ap.add_argument("--out", help="JSON output path for --ppl-quf")
     a = ap.parse_args()
+    if a.ppl_quf:
+        return ppl_quf_file(a)
     if a.drive_timing:
         return drive_timing(a.models, a.only)
     if a.drive:

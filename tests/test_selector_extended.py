@@ -39,7 +39,8 @@ def test_extended_backend_selection_rules(device, info, cached_bytes, free_bytes
     """**Validates: Requirements 15.1, 15.4, 15.5, 15.7**
 
     CPU without CUDA; fused when weights do not fit or fused is faster and its
-    self-test passes; cached otherwise; Marlin never in automatic mode.
+    self-test passes; cached otherwise; Marlin never in automatic mode. No int4 probe is passed
+    here, so triton_int4 stays unavailable (int4 rules: test_selector.py, test_selector_cli.py).
     """
     self_test, calls = _make_self_test(mode)
     if device == "cuda" and not info.cuda_available:

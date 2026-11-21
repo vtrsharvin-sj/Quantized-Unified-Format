@@ -528,3 +528,82 @@ QUF decode on Torch_GPU measures about 40 to 50 tokens per second for Qwen2.5-0.
 6. WHERE a new tensor layout or Header field is added, THE Writer and Reader SHALL round-trip the new layout bit-identically, THE Reader SHALL read every older file unchanged, and FORMAT.md SHALL document the addition.
 7. WHERE a new quantization bit width is added, THE Backends SHALL dequantize the new layout to the same values as the reference dequantizer within an absolute tolerance of 1e-3.
 8. THE Results_Doc SHALL report the size and Perplexity table of all Size_Candidates and the default chosen.
+
+## Triton Int4 Kernel Extension (release 0.3.0)
+
+With CUDA graphs, decode is GPU-bound, and about 73% of GPU time is in fp16 gemv over the cached fp16 weights (docs/BACKENDS.md). QUF decodes at 255 tokens per second on Qwen2.5-0.5B and 83 on Qwen2.5-1.5B, against 764 and 451 for llama.cpp Q4_K_M on the same RTX 5080. This extension adds a 4-bit GPU kernel written in Triton that reads the packed int4 weights directly during decode, so that the fp16 weight cache is no longer read for int4 modules. The kernel is delivered through an optional extra, so the wheel stays pure Python. C++ and CUDA extensions are rejected because the build environment has no nvcc and such extensions would need per-platform wheels. Task 26.4 showed that triton-windows 3.9 works with torch 2.11 on sm_120.
+
+### Glossary additions
+
+- **Triton_Runtime**: The `triton-windows` package on Windows or the `triton` package on Linux, installed through the `quf[fast]` extra.
+- **Int4_Kernel**: The Triton W4A16 GEMV kernel that multiplies an fp16 activation by a Packed_Int4 weight and accumulates in fp32.
+- **Int4_Backend**: The Backend named `triton_int4` that applies every int4 module through the Int4_Kernel.
+- **Triton_Gate**: The check that the Triton_Runtime imports, that a CUDA device is present, and that a small kernel compiles and runs.
+- **Self_Test**: The startup check that compares Int4_Kernel output with the Reference_Dequantizer followed by an fp32 matmul on one small module for each supported group size and zero point mode.
+- **Kernel_Layout**: The Packed_Int4 weight, scale, and zero point arrangement that the Int4_Kernel reads, produced from the QUF_File tensors at load time.
+- **Gemv_Range**: Activation row counts M from 1 to 16.
+- **Prefill_Path**: The path that handles M greater than 16 by dequantizing a weight into a reused fp16 buffer and running a matmul.
+- **Torch_GPU_Reference**: The existing Torch_GPU Backend with the fp16 Weight_Cache, used as the comparison baseline.
+- **Int4_Speed_Target**: A median CUDA_Graph_Decoder decode rate of at least 1.5 times 255 tokens per second on Qwen2.5-0.5B and at least 1.5 times 83 tokens per second on Qwen2.5-1.5B, with the Sensitive_Preset file size_b.
+
+### Requirement 33: Triton int4 kernels
+
+**User Story:** As a user with an NVIDIA GPU, I want decode to read packed 4-bit weights directly, so that generation is fast, precise, and uses less GPU memory.
+
+#### Acceptance Criteria
+
+1. WHEN the Int4_Backend applies an int4 module to an activation with M in the Gemv_Range, THE Int4_Kernel SHALL read the Packed_Int4 weight, the scales, and the zero points directly and SHALL NOT read an fp16 copy of the weight.
+2. THE Int4_Kernel SHALL support group sizes 32, 64, and 128 with symmetric and with asymmetric quantization.
+3. THE Int4_Kernel SHALL accumulate in fp32 and SHALL return an fp16 result.
+4. FOR ALL supported shapes, group sizes, zero point modes, and M in the Gemv_Range, THE Int4_Kernel output SHALL equal the Reference_Dequantizer weight multiplied by the activation in fp32 within an absolute tolerance of 1e-2 plus a relative tolerance of 2e-3 (equivalence property).
+5. WHERE a module carries a g_idx permutation from act-order, THE Int4_Backend SHALL permute the weight columns once at load time and SHALL permute the activation on each call, and THE Int4_Kernel SHALL NOT gather by index.
+6. WHEN the Int4_Backend prepares an int8 module, THE Int4_Backend SHALL apply that module through the cached fp16 path of the Torch_GPU_Reference.
+7. WHEN the Int4_Backend applies an int4 module to an activation with M greater than 16, THE Prefill_Path SHALL dequantize the weight into a reused fp16 buffer and SHALL run a matmul.
+8. WHEN the Int4_Backend prepares query, key, and value projections, or gate and up projections, THE Int4_Backend SHALL concatenate the packed weights, scales, and zero points along the output dimension into one Fused_Projection and SHALL return outputs equal to the separate projections within an absolute tolerance of 1e-2 plus a relative tolerance of 2e-3.
+9. THE Int4_Kernel SHALL launch without host synchronization and without device memory allocation during CUDA graph capture, so that the CUDA_Graph_Decoder can capture and replay the Decode_Step.
+10. WHEN the Int4_Backend prepares an int4 module, THE Int4_Backend SHALL keep only the Kernel_Layout tensors for that module and SHALL NOT build an fp16 Weight_Cache for it.
+11. IF the activation shape, group size, or weight shape of a module is not supported by the Int4_Kernel, THEN THE Int4_Backend SHALL apply that module through the cached fp16 path and SHALL log the module name at INFO level.
+
+### Requirement 34: Backend integration and selection
+
+**User Story:** As a user, I want the fast backend chosen automatically when it works and a safe fallback when it does not, so that QUF runs everywhere without manual setup.
+
+#### Acceptance Criteria
+
+1. WHEN the Int4_Backend starts, THE Int4_Backend SHALL run the Triton_Gate and the Self_Test before it loads any model weights.
+2. IF the Triton_Gate fails or the Self_Test output differs from the Reference_Dequantizer result beyond the tolerance in 33.4, THEN THE Backend_Selector SHALL select the Torch_GPU Backend and SHALL log one INFO line that states the reason.
+3. WHERE the Triton_Runtime is importable, a CUDA device is present, the Triton_Gate passes, the Self_Test passes, and QUF_NO_TRITON is not set to 1, THE Backend_Selector SHALL select the Int4_Backend by default on CUDA once the default decision in Requirement 35 is Int4_Backend.
+4. WHEN the user passes `--backend int4`, THE Backend_Selector SHALL select the Int4_Backend, and IF the Triton_Gate or the Self_Test fails, THEN THE Backend_Selector SHALL report an error that states the reason.
+5. WHILE the environment variable QUF_NO_TRITON equals 1, THE Backend_Selector SHALL NOT import the Triton_Runtime and SHALL NOT select the Int4_Backend.
+6. WHEN the Backend_Selector receives the same inputs, THE Backend_Selector SHALL return the same Backend, and THE selection function SHALL run without a GPU.
+7. THE `quf info` command SHALL report the selected Backend and the Triton_Gate result.
+8. WHILE no CUDA device is present, THE Backend_Selector SHALL select the CPU Backend and SHALL NOT import the Triton_Runtime.
+
+### Requirement 35: Correctness, measurement, and default decision
+
+**User Story:** As a maintainer, I want measured evidence of speed and precision before the new kernel becomes the default, so that the format stays fast, precise, small, and bug-free.
+
+#### Acceptance Criteria
+
+1. FOR ALL prompts, prompt lengths, and generation lengths on tiny models, THE Int4_Backend SHALL select the same greedy tokens as the Torch_GPU_Reference, with and without the CUDA_Graph_Decoder (equivalence property).
+2. WHEN the Int4_Backend runs the real Qwen2.5-0.5B file, THE whole-model logits SHALL match the Torch_GPU_Reference within an absolute tolerance of 5e-2 and SHALL select the same greedy token for each test prompt.
+3. WHEN decode speed is measured, THE benchmark SHALL use the median timing helper from Requirement 28 on Qwen2.5-0.5B and Qwen2.5-1.5B with the Sensitive_Preset file size_b and SHALL record tokens per second for the eager and graph decoders.
+4. THE Results_Doc SHALL record GPU memory in use after load for the Int4_Backend and the Torch_GPU_Reference on both models.
+5. WHEN llama-protocol WikiText-2 Perplexity is measured for the Int4_Backend, THE Perplexity SHALL be within 0.1 percent of the Torch_GPU_Reference Perplexity on each model.
+6. THE Results_Doc SHALL report whether each model reached the Int4_Speed_Target and SHALL state the measured speedup when it is not reached.
+7. WHEN the Int4_Backend is faster than the Torch_GPU_Reference on both models and the checks in 35.2 and 35.5 pass, THE Backend_Selector SHALL make the Int4_Backend the default on CUDA.
+8. IF the Int4_Backend is not faster on both models or a check in 35.2 or 35.5 fails, THEN THE Backend_Selector SHALL keep the Int4_Backend opt-in through `--backend int4` and THE Results_Doc SHALL record the reason.
+
+### Requirement 36: Packaging and release 0.3.0
+
+**User Story:** As a user, I want the fast kernel to be an optional install, so that the base package stays small and pure Python.
+
+#### Acceptance Criteria
+
+1. THE package SHALL declare an optional extra `quf[fast]` that installs `triton-windows` on Windows and `triton` on Linux through platform markers.
+2. THE built wheel SHALL contain only Python files and SHALL NOT contain compiled extensions.
+3. WHEN the Triton_Runtime is not installed, THE package SHALL import and run on the CPU and Torch_GPU Backends without error.
+4. THE CPU CI test suite SHALL pass without the Triton_Runtime, and every test that needs the Triton_Runtime SHALL carry the `triton` marker.
+5. WHEN release 0.3.0 is prepared, THE CHANGELOG SHALL list the Int4_Backend, the `quf[fast]` extra, `--backend int4`, and QUF_NO_TRITON, and THE package version SHALL be 0.3.0.
+6. WHEN release 0.3.0 is built, THE build SHALL pass `twine check`, and a fresh virtual environment smoke test SHALL pass with and without the fast extra.
+7. THE release procedure SHALL commit and push the release and confirm that CI passes, and THE release procedure SHALL NOT upload to PyPI.

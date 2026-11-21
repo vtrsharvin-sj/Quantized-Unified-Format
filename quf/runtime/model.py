@@ -33,6 +33,7 @@ _BACKEND_CLASSES = {
     "torch_gpu": ("quf.runtime.backends.torch_gpu", "TorchGPUBackend"),
     "torch_fused": ("quf.runtime.backends.torch_fused", "TorchGPUFusedBackend"),
     "marlin": ("quf.runtime.backends.marlin", "MarlinBackend"),
+    "triton_int4": ("quf.runtime.backends.triton_int4", "TritonInt4Backend"),
 }
 
 
@@ -182,17 +183,21 @@ class QUFModel:
         backend_option: str = "auto",
         prefer_fused: bool = False,
         fuse_projections: bool = True,
+        cuda_graph: bool | None = None,
     ) -> "QUFModel":
         """Load a QUF file. ``backend`` names the Backend explicitly (``cpu``, ``torch_gpu``,
         ``torch_fused``, ``marlin``); otherwise the Backend_Selector chooses from
-        ``device_option`` (auto, cpu, cuda) and ``backend_option`` (auto, cached, fused, marlin).
+        ``device_option`` (auto, cpu, cuda) and ``backend_option`` (auto, cached, fused, marlin, int4).
         Raises ``NoGPUError`` when a GPU is required and none is available. When the selector
-        picked the fused backend and loading it fails, the cached backend is used instead."""
+        picked the fused backend and loading it fails, the cached backend is used instead.
+        `cuda_graph` False, or QUF_NO_CUDA_GRAPH set (None), makes `auto` prefer torch_gpu over
+        triton_int4, since eager int4 decoding is slower."""
         selected_by_selector = backend is None
         if backend is None:
             from quf.device import detect_devices  # noqa: PLC0415
             from quf.runtime.backends.torch_fused import fused_self_test  # noqa: PLC0415
-            from quf.runtime.selector import select_backend  # noqa: PLC0415
+            from quf.runtime.cuda_graph import cuda_graph_disabled_by_env  # noqa: PLC0415
+            from quf.runtime.selector import int4_probe, select_backend  # noqa: PLC0415
 
             info = detect_devices()
             cached_bytes, free_bytes = (None, None)
@@ -206,6 +211,8 @@ class QUFModel:
                 free_bytes=free_bytes,
                 prefer_fused=prefer_fused,
                 fused_self_test=fused_self_test,
+                int4_probe=int4_probe,
+                cuda_graph=(not cuda_graph_disabled_by_env()) if cuda_graph is None else bool(cuda_graph),
             ).backend
         if backend == "marlin":
             from quf.runtime.backends.marlin import require_marlin  # noqa: PLC0415
@@ -218,6 +225,10 @@ class QUFModel:
         except GPUMemoryError:
             raise
         except Exception as exc:  # noqa: BLE001
+            if backend == "triton_int4" and selected_by_selector and backend_option == "auto":
+                logger.debug("int4 backend load failure: %s: %s", type(exc).__name__, exc)
+                logger.info("int4 backend failed to load, using the cached backend")
+                return cls._load_with(path, "torch_gpu", fuse_projections)
             if backend == "torch_fused" and selected_by_selector:
                 logger.debug("fused backend load failure: %s: %s", type(exc).__name__, exc)
                 logger.info("fused backend failed to load, using the cached backend")
@@ -227,6 +238,12 @@ class QUFModel:
     @classmethod
     def _load_with(cls, path, backend: str, fuse_projections: bool = True) -> "QUFModel":
         device = torch.device("cpu" if backend == "cpu" else "cuda")
+        if backend == "triton_int4":
+            from quf.runtime.backends.triton_int4 import triton_int4_self_test  # noqa: PLC0415
+
+            ok, reason = triton_int4_self_test()
+            if not ok:
+                raise RuntimeError(f"triton_int4 backend unavailable: {reason}")
         be = _make_backend(backend)
         with QUFReader(path) as reader:
             model = cls(reader.header, device, backend)
@@ -260,7 +277,14 @@ class QUFModel:
         def norm(name: str) -> torch.Tensor:
             return dense(name).to(self.dtype)
 
+        routed: list = []
+
         def linear(prefix: str) -> QUFLinear:
+            m = _linear(prefix)
+            routed.append(m.prepared)
+            return m
+
+        def _linear(prefix: str) -> QUFLinear:
             bias = None
             if f"{prefix}.bias" in names:
                 bias = dense(f"{prefix}.bias").to(self.dtype)
@@ -268,10 +292,10 @@ class QUFModel:
             if f"{prefix}{INT8_SUFFIX}" in names:
                 q = torch.from_numpy(np.array(reader.tensor(f"{prefix}{INT8_SUFFIX}")))
                 s = torch.from_numpy(np.array(reader.tensor(f"{prefix}.scales")))
-                return QUFLinear(Int8Weight(q.to(self.device), s.to(self.device)), be, self.device, bias=bias)
+                return QUFLinear(Int8Weight(q.to(self.device), s.to(self.device)), be, self.device, bias=bias, name=prefix)
             if f"{prefix}.qweight" not in names and f"{prefix}.weight" in names:
                 w = torch.from_numpy(np.array(reader.tensor(f"{prefix}.weight")))
-                return QUFLinear(w.to(self.device), be, self.device, bias=bias)
+                return QUFLinear(w.to(self.device), be, self.device, bias=bias, name=prefix)
             qweight = torch.from_numpy(np.array(reader.tensor(f"{prefix}.qweight")))
             scales = torch.from_numpy(np.array(reader.tensor(f"{prefix}.scales")))
             qzeros = None
@@ -289,7 +313,8 @@ class QUFModel:
                 out_features=int(qweight.shape[1]),
             )
             return QUFLinear(
-                qw, be, self.device, bias=bias, g_idx=None if g_idx is None else g_idx.to(self.device)
+                qw, be, self.device, bias=bias, name=prefix,
+                g_idx=None if g_idx is None else g_idx.to(self.device),
             )
 
         self.embed = dense("model.embed_tokens.weight")
@@ -328,6 +353,10 @@ class QUFModel:
                 if FusedProjection.can_fuse([layer.gate, layer.up]):
                     layer.gate_up = FusedProjection([layer.gate, layer.up])
             self.layers.append(layer)
+        if getattr(be, "name", None) == "triton_int4":
+            from quf.runtime.kernels.dispatch import route_summary  # noqa: PLC0415
+
+            logger.debug("%s", route_summary(routed))
 
     # -- forward ----------------------------------------------------------
 
