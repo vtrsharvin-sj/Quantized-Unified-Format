@@ -20,7 +20,8 @@ import _greedy_compare as gcmp
 import test_int4_greedy as tig
 from quf.quant.quantize import dequantize_int8, quantize_int8
 from quf.runtime.generate import generate
-from quf.runtime.kernels.decode_gemv import gemv_int8
+pytest.importorskip("triton")
+from quf.runtime.kernels.decode_gemv import gemv_int8  # noqa: E402
 
 pytestmark = [pytest.mark.gpu, pytest.mark.triton]
 

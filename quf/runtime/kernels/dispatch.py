@@ -188,7 +188,10 @@ def _build_dequant_kernel():
 
 
 def _prefill_buffer(numel: int, device: torch.device) -> torch.Tensor:
-    key = (device.type, device.index if device.index is not None else torch.cuda.current_device())
+    index = device.index
+    if index is None:
+        index = torch.cuda.current_device() if device.type == "cuda" else 0
+    key = (device.type, index)
     buf = _PREFILL_BUFFERS.get(key)
     if buf is None or buf.numel() < numel:
         _PREFILL_BUFFERS.pop(key, None)  # free the old one before allocating the larger one

@@ -6,7 +6,8 @@ import pytest
 import torch
 
 from quf.quant.quantize import dequantize_int8, quantize_int8
-from quf.runtime.kernels.decode_gemv import gemv_int8
+pytest.importorskip("triton")
+from quf.runtime.kernels.decode_gemv import gemv_int8  # noqa: E402
 
 pytestmark = [pytest.mark.gpu, pytest.mark.triton]
 
