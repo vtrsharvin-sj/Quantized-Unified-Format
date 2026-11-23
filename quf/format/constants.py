@@ -1,8 +1,8 @@
-"""Constants for the QUF file format (versions 1 and 2). All integers are little-endian."""
+"""Constants for the QUF file format (versions 1, 2 and 3). All integers are little-endian."""
 
 MAGIC = b"QUF1"
 VERSION = 1  # version written for files that use only version 1 features
-MAX_VERSION = 2  # highest version this package reads and writes
+MAX_VERSION = 3  # highest version this package reads and writes
 ALIGN = 64
 GROUP_SIZE = 128  # default group size, and the only one version 1 files use
 SUPPORTED_GROUP_SIZES = (32, 64, 128)
@@ -13,6 +13,16 @@ PRECISIONS = ("int4", "int8", "fp16")
 # Tensor name suffixes introduced by version 2
 G_IDX_SUFFIX = ".g_idx"
 INT8_SUFFIX = ".qweight_int8"
+
+# Version 3: Quantized_Embedding (per-row group-wise int4 or int8 table, fp16 scales)
+EMBED_VERSION = 3
+EMBED_Q4_SUFFIX = ".embed_q4"  # int8 bytes, [rows, cols/2], two int4 per byte (even col in low nibble)
+EMBED_Q8_SUFFIX = ".embed_q8"  # int8, [rows, cols]
+EMBED_SCALES_SUFFIX = ".embed_scales"  # fp16, [rows, cols/group_size]
+EMBED_GROUP_SIZES = (32, 64)
+EMBED_BITS = (4, 8)
+EMBED_METHODS = ("rtn", "gptq")
+EMBED_KEYS = ("embedding", "lm_head")  # keys of the quantization object that declare one
 
 # Fixed prefix: magic (4) + version uint32 (4) + header_len uint64 (8)
 PREFIX_SIZE = 16

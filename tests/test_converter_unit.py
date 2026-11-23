@@ -98,7 +98,7 @@ def test_header_stores_config_and_tokenizer(tmp_path):
 
 def test_embedding_and_lm_head_stored_fp16(tmp_path):
     out = tmp_path / "o.quf"
-    _convert(tmp_path, out)
+    _convert(tmp_path, out, embed_precision="fp16")
     r = QUFReader(out)
     assert r.tensor("model.embed_tokens.weight").dtype.name == "float16"
     assert r.tensor("lm_head.weight").dtype.name == "float16"

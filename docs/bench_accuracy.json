@@ -1,1674 +1,2666 @@
 {
- "environment": {
-  "device": "NVIDIA GeForce RTX 5080 Laptop GPU",
-  "platform": "Windows-11-10.0.26300-SP0",
-  "software_versions": {
-   "python": "3.13.0rc2",
-   "quf": "0.2.0",
-   "torch": "2.11.0+cu128",
-   "gptqmodel": "not installed",
-   "gigatoken": "0.11.0",
-   "tokenizers": "0.23.3",
-   "transformers": "5.23.0",
-   "datasets": "5.2.0",
-   "cuda": "12.8",
-   "llama-cpp-python": "0.3.36"
-  }
- },
- "target_percent": 3.0,
- "time_cap_seconds": 1500,
- "eval": {
-  "domain_1": "WikiText-2 test split (calibration domain)",
-  "domain_2": "allenai/c4 en validation, first ~1300000 chars (never used for calibration)",
-  "context": 2048
- },
- "gguf_setup": {
-  "status": "installed",
-  "command": "pip install --only-binary=:all: llama-cpp-python",
-  "pip_error": null
- },
- "models": {
-  "Qwen/Qwen2.5-0.5B": {
-   "fp16": {
-    "run": "fp16",
-    "status": "done",
-    "ppl_wikitext2": 13.070290181970144,
-    "ppl_c4_heldout": 19.793030493180073,
-    "ppl_wikitext2_subset": 13.183905637551634,
-    "ppl_c4_heldout_subset": 20.40354177447443,
-    "subset_windows": 32,
-    "file_size_bytes": 988065536,
-    "tokens_per_second": 37.95855566273789,
-    "backend": "huggingface fp16 generate (cuda)",
-    "size_note": "fp16 parameter bytes (tied embeddings counted once)",
-    "tokens_per_second_min": 32.64010843045602,
-    "tokens_per_second_max": 39.16688126855171,
-    "tokens_per_second_repeats": 7,
-    "tps_samples": [
-     39.16688126855171,
-     37.95855566273789,
-     39.032139551622315,
-     38.40359611273912,
-     36.290984287460645,
-     32.64010843045602,
-     36.024571459581885
-    ],
-    "tps_measurement": "median of 7 timed repeats after 2 warm-up runs (task 22.3)"
-   },
-   "rtn_g128": {
-    "run": "rtn_g128",
-    "status": "done",
-    "group_size": 128,
-    "act_order": false,
-    "clip_search": false,
-    "preset": null,
-    "calibration": "none",
-    "method": "rtn",
-    "ppl_wikitext2": 15.541694536673987,
-    "ppl_c4_heldout": 23.50729578540078,
-    "ppl_wikitext2_subset": 15.71127584436698,
-    "ppl_c4_heldout_subset": 24.350579452266135,
-    "subset_windows": 32,
-    "file_size_bytes": 469483072,
-    "tokens_per_second": 28.08106723298913,
-    "backend": "torch_gpu",
-    "convert_seconds": 13,
-    "bench_seconds": 200,
-    "size_report": "Size by precision:\n  int4: 185902080 bytes (168 modules: down_proj x24, gate_proj x24, up_proj x24, k_proj x24, o_proj x24, q_proj x24, v_proj x24)\n  int8: 0 bytes\n  fp16: 272412416 bytes (embeddings, norms, biases and fp16 modules)\n  tensor total: 458314496 bytes\n  file total: 469483072 bytes (tensors plus header and padding)\n  ratio to fp16 checkpoint: 0.4752 (988065536 bytes)",
-    "increase_pct_wikitext2": 18.908565305711655,
-    "target_reached_wikitext2": false,
-    "increase_pct_c4_heldout": 18.765520992353846,
-    "target_reached_c4_heldout": false,
-    "increase_pct_wikitext2_subset": 19.170117537982478,
-    "target_reached_wikitext2_subset": false,
-    "increase_pct_c4_heldout_subset": 19.34486532494859,
-    "target_reached_c4_heldout_subset": false,
-    "tokens_per_second_min": 25.698550858705413,
-    "tokens_per_second_max": 31.84989417871416,
-    "tokens_per_second_repeats": 7,
-    "tps_samples": [
-     29.037311493411853,
-     29.194931009252905,
-     27.96954675749864,
-     28.08106723298913,
-     27.22552369509905,
-     31.84989417871416,
-     25.698550858705413
-    ],
-    "tps_measurement": "median of 7 timed repeats after 2 warm-up runs (task 22.3)"
-   },
-   "v010": {
-    "run": "v010",
-    "status": "done",
-    "group_size": 128,
-    "act_order": false,
-    "clip_search": false,
-    "preset": null,
-    "calibration": "legacy",
-    "method": "gptq",
-    "ppl_wikitext2": 14.040074869015013,
-    "ppl_c4_heldout": 21.74755826789914,
-    "ppl_wikitext2_subset": 14.138196909538363,
-    "ppl_c4_heldout_subset": 22.50508826690697,
-    "subset_windows": 32,
-    "file_size_bytes": 469483072,
-    "tokens_per_second": 23.21706878268009,
-    "backend": "torch_gpu",
-    "convert_seconds": 113,
-    "bench_seconds": 196,
-    "size_report": "Size by precision:\n  int4: 185902080 bytes (168 modules: down_proj x24, gate_proj x24, up_proj x24, k_proj x24, o_proj x24, q_proj x24, v_proj x24)\n  int8: 0 bytes\n  fp16: 272412416 bytes (embeddings, norms, biases and fp16 modules)\n  tensor total: 458314496 bytes\n  file total: 469483072 bytes (tensors plus header and padding)\n  ratio to fp16 checkpoint: 0.4752 (988065536 bytes)",
-    "increase_pct_wikitext2": 7.419764010921837,
-    "target_reached_wikitext2": false,
-    "increase_pct_c4_heldout": 9.874828290657778,
-    "target_reached_c4_heldout": false,
-    "increase_pct_wikitext2_subset": 7.238304780251359,
-    "target_reached_wikitext2_subset": false,
-    "increase_pct_c4_heldout_subset": 10.299910259020084,
-    "target_reached_c4_heldout_subset": false,
-    "tokens_per_second_min": 18.607468246935415,
-    "tokens_per_second_max": 31.113292930763482,
-    "tokens_per_second_repeats": 7,
-    "tps_samples": [
-     20.63550121310849,
-     22.195718376555153,
-     18.607468246935415,
-     23.21706878268009,
-     31.113292930763482,
-     26.85647705629915,
-     28.396027324773442
-    ],
-    "tps_measurement": "median of 7 timed repeats after 2 warm-up runs (task 22.3)"
-   },
-   "rtn_g32": {
-    "run": "rtn_g32",
-    "status": "done",
-    "group_size": 32,
-    "act_order": false,
-    "clip_search": false,
-    "preset": null,
-    "calibration": "none",
-    "method": "rtn",
-    "ppl_wikitext2": 14.382624766525385,
-    "ppl_c4_heldout": 21.602435769122238,
-    "ppl_wikitext2_subset": 14.464295165733356,
-    "ppl_c4_heldout_subset": 22.390695658450376,
-    "subset_windows": 32,
-    "file_size_bytes": 490449792,
-    "tokens_per_second": 29.504633794934684,
-    "backend": "torch_gpu",
-    "convert_seconds": 11,
-    "bench_seconds": 201,
-    "size_report": "Size by precision:\n  int4: 206868480 bytes (168 modules: down_proj x24, gate_proj x24, up_proj x24, k_proj x24, o_proj x24, q_proj x24, v_proj x24)\n  int8: 0 bytes\n  fp16: 272412416 bytes (embeddings, norms, biases and fp16 modules)\n  tensor total: 479280896 bytes\n  file total: 490449792 bytes (tensors plus header and padding)\n  ratio to fp16 checkpoint: 0.4964 (988065536 bytes)",
-    "increase_pct_wikitext2": 10.040592567451533,
-    "target_reached_wikitext2": false,
-    "increase_pct_c4_heldout": 9.141628294695025,
-    "target_reached_c4_heldout": false,
-    "increase_pct_wikitext2_subset": 9.711761926866313,
-    "target_reached_wikitext2_subset": false,
-    "increase_pct_c4_heldout_subset": 9.739259516511733,
-    "target_reached_c4_heldout_subset": false,
-    "tokens_per_second_min": 24.945536877069767,
-    "tokens_per_second_max": 32.84164936921464,
-    "tokens_per_second_repeats": 7,
-    "tps_samples": [
-     26.698789760547243,
-     29.912983132075944,
-     26.606396526933697,
-     29.504633794934684,
-     24.945536877069767,
-     31.195313761968563,
-     32.84164936921464
-    ],
-    "tps_measurement": "median of 7 timed repeats after 2 warm-up runs (task 22.3)"
-   },
-   "v020": {
-    "run": "v020",
-    "status": "done",
-    "group_size": 32,
-    "act_order": true,
-    "clip_search": true,
-    "preset": "sensitive",
-    "calibration": "default",
-    "method": "gptq",
-    "ppl_wikitext2": 13.377461537118602,
-    "ppl_c4_heldout": 20.44530853759952,
-    "ppl_wikitext2_subset": 13.499568557551418,
-    "ppl_c4_heldout_subset": 21.11752818683697,
-    "subset_windows": 32,
-    "file_size_bytes": 539605632,
-    "tokens_per_second": 40.9422395840375,
-    "backend": "torch_gpu",
-    "convert_seconds": 150,
-    "bench_seconds": 199,
-    "size_report": "Size by precision:\n  int4: 140793856 bytes (138 modules: gate_proj x23, up_proj x23, k_proj x23, o_proj x23, q_proj x23, v_proj x23)\n  int8: 115213312 bytes (30 modules: down_proj x24, gate_proj x1, up_proj x1, k_proj x1, o_proj x1, q_proj x1, v_proj x1)\n  fp16: 272412416 bytes (embeddings, norms, biases and fp16 modules)\n  tensor total: 528419584 bytes\n  file total: 539605632 bytes (tensors plus header and padding)\n  ratio to fp16 checkpoint: 0.5461 (988065536 bytes)",
-    "increase_pct_wikitext2": 2.3501494677768298,
-    "target_reached_wikitext2": true,
-    "increase_pct_c4_heldout": 3.2954935558968446,
-    "target_reached_c4_heldout": false,
-    "increase_pct_wikitext2_subset": 2.394305061625168,
-    "target_reached_wikitext2_subset": true,
-    "increase_pct_c4_heldout_subset": 3.499325853591584,
-    "target_reached_c4_heldout_subset": false,
-    "tokens_per_second_min": 39.38201738318936,
-    "tokens_per_second_max": 41.72991356692824,
-    "tokens_per_second_repeats": 7,
-    "tps_samples": [
-     39.38201738318936,
-     40.33015271266677,
-     40.9422395840375,
-     41.040310305808056,
-     41.72991356692824,
-     39.78401754178566,
-     41.30541637926988
-    ],
-    "tps_measurement": "median of 7 timed repeats after 2 warm-up runs (task 22.3)"
-   },
-   "gguf_q4_k_m": {
-    "run": "gguf_q4_k_m",
-    "status": "not run (unverified)",
-    "reason": "GGUF rows skipped by scope decision; harness not verified end to end"
-   },
-   "gguf_q4_0": {
-    "run": "gguf_q4_0",
-    "status": "not run (unverified)",
-    "reason": "GGUF rows skipped by scope decision; harness not verified end to end"
-   },
-   "gguf_q8_0": {
-    "run": "gguf_q8_0",
-    "status": "not run (unverified)",
-    "reason": "GGUF rows skipped by scope decision; harness not verified end to end"
-   }
-  },
-  "Qwen/Qwen2.5-1.5B": {
-   "fp16": {
-    "run": "fp16",
-    "status": "done",
-    "ppl_wikitext2": 9.265000854444182,
-    "ppl_c4_heldout": 14.660481584368847,
-    "ppl_wikitext2_subset": 9.277642292817838,
-    "ppl_c4_heldout_subset": 15.067721078823213,
-    "subset_windows": 32,
-    "file_size_bytes": 3087428608,
-    "tokens_per_second": 32.32343475282809,
-    "backend": "huggingface fp16 generate (cuda)",
-    "size_note": "fp16 parameter bytes (tied embeddings counted once)",
-    "tokens_per_second_min": 31.8409987884345,
-    "tokens_per_second_max": 32.49320460474817,
-    "tokens_per_second_repeats": 7,
-    "tps_samples": [
-     32.49320460474817,
-     32.32343475282809,
-     32.40450216003218,
-     32.01198208488632,
-     32.36396187889962,
-     32.22340162109277,
-     31.8409987884345
-    ],
-    "tps_measurement": "median of 7 timed repeats after 2 warm-up runs (task 22.3)"
-   },
-   "v010": {
-    "run": "v010",
-    "status": "done",
-    "group_size": 128,
-    "act_order": false,
-    "clip_search": false,
-    "preset": null,
-    "calibration": "legacy",
-    "method": "gptq",
-    "ppl_wikitext2": 9.843357146278452,
-    "ppl_c4_heldout": 15.693512963886736,
-    "ppl_wikitext2_subset": 9.875142784210933,
-    "ppl_c4_heldout_subset": 16.129967183539332,
-    "subset_windows": 32,
-    "file_size_bytes": 1158904640,
-    "tokens_per_second": 36.48198308763924,
-    "backend": "torch_gpu",
-    "convert_seconds": 279,
-    "bench_seconds": 237,
-    "size_report": "Size by precision:\n  int4: 680687616 bytes (196 modules: down_proj x28, gate_proj x28, up_proj x28, k_proj x28, o_proj x28, q_proj x28, v_proj x28)\n  int8: 0 bytes\n  fp16: 467037184 bytes (embeddings, norms, biases and fp16 modules)\n  tensor total: 1147724800 bytes\n  file total: 1158904640 bytes (tensors plus header and padding)\n  ratio to fp16 checkpoint: 0.3754 (3087428608 bytes)",
-    "increase_pct_wikitext2": 6.242377101960517,
-    "target_reached_wikitext2": false,
-    "increase_pct_c4_heldout": 7.04636729409569,
-    "target_reached_c4_heldout": false,
-    "increase_pct_wikitext2_subset": 6.440219104541711,
-    "target_reached_wikitext2_subset": false,
-    "increase_pct_c4_heldout_subset": 7.049812636955721,
-    "target_reached_c4_heldout_subset": false,
-    "tokens_per_second_min": 36.416668136643665,
-    "tokens_per_second_max": 37.153123346980976,
-    "tokens_per_second_repeats": 7,
-    "tps_samples": [
-     36.416668136643665,
-     36.43900713726286,
-     36.57946351187621,
-     37.02383015688717,
-     36.48198308763924,
-     37.153123346980976,
-     36.43981628412106
-    ],
-    "tps_measurement": "median of 7 timed repeats after 2 warm-up runs (task 22.3)"
-   },
-   "rtn_g128": {
-    "run": "rtn_g128",
-    "status": "done",
-    "group_size": 128,
-    "act_order": false,
-    "clip_search": false,
-    "preset": null,
-    "calibration": "none",
-    "method": "rtn",
-    "ppl_wikitext2": 10.355541270052527,
-    "ppl_c4_heldout": 16.139045914564175,
-    "ppl_wikitext2_subset": 10.411064344133294,
-    "ppl_c4_heldout_subset": 16.641978372977057,
-    "subset_windows": 32,
-    "file_size_bytes": 1158904640,
-    "tokens_per_second": 38.21475017702818,
-    "backend": "torch_gpu",
-    "convert_seconds": 23,
-    "bench_seconds": 242,
-    "size_report": "Size by precision:\n  int4: 680687616 bytes (196 modules: down_proj x28, gate_proj x28, up_proj x28, k_proj x28, o_proj x28, q_proj x28, v_proj x28)\n  int8: 0 bytes\n  fp16: 467037184 bytes (embeddings, norms, biases and fp16 modules)\n  tensor total: 1147724800 bytes\n  file total: 1158904640 bytes (tensors plus header and padding)\n  ratio to fp16 checkpoint: 0.3754 (3087428608 bytes)",
-    "increase_pct_wikitext2": 11.770537669030446,
-    "target_reached_wikitext2": false,
-    "increase_pct_c4_heldout": 10.08537353760457,
-    "target_reached_c4_heldout": false,
-    "increase_pct_wikitext2_subset": 12.216703506588944,
-    "target_reached_wikitext2_subset": false,
-    "increase_pct_c4_heldout_subset": 10.447879184373598,
-    "target_reached_c4_heldout_subset": false,
-    "tokens_per_second_min": 33.385271774365904,
-    "tokens_per_second_max": 39.27332565543286,
-    "tokens_per_second_repeats": 7,
-    "tps_samples": [
-     33.385271774365904,
-     34.01865327807261,
-     38.21475017702818,
-     39.22320886295112,
-     38.560321477408195,
-     37.81871574970631,
-     39.27332565543286
-    ],
-    "tps_measurement": "median of 7 timed repeats after 2 warm-up runs (task 22.3)"
-   },
-   "rtn_g32": {
-    "run": "rtn_g32",
-    "status": "done",
-    "group_size": 32,
-    "act_order": false,
-    "clip_search": false,
-    "preset": null,
-    "calibration": "none",
-    "method": "rtn",
-    "ppl_wikitext2": 9.857169437816257,
-    "ppl_c4_heldout": 15.46760930190529,
-    "ppl_wikitext2_subset": 9.88156324035005,
-    "ppl_c4_heldout_subset": 15.893013202753707,
-    "subset_windows": 32,
-    "file_size_bytes": 1235674048,
-    "tokens_per_second": 38.75358773446714,
-    "backend": "torch_gpu",
-    "convert_seconds": 24,
-    "bench_seconds": 242,
-    "size_report": "Size by precision:\n  int4: 757456896 bytes (196 modules: down_proj x28, gate_proj x28, up_proj x28, k_proj x28, o_proj x28, q_proj x28, v_proj x28)\n  int8: 0 bytes\n  fp16: 467037184 bytes (embeddings, norms, biases and fp16 modules)\n  tensor total: 1224494080 bytes\n  file total: 1235674048 bytes (tensors plus header and padding)\n  ratio to fp16 checkpoint: 0.4002 (3087428608 bytes)",
-    "increase_pct_wikitext2": 6.391457407022538,
-    "target_reached_wikitext2": false,
-    "increase_pct_c4_heldout": 5.505465239266161,
-    "target_reached_c4_heldout": false,
-    "increase_pct_wikitext2_subset": 6.509422636392559,
-    "target_reached_wikitext2_subset": false,
-    "increase_pct_c4_heldout_subset": 5.477219279632095,
-    "target_reached_c4_heldout_subset": false,
-    "tokens_per_second_min": 35.78517710866929,
-    "tokens_per_second_max": 40.27626497052388,
-    "tokens_per_second_repeats": 7,
-    "tps_samples": [
-     35.79783130027542,
-     35.78517710866929,
-     39.81721410150655,
-     39.974201649574994,
-     38.75358773446714,
-     40.27626497052388,
-     38.55756161984035
-    ],
-    "tps_measurement": "median of 7 timed repeats after 2 warm-up runs (task 22.3)"
-   },
-   "v020": {
-    "run": "v020",
-    "status": "done",
-    "group_size": 32,
-    "act_order": true,
-    "clip_search": true,
-    "preset": "sensitive",
-    "calibration": "default",
-    "method": "gptq",
-    "ppl_wikitext2": 9.358493960377901,
-    "ppl_c4_heldout": 14.899744154939428,
-    "ppl_wikitext2_subset": 9.385706298679713,
-    "ppl_c4_heldout_subset": 15.319029318264834,
-    "subset_windows": 32,
-    "file_size_bytes": 1413323520,
-    "tokens_per_second": 30.664761235076465,
-    "backend": "torch_gpu",
-    "convert_seconds": 263,
-    "bench_seconds": 238,
-    "size_report": "Size by precision:\n  int4: 516575232 bytes (162 modules: gate_proj x27, up_proj x27, k_proj x27, o_proj x27, q_proj x27, v_proj x27)\n  int8: 418510848 bytes (34 modules: down_proj x28, gate_proj x1, up_proj x1, k_proj x1, o_proj x1, q_proj x1, v_proj x1)\n  fp16: 467037184 bytes (embeddings, norms, biases and fp16 modules)\n  tensor total: 1402123264 bytes\n  file total: 1413323520 bytes (tensors plus header and padding)\n  ratio to fp16 checkpoint: 0.4578 (3087428608 bytes)",
-    "increase_pct_wikitext2": 1.0090998090828363,
-    "target_reached_wikitext2": true,
-    "increase_pct_c4_heldout": 1.6320239495112077,
-    "target_reached_c4_heldout": true,
-    "increase_pct_wikitext2_subset": 1.1647787492899075,
-    "target_reached_wikitext2_subset": true,
-    "increase_pct_c4_heldout_subset": 1.6678583186333196,
-    "target_reached_c4_heldout_subset": true,
-    "tokens_per_second_min": 30.211583045423083,
-    "tokens_per_second_max": 31.079973725774416,
-    "tokens_per_second_repeats": 7,
-    "tps_samples": [
-     30.94108768559736,
-     31.079973725774416,
-     30.664761235076465,
-     30.5759525292837,
-     30.81296740623882,
-     30.211583045423083,
-     30.65906155870633
-    ],
-    "tps_measurement": "median of 7 timed repeats after 2 warm-up runs (task 22.3)"
-   },
-   "gguf_q4_k_m": {
-    "run": "gguf_q4_k_m",
-    "status": "not run (unverified)",
-    "reason": "GGUF rows skipped by scope decision; harness not verified end to end"
-   },
-   "gguf_q8_0": {
-    "run": "gguf_q8_0",
-    "status": "not run (unverified)",
-    "reason": "GGUF rows skipped by scope decision; harness not verified end to end"
-   },
-   "gguf_q4_0": {
-    "run": "gguf_q4_0",
-    "status": "not run (unverified)",
-    "reason": "GGUF rows skipped by scope decision; harness not verified end to end"
-   }
-  }
- },
- "models_llama": {
-  "Qwen/Qwen2.5-0.5B": {
-   "fp16": {
-    "run": "fp16",
-    "status": "done",
-    "ppl_wikitext2": 11.739802220097932,
-    "ppl_c4_heldout": 18.23939220877998,
-    "protocol": "llama",
-    "windows": "all",
-    "file_size_bytes": 988065536,
-    "tokens_per_second": 45.813498116829855,
-    "tokens_per_second_min": 45.16449190227757,
-    "tokens_per_second_max": 46.0783242235113,
-    "tokens_per_second_repeats": 7,
-    "backend": "huggingface fp16 generate (cuda)",
-    "size_note": "fp16 parameter bytes (tied embeddings counted once)"
-   },
-   "v010": {
-    "run": "v010",
-    "status": "done",
-    "group_size": 128,
-    "act_order": false,
-    "clip_search": false,
-    "preset": null,
-    "calibration": "legacy",
-    "method": "gptq",
-    "ppl_wikitext2": 12.596312651702426,
-    "ppl_c4_heldout": 19.984847789475463,
-    "protocol": "llama",
-    "windows": "all",
-    "file_size_bytes": 469483072,
-    "tokens_per_second": 25.366027817970235,
-    "tokens_per_second_min": 23.29758706891849,
-    "tokens_per_second_max": 37.52615837095315,
-    "tokens_per_second_repeats": 7,
-    "backend": "torch_gpu",
-    "convert_seconds": 103,
-    "bench_seconds": 290,
-    "size_report": "Size by precision:\n  int4: 185902080 bytes (168 modules: down_proj x24, gate_proj x24, up_proj x24, k_proj x24, o_proj x24, q_proj x24, v_proj x24)\n  int8: 0 bytes\n  fp16: 272412416 bytes (embeddings, norms, biases and fp16 modules)\n  tensor total: 458314496 bytes\n  file total: 469483072 bytes (tensors plus header and padding)\n  ratio to fp16 checkpoint: 0.4752 (988065536 bytes)",
-    "increase_pct_wikitext2": 7.2957824633382184,
-    "target_reached_wikitext2": false,
-    "increase_pct_c4_heldout": 9.569702546641157,
-    "target_reached_c4_heldout": false
-   },
-   "rtn_g128": {
-    "run": "rtn_g128",
-    "status": "done",
-    "group_size": 128,
-    "act_order": false,
-    "clip_search": false,
-    "preset": null,
-    "calibration": "none",
-    "method": "rtn",
-    "ppl_wikitext2": 13.902831902717601,
-    "ppl_c4_heldout": 21.639683958722593,
-    "protocol": "llama",
-    "windows": "all",
-    "file_size_bytes": 469483072,
-    "tokens_per_second": 46.66750668178835,
-    "tokens_per_second_min": 46.62739862572816,
-    "tokens_per_second_max": 47.249018697017895,
-    "tokens_per_second_repeats": 7,
-    "backend": "torch_gpu",
-    "convert_seconds": 10,
-    "bench_seconds": 288,
-    "size_report": "Size by precision:\n  int4: 185902080 bytes (168 modules: down_proj x24, gate_proj x24, up_proj x24, k_proj x24, o_proj x24, q_proj x24, v_proj x24)\n  int8: 0 bytes\n  fp16: 272412416 bytes (embeddings, norms, biases and fp16 modules)\n  tensor total: 458314496 bytes\n  file total: 469483072 bytes (tensors plus header and padding)\n  ratio to fp16 checkpoint: 0.4752 (988065536 bytes)",
-    "increase_pct_wikitext2": 18.424754029643474,
-    "target_reached_wikitext2": false,
-    "increase_pct_c4_heldout": 18.64257158912237,
-    "target_reached_c4_heldout": false
-   },
-   "rtn_g32": {
-    "run": "rtn_g32",
-    "status": "done",
-    "group_size": 32,
-    "act_order": false,
-    "clip_search": false,
-    "preset": null,
-    "calibration": "none",
-    "method": "rtn",
-    "ppl_wikitext2": 12.868753725663321,
-    "ppl_c4_heldout": 19.82647327316754,
-    "protocol": "llama",
-    "windows": "all",
-    "file_size_bytes": 490449792,
-    "tokens_per_second": 47.25540601851371,
-    "tokens_per_second_min": 46.86331391877338,
-    "tokens_per_second_max": 47.561103756424224,
-    "tokens_per_second_repeats": 7,
-    "backend": "torch_gpu",
-    "convert_seconds": 8,
-    "bench_seconds": 287,
-    "size_report": "Size by precision:\n  int4: 206868480 bytes (168 modules: down_proj x24, gate_proj x24, up_proj x24, k_proj x24, o_proj x24, q_proj x24, v_proj x24)\n  int8: 0 bytes\n  fp16: 272412416 bytes (embeddings, norms, biases and fp16 modules)\n  tensor total: 479280896 bytes\n  file total: 490449792 bytes (tensors plus header and padding)\n  ratio to fp16 checkpoint: 0.4964 (988065536 bytes)",
-    "increase_pct_wikitext2": 9.616443994539225,
-    "target_reached_wikitext2": false,
-    "increase_pct_c4_heldout": 8.701392273496822,
-    "target_reached_c4_heldout": false
-   },
-   "v020": {
-    "run": "v020",
-    "status": "done",
-    "group_size": 32,
-    "act_order": true,
-    "clip_search": true,
-    "preset": "sensitive",
-    "calibration": "default",
-    "method": "gptq",
-    "ppl_wikitext2": 12.032610277960668,
-    "ppl_c4_heldout": 18.84406342472731,
-    "protocol": "llama",
-    "windows": "all",
-    "file_size_bytes": 539605632,
-    "tokens_per_second": 50.18814280027115,
-    "tokens_per_second_min": 48.92012642795483,
-    "tokens_per_second_max": 50.72250242004342,
-    "tokens_per_second_repeats": 7,
-    "backend": "torch_gpu",
-    "convert_seconds": 113,
-    "bench_seconds": 282,
-    "size_report": "Size by precision:\n  int4: 140793856 bytes (138 modules: gate_proj x23, up_proj x23, k_proj x23, o_proj x23, q_proj x23, v_proj x23)\n  int8: 115213312 bytes (30 modules: down_proj x24, gate_proj x1, up_proj x1, k_proj x1, o_proj x1, q_proj x1, v_proj x1)\n  fp16: 272412416 bytes (embeddings, norms, biases and fp16 modules)\n  tensor total: 528419584 bytes\n  file total: 539605632 bytes (tensors plus header and padding)\n  ratio to fp16 checkpoint: 0.5461 (988065536 bytes)",
-    "increase_pct_wikitext2": 2.494148132763807,
-    "target_reached_wikitext2": true,
-    "increase_pct_c4_heldout": 3.3151938892802546,
-    "target_reached_c4_heldout": false
-   },
-   "gguf_q4_k_m": {
-    "run": "gguf_q4_k_m",
-    "status": "done",
-    "quant": "Q4_K_M",
-    "ppl_wikitext2": 12.0425,
-    "ppl_c4_heldout": 18.7241,
-    "protocol": "llama",
-    "windows": "all",
-    "file_size_bytes": 397807584,
-    "backend": "llama-perplexity.exe (cuda, -ngl 99)",
-    "tokens_per_second": 481.071,
-    "tokens_per_second_min": 445.952,
-    "tokens_per_second_max": 542.329,
-    "tokens_per_second_repeats": 7,
-    "tps_backend": "llama-bench.exe (cuda, -ngl 99, -p 4 -n 32; llama.cpp engine, not QUF runtime)",
-    "increase_pct_wikitext2": 2.5783890923125163,
-    "target_reached_wikitext2": true,
-    "increase_pct_c4_heldout": 2.657477758423865,
-    "target_reached_c4_heldout": true
-   },
-   "gguf_q4_0": {
-    "run": "gguf_q4_0",
-    "status": "done",
-    "quant": "Q4_0",
-    "ppl_wikitext2": 13.1901,
-    "ppl_c4_heldout": 20.291,
-    "protocol": "llama",
-    "windows": "all",
-    "file_size_bytes": 352154592,
-    "backend": "llama-perplexity.exe (cuda, -ngl 99)",
-    "tokens_per_second": 561.623,
-    "tokens_per_second_min": 503.613,
-    "tokens_per_second_max": 604.402,
-    "tokens_per_second_repeats": 7,
-    "tps_backend": "llama-bench.exe (cuda, -ngl 99, -p 4 -n 32; llama.cpp engine, not QUF runtime)",
-    "increase_pct_wikitext2": 12.353681541748918,
-    "target_reached_wikitext2": false,
-    "increase_pct_c4_heldout": 11.248224544633834,
-    "target_reached_c4_heldout": false
-   },
-   "gguf_q8_0": {
-    "run": "gguf_q8_0",
-    "status": "done",
-    "quant": "Q8_0",
-    "ppl_wikitext2": 11.7662,
-    "ppl_c4_heldout": 18.2748,
-    "protocol": "llama",
-    "windows": "all",
-    "file_size_bytes": 531067872,
-    "backend": "llama-perplexity.exe (cuda, -ngl 99)",
-    "tokens_per_second": 461.81,
-    "tokens_per_second_min": 407.532,
-    "tokens_per_second_max": 473.461,
-    "tokens_per_second_repeats": 7,
-    "tps_backend": "llama-bench.exe (cuda, -ngl 99, -p 4 -n 32; llama.cpp engine, not QUF runtime)",
-    "increase_pct_wikitext2": 0.22485710923541014,
-    "target_reached_wikitext2": true,
-    "increase_pct_c4_heldout": 0.19412813110613047,
-    "target_reached_c4_heldout": true
-   }
-  },
-  "Qwen/Qwen2.5-1.5B": {
-   "fp16": {
-    "run": "fp16",
-    "status": "done",
-    "ppl_wikitext2": 8.296410829347662,
-    "ppl_c4_heldout": 13.475598007567775,
-    "protocol": "llama",
-    "windows": "all",
-    "file_size_bytes": 3087428608,
-    "tokens_per_second": 30.23616428554782,
-    "tokens_per_second_min": 28.920938108441998,
-    "tokens_per_second_max": 30.64767149526091,
-    "tokens_per_second_repeats": 7,
-    "backend": "huggingface fp16 generate (cuda)",
-    "size_note": "fp16 parameter bytes (tied embeddings counted once)"
-   },
-   "v010": {
-    "run": "v010",
-    "status": "done",
-    "group_size": 128,
-    "act_order": false,
-    "clip_search": false,
-    "preset": null,
-    "calibration": "legacy",
-    "method": "gptq",
-    "ppl_wikitext2": 8.752700708577246,
-    "ppl_c4_heldout": 14.347297100208058,
-    "protocol": "llama",
-    "windows": "all",
-    "file_size_bytes": 1158904640,
-    "tokens_per_second": 39.38606479181425,
-    "tokens_per_second_min": 38.7480504887761,
-    "tokens_per_second_max": 41.307325208754065,
-    "tokens_per_second_repeats": 7,
-    "backend": "torch_gpu",
-    "convert_seconds": 247,
-    "bench_seconds": 473,
-    "size_report": "Size by precision:\n  int4: 680687616 bytes (196 modules: down_proj x28, gate_proj x28, up_proj x28, k_proj x28, o_proj x28, q_proj x28, v_proj x28)\n  int8: 0 bytes\n  fp16: 467037184 bytes (embeddings, norms, biases and fp16 modules)\n  tensor total: 1147724800 bytes\n  file total: 1158904640 bytes (tensors plus header and padding)\n  ratio to fp16 checkpoint: 0.3754 (3087428608 bytes)",
-    "increase_pct_wikitext2": 5.499846724266688,
-    "target_reached_wikitext2": false,
-    "increase_pct_c4_heldout": 6.46872288822169,
-    "target_reached_c4_heldout": false
-   },
-   "rtn_g128": {
-    "run": "rtn_g128",
-    "status": "done",
-    "group_size": 128,
-    "act_order": false,
-    "clip_search": false,
-    "preset": null,
-    "calibration": "none",
-    "method": "rtn",
-    "ppl_wikitext2": 9.209636973016218,
-    "ppl_c4_heldout": 14.781015500570527,
-    "protocol": "llama",
-    "windows": "all",
-    "file_size_bytes": 1158904640,
-    "tokens_per_second": 41.92212415206566,
-    "tokens_per_second_min": 41.48154447202421,
-    "tokens_per_second_max": 42.42183610980468,
-    "tokens_per_second_repeats": 7,
-    "backend": "torch_gpu",
-    "convert_seconds": 16,
-    "bench_seconds": 365,
-    "size_report": "Size by precision:\n  int4: 680687616 bytes (196 modules: down_proj x28, gate_proj x28, up_proj x28, k_proj x28, o_proj x28, q_proj x28, v_proj x28)\n  int8: 0 bytes\n  fp16: 467037184 bytes (embeddings, norms, biases and fp16 modules)\n  tensor total: 1147724800 bytes\n  file total: 1158904640 bytes (tensors plus header and padding)\n  ratio to fp16 checkpoint: 0.3754 (3087428608 bytes)",
-    "increase_pct_wikitext2": 11.00748459126586,
-    "target_reached_wikitext2": false,
-    "increase_pct_c4_heldout": 9.68726947976366,
-    "target_reached_c4_heldout": false
-   },
-   "rtn_g32": {
-    "run": "rtn_g32",
-    "status": "done",
-    "group_size": 32,
-    "act_order": false,
-    "clip_search": false,
-    "preset": null,
-    "calibration": "none",
-    "method": "rtn",
-    "ppl_wikitext2": 8.789123202138247,
-    "ppl_c4_heldout": 14.184618751976442,
-    "protocol": "llama",
-    "windows": "all",
-    "file_size_bytes": 1235674048,
-    "tokens_per_second": 39.77569985659978,
-    "tokens_per_second_min": 37.70427172903453,
-    "tokens_per_second_max": 41.22901636329326,
-    "tokens_per_second_repeats": 7,
-    "backend": "torch_gpu",
-    "convert_seconds": 17,
-    "bench_seconds": 361,
-    "size_report": "Size by precision:\n  int4: 757456896 bytes (196 modules: down_proj x28, gate_proj x28, up_proj x28, k_proj x28, o_proj x28, q_proj x28, v_proj x28)\n  int8: 0 bytes\n  fp16: 467037184 bytes (embeddings, norms, biases and fp16 modules)\n  tensor total: 1224494080 bytes\n  file total: 1235674048 bytes (tensors plus header and padding)\n  ratio to fp16 checkpoint: 0.4002 (3087428608 bytes)",
-    "increase_pct_wikitext2": 5.938861791266015,
-    "target_reached_wikitext2": false,
-    "increase_pct_c4_heldout": 5.261515993653765,
-    "target_reached_c4_heldout": false
-   },
-   "v020": {
-    "run": "v020",
-    "status": "done",
-    "group_size": 32,
-    "act_order": true,
-    "clip_search": true,
-    "preset": "sensitive",
-    "calibration": "default",
-    "method": "gptq",
-    "ppl_wikitext2": 8.395440268803094,
-    "ppl_c4_heldout": 13.677370899475218,
-    "protocol": "llama",
-    "windows": "all",
-    "file_size_bytes": 1413323520,
-    "tokens_per_second": 39.94655650072199,
-    "tokens_per_second_min": 38.95840800365741,
-    "tokens_per_second_max": 40.45887955455585,
-    "tokens_per_second_repeats": 7,
-    "backend": "torch_gpu",
-    "convert_seconds": 241,
-    "bench_seconds": 365,
-    "size_report": "Size by precision:\n  int4: 516575232 bytes (162 modules: gate_proj x27, up_proj x27, k_proj x27, o_proj x27, q_proj x27, v_proj x27)\n  int8: 418510848 bytes (34 modules: down_proj x28, gate_proj x1, up_proj x1, k_proj x1, o_proj x1, q_proj x1, v_proj x1)\n  fp16: 467037184 bytes (embeddings, norms, biases and fp16 modules)\n  tensor total: 1402123264 bytes\n  file total: 1413323520 bytes (tensors plus header and padding)\n  ratio to fp16 checkpoint: 0.4578 (3087428608 bytes)"
-   },
-   "gguf_q4_k_m": {
-    "run": "gguf_q4_k_m",
-    "status": "done",
-    "quant": "Q4_K_M",
-    "ppl_wikitext2": 8.5998,
-    "ppl_c4_heldout": 13.9536,
-    "protocol": "llama",
-    "windows": "all",
-    "file_size_bytes": 986048160,
-    "backend": "llama-perplexity.exe (cuda, -ngl 99)",
-    "tokens_per_second": 209.183,
-    "tokens_per_second_min": 70.4649,
-    "tokens_per_second_max": 278.822,
-    "tokens_per_second_repeats": 7,
-    "tps_backend": "llama-bench.exe (cuda, -ngl 99, -p 4 -n 32; llama.cpp engine, not QUF runtime)",
-    "increase_pct_wikitext2": 3.6568725548056458,
-    "target_reached_wikitext2": false,
-    "increase_pct_c4_heldout": 3.547167199287049,
-    "target_reached_c4_heldout": false
-   },
-   "gguf_q4_0": {
-    "run": "gguf_q4_0",
-    "status": "done",
-    "quant": "Q4_0",
-    "ppl_wikitext2": 8.9146,
-    "ppl_c4_heldout": 14.393,
-    "protocol": "llama",
-    "windows": "all",
-    "file_size_bytes": 934954656,
-    "backend": "llama-perplexity.exe (cuda, -ngl 99)",
-    "tokens_per_second": 230.847,
-    "tokens_per_second_min": 99.3317,
-    "tokens_per_second_max": 314.844,
-    "tokens_per_second_repeats": 7,
-    "tps_backend": "llama-bench.exe (cuda, -ngl 99, -p 4 -n 32; llama.cpp engine, not QUF runtime)",
-    "increase_pct_wikitext2": 7.451284457437435,
-    "target_reached_wikitext2": false,
-    "increase_pct_c4_heldout": 6.807875924445206,
-    "target_reached_c4_heldout": false
-   },
-   "gguf_q8_0": {
-    "run": "gguf_q8_0",
-    "status": "done",
-    "quant": "Q8_0",
-    "ppl_wikitext2": 8.3163,
-    "ppl_c4_heldout": 13.5018,
-    "protocol": "llama",
-    "windows": "all",
-    "file_size_bytes": 1646572704,
-    "backend": "llama-perplexity.exe (cuda, -ngl 99)",
-    "tokens_per_second": 143.635,
-    "tokens_per_second_min": 61.1036,
-    "tokens_per_second_max": 196.021,
-    "tokens_per_second_repeats": 7,
-    "tps_backend": "llama-bench.exe (cuda, -ngl 99, -p 4 -n 32; llama.cpp engine, not QUF runtime)",
-    "increase_pct_wikitext2": 0.23973222953210804,
-    "target_reached_wikitext2": true,
-    "increase_pct_c4_heldout": 0.19444029435657928,
-    "target_reached_c4_heldout": true
-   }
-  }
- },
- "lm_eval": {
-  "harness": "lm_eval 0.4.13",
-  "tasks": [
-   "hellaswag",
-   "arc_easy"
-  ],
-  "num_fewshot": 0,
-  "limit": 500,
-  "seed": 1234,
-  "device": "cuda",
-  "results": {
-   "qwen2.5-0.5b": {
-    "hf_fp16": {
-     "hellaswag": {
-      "name": "hellaswag",
-      "alias": "hellaswag",
-      "sample_len": 500,
-      "acc,none": 0.41,
-      "acc_stderr,none": 0.02201748257812769,
-      "acc_norm,none": 0.502,
-      "acc_norm_stderr,none": 0.022382894986483586
-     },
-     "arc_easy": {
-      "name": "arc_easy",
-      "alias": "arc_easy",
-      "sample_len": 500,
-      "acc,none": 0.636,
-      "acc_stderr,none": 0.021539170637317653,
-      "acc_norm,none": 0.586,
-      "acc_norm_stderr,none": 0.022049497969827858
-     },
-     "_seconds": 96.41962027549744
-    },
-    "quf_0_2_0_sensitive": {
-     "hellaswag": {
-      "name": "hellaswag",
-      "alias": "hellaswag",
-      "sample_len": 500,
-      "acc,none": 0.424,
-      "acc_stderr,none": 0.022122993778135334,
-      "acc_norm,none": 0.496,
-      "acc_norm_stderr,none": 0.022382357781962105
-     },
-     "arc_easy": {
-      "name": "arc_easy",
-      "alias": "arc_easy",
-      "sample_len": 500,
-      "acc,none": 0.62,
-      "acc_stderr,none": 0.021728881438701678,
-      "acc_norm,none": 0.564,
-      "acc_norm_stderr,none": 0.022198954641476896
-     },
-     "_seconds": 32.642786264419556
-    },
-    "quf_size_b": {
-     "hellaswag": {
-      "name": "hellaswag",
-      "alias": "hellaswag",
-      "sample_len": 500,
-      "acc,none": 0.41,
-      "acc_stderr,none": 0.02201748257812769,
-      "acc_norm,none": 0.5,
-      "acc_norm_stderr,none": 0.022383074051792257
-     },
-     "arc_easy": {
-      "name": "arc_easy",
-      "alias": "arc_easy",
-      "sample_len": 500,
-      "acc,none": 0.612,
-      "acc_stderr,none": 0.021814300984787705,
-      "acc_norm,none": 0.588,
-      "acc_norm_stderr,none": 0.02203367799374094
-     },
-     "_seconds": 69.67913961410522
+  "environment": {
+    "device": "NVIDIA GeForce RTX 5080 Laptop GPU",
+    "platform": "Windows-11-10.0.26300-SP0",
+    "software_versions": {
+      "python": "3.13.0rc2",
+      "quf": "0.2.0",
+      "torch": "2.11.0+cu128",
+      "gptqmodel": "not installed",
+      "gigatoken": "0.11.0",
+      "tokenizers": "0.23.3",
+      "transformers": "5.23.0",
+      "datasets": "5.2.0",
+      "cuda": "12.8",
+      "llama-cpp-python": "0.3.36"
     }
-   },
-   "qwen2.5-1.5b": {
-    "hf_fp16": {
-     "hellaswag": {
-      "name": "hellaswag",
-      "alias": "hellaswag",
-      "sample_len": 500,
-      "acc,none": 0.486,
-      "acc_stderr,none": 0.022374298166353144,
-      "acc_norm,none": 0.602,
-      "acc_norm_stderr,none": 0.021912377885779953
-     },
-     "arc_easy": {
-      "name": "arc_easy",
-      "alias": "arc_easy",
-      "sample_len": 500,
-      "acc,none": 0.75,
-      "acc_stderr,none": 0.019384310743640384,
-      "acc_norm,none": 0.71,
-      "acc_norm_stderr,none": 0.020313179231745138
-     },
-     "_seconds": 46.093441009521484
-    },
-    "quf_0_2_0_sensitive": {
-     "hellaswag": {
-      "name": "hellaswag",
-      "alias": "hellaswag",
-      "sample_len": 500,
-      "acc,none": 0.484,
-      "acc_stderr,none": 0.022371610982580396,
-      "acc_norm,none": 0.608,
-      "acc_norm_stderr,none": 0.02185468495561119
-     },
-     "arc_easy": {
-      "name": "arc_easy",
-      "alias": "arc_easy",
-      "sample_len": 500,
-      "acc,none": 0.748,
-      "acc_stderr,none": 0.019435727282249564,
-      "acc_norm,none": 0.724,
-      "acc_norm_stderr,none": 0.02001121929807355
-     },
-     "_seconds": 44.51696419715881
-    },
-    "quf_size_b": {
-     "hellaswag": {
-      "name": "hellaswag",
-      "alias": "hellaswag",
-      "sample_len": 500,
-      "acc,none": 0.48,
-      "acc_stderr,none": 0.022365160424231326,
-      "acc_norm,none": 0.59,
-      "acc_norm_stderr,none": 0.02201748257812769
-     },
-     "arc_easy": {
-      "name": "arc_easy",
-      "alias": "arc_easy",
-      "sample_len": 500,
-      "acc,none": 0.744,
-      "acc_stderr,none": 0.019536923574747664,
-      "acc_norm,none": 0.704,
-      "acc_norm_stderr,none": 0.020435342091896225
-     },
-     "_seconds": 36.29137110710144
-    }
-   }
   },
-  "note": "quf_0_2_0_sensitive: 0.2.0 sensitive files. quf_size_b: 0.2.1 default preset, converted with plain CLI defaults."
- },
- "decode_speed": {
-  "task": "26.8",
-  "measurement": "median of 7 timed repeats after 2 warm-up runs; prompt 'The quick brown fox'; 128 new tokens, greedy; time includes prefill and, in graph mode, the per-generate graph capture (scripts/measure_decode_speed.py)",
-  "files": "default convert preset size_b (quf convert with no flags)",
-  "baseline_tokens_per_second": {
-   "Qwen/Qwen2.5-0.5B": 40.9422395840375,
-   "Qwen/Qwen2.5-1.5B": 30.664761235076465
+  "target_percent": 3.0,
+  "time_cap_seconds": 1500,
+  "eval": {
+    "domain_1": "WikiText-2 test split (calibration domain)",
+    "domain_2": "allenai/c4 en validation, first ~1300000 chars (never used for calibration)",
+    "context": 2048
   },
-  "baseline_source": "models.<model>.v020 (pre-change, task 22.3, 32 new tokens)",
-  "speed_target_factor": 3.0,
+  "gguf_setup": {
+    "status": "installed",
+    "command": "pip install --only-binary=:all: llama-cpp-python",
+    "pip_error": null
+  },
   "models": {
-   "Qwen/Qwen2.5-0.5B": {
-    "torch_gpu_eager": {
-     "status": "done",
-     "backend": "torch_gpu",
-     "cuda_graph": false,
-     "file_size_bytes": 497728832,
-     "tokens_per_second": 57.81794619356787,
-     "tokens_per_second_min": 56.91938503062158,
-     "tokens_per_second_max": 59.637396244215175,
-     "tokens_per_second_repeats": 7,
-     "tps_samples": [
-      58.49353555033963,
-      57.81794619356787,
-      59.45043368851088,
-      59.637396244215175,
-      56.91938503062158,
-      57.45695172560909,
-      57.648002915687705
-     ],
-     "speedup_vs_baseline": 1.4121832801767358,
-     "speed_target_reached": false
+    "Qwen/Qwen2.5-0.5B": {
+      "fp16": {
+        "run": "fp16",
+        "status": "done",
+        "ppl_wikitext2": 13.070290181970144,
+        "ppl_c4_heldout": 19.793030493180073,
+        "ppl_wikitext2_subset": 13.183905637551634,
+        "ppl_c4_heldout_subset": 20.40354177447443,
+        "subset_windows": 32,
+        "file_size_bytes": 988065536,
+        "tokens_per_second": 37.95855566273789,
+        "backend": "huggingface fp16 generate (cuda)",
+        "size_note": "fp16 parameter bytes (tied embeddings counted once)",
+        "tokens_per_second_min": 32.64010843045602,
+        "tokens_per_second_max": 39.16688126855171,
+        "tokens_per_second_repeats": 7,
+        "tps_samples": [
+          39.16688126855171,
+          37.95855566273789,
+          39.032139551622315,
+          38.40359611273912,
+          36.290984287460645,
+          32.64010843045602,
+          36.024571459581885
+        ],
+        "tps_measurement": "median of 7 timed repeats after 2 warm-up runs (task 22.3)"
+      },
+      "rtn_g128": {
+        "run": "rtn_g128",
+        "status": "done",
+        "group_size": 128,
+        "act_order": false,
+        "clip_search": false,
+        "preset": null,
+        "calibration": "none",
+        "method": "rtn",
+        "ppl_wikitext2": 15.541694536673987,
+        "ppl_c4_heldout": 23.50729578540078,
+        "ppl_wikitext2_subset": 15.71127584436698,
+        "ppl_c4_heldout_subset": 24.350579452266135,
+        "subset_windows": 32,
+        "file_size_bytes": 469483072,
+        "tokens_per_second": 28.08106723298913,
+        "backend": "torch_gpu",
+        "convert_seconds": 13,
+        "bench_seconds": 200,
+        "size_report": "Size by precision:\n  int4: 185902080 bytes (168 modules: down_proj x24, gate_proj x24, up_proj x24, k_proj x24, o_proj x24, q_proj x24, v_proj x24)\n  int8: 0 bytes\n  fp16: 272412416 bytes (embeddings, norms, biases and fp16 modules)\n  tensor total: 458314496 bytes\n  file total: 469483072 bytes (tensors plus header and padding)\n  ratio to fp16 checkpoint: 0.4752 (988065536 bytes)",
+        "increase_pct_wikitext2": 18.908565305711655,
+        "target_reached_wikitext2": false,
+        "increase_pct_c4_heldout": 18.765520992353846,
+        "target_reached_c4_heldout": false,
+        "increase_pct_wikitext2_subset": 19.170117537982478,
+        "target_reached_wikitext2_subset": false,
+        "increase_pct_c4_heldout_subset": 19.34486532494859,
+        "target_reached_c4_heldout_subset": false,
+        "tokens_per_second_min": 25.698550858705413,
+        "tokens_per_second_max": 31.84989417871416,
+        "tokens_per_second_repeats": 7,
+        "tps_samples": [
+          29.037311493411853,
+          29.194931009252905,
+          27.96954675749864,
+          28.08106723298913,
+          27.22552369509905,
+          31.84989417871416,
+          25.698550858705413
+        ],
+        "tps_measurement": "median of 7 timed repeats after 2 warm-up runs (task 22.3)"
+      },
+      "v010": {
+        "run": "v010",
+        "status": "done",
+        "group_size": 128,
+        "act_order": false,
+        "clip_search": false,
+        "preset": null,
+        "calibration": "legacy",
+        "method": "gptq",
+        "ppl_wikitext2": 14.040074869015013,
+        "ppl_c4_heldout": 21.74755826789914,
+        "ppl_wikitext2_subset": 14.138196909538363,
+        "ppl_c4_heldout_subset": 22.50508826690697,
+        "subset_windows": 32,
+        "file_size_bytes": 469483072,
+        "tokens_per_second": 23.21706878268009,
+        "backend": "torch_gpu",
+        "convert_seconds": 113,
+        "bench_seconds": 196,
+        "size_report": "Size by precision:\n  int4: 185902080 bytes (168 modules: down_proj x24, gate_proj x24, up_proj x24, k_proj x24, o_proj x24, q_proj x24, v_proj x24)\n  int8: 0 bytes\n  fp16: 272412416 bytes (embeddings, norms, biases and fp16 modules)\n  tensor total: 458314496 bytes\n  file total: 469483072 bytes (tensors plus header and padding)\n  ratio to fp16 checkpoint: 0.4752 (988065536 bytes)",
+        "increase_pct_wikitext2": 7.419764010921837,
+        "target_reached_wikitext2": false,
+        "increase_pct_c4_heldout": 9.874828290657778,
+        "target_reached_c4_heldout": false,
+        "increase_pct_wikitext2_subset": 7.238304780251359,
+        "target_reached_wikitext2_subset": false,
+        "increase_pct_c4_heldout_subset": 10.299910259020084,
+        "target_reached_c4_heldout_subset": false,
+        "tokens_per_second_min": 18.607468246935415,
+        "tokens_per_second_max": 31.113292930763482,
+        "tokens_per_second_repeats": 7,
+        "tps_samples": [
+          20.63550121310849,
+          22.195718376555153,
+          18.607468246935415,
+          23.21706878268009,
+          31.113292930763482,
+          26.85647705629915,
+          28.396027324773442
+        ],
+        "tps_measurement": "median of 7 timed repeats after 2 warm-up runs (task 22.3)"
+      },
+      "rtn_g32": {
+        "run": "rtn_g32",
+        "status": "done",
+        "group_size": 32,
+        "act_order": false,
+        "clip_search": false,
+        "preset": null,
+        "calibration": "none",
+        "method": "rtn",
+        "ppl_wikitext2": 14.382624766525385,
+        "ppl_c4_heldout": 21.602435769122238,
+        "ppl_wikitext2_subset": 14.464295165733356,
+        "ppl_c4_heldout_subset": 22.390695658450376,
+        "subset_windows": 32,
+        "file_size_bytes": 490449792,
+        "tokens_per_second": 29.504633794934684,
+        "backend": "torch_gpu",
+        "convert_seconds": 11,
+        "bench_seconds": 201,
+        "size_report": "Size by precision:\n  int4: 206868480 bytes (168 modules: down_proj x24, gate_proj x24, up_proj x24, k_proj x24, o_proj x24, q_proj x24, v_proj x24)\n  int8: 0 bytes\n  fp16: 272412416 bytes (embeddings, norms, biases and fp16 modules)\n  tensor total: 479280896 bytes\n  file total: 490449792 bytes (tensors plus header and padding)\n  ratio to fp16 checkpoint: 0.4964 (988065536 bytes)",
+        "increase_pct_wikitext2": 10.040592567451533,
+        "target_reached_wikitext2": false,
+        "increase_pct_c4_heldout": 9.141628294695025,
+        "target_reached_c4_heldout": false,
+        "increase_pct_wikitext2_subset": 9.711761926866313,
+        "target_reached_wikitext2_subset": false,
+        "increase_pct_c4_heldout_subset": 9.739259516511733,
+        "target_reached_c4_heldout_subset": false,
+        "tokens_per_second_min": 24.945536877069767,
+        "tokens_per_second_max": 32.84164936921464,
+        "tokens_per_second_repeats": 7,
+        "tps_samples": [
+          26.698789760547243,
+          29.912983132075944,
+          26.606396526933697,
+          29.504633794934684,
+          24.945536877069767,
+          31.195313761968563,
+          32.84164936921464
+        ],
+        "tps_measurement": "median of 7 timed repeats after 2 warm-up runs (task 22.3)"
+      },
+      "v020": {
+        "run": "v020",
+        "status": "done",
+        "group_size": 32,
+        "act_order": true,
+        "clip_search": true,
+        "preset": "sensitive",
+        "calibration": "default",
+        "method": "gptq",
+        "ppl_wikitext2": 13.377461537118602,
+        "ppl_c4_heldout": 20.44530853759952,
+        "ppl_wikitext2_subset": 13.499568557551418,
+        "ppl_c4_heldout_subset": 21.11752818683697,
+        "subset_windows": 32,
+        "file_size_bytes": 539605632,
+        "tokens_per_second": 40.9422395840375,
+        "backend": "torch_gpu",
+        "convert_seconds": 150,
+        "bench_seconds": 199,
+        "size_report": "Size by precision:\n  int4: 140793856 bytes (138 modules: gate_proj x23, up_proj x23, k_proj x23, o_proj x23, q_proj x23, v_proj x23)\n  int8: 115213312 bytes (30 modules: down_proj x24, gate_proj x1, up_proj x1, k_proj x1, o_proj x1, q_proj x1, v_proj x1)\n  fp16: 272412416 bytes (embeddings, norms, biases and fp16 modules)\n  tensor total: 528419584 bytes\n  file total: 539605632 bytes (tensors plus header and padding)\n  ratio to fp16 checkpoint: 0.5461 (988065536 bytes)",
+        "increase_pct_wikitext2": 2.3501494677768298,
+        "target_reached_wikitext2": true,
+        "increase_pct_c4_heldout": 3.2954935558968446,
+        "target_reached_c4_heldout": false,
+        "increase_pct_wikitext2_subset": 2.394305061625168,
+        "target_reached_wikitext2_subset": true,
+        "increase_pct_c4_heldout_subset": 3.499325853591584,
+        "target_reached_c4_heldout_subset": false,
+        "tokens_per_second_min": 39.38201738318936,
+        "tokens_per_second_max": 41.72991356692824,
+        "tokens_per_second_repeats": 7,
+        "tps_samples": [
+          39.38201738318936,
+          40.33015271266677,
+          40.9422395840375,
+          41.040310305808056,
+          41.72991356692824,
+          39.78401754178566,
+          41.30541637926988
+        ],
+        "tps_measurement": "median of 7 timed repeats after 2 warm-up runs (task 22.3)"
+      },
+      "gguf_q4_k_m": {
+        "run": "gguf_q4_k_m",
+        "status": "not run (unverified)",
+        "reason": "GGUF rows skipped by scope decision; harness not verified end to end"
+      },
+      "gguf_q4_0": {
+        "run": "gguf_q4_0",
+        "status": "not run (unverified)",
+        "reason": "GGUF rows skipped by scope decision; harness not verified end to end"
+      },
+      "gguf_q8_0": {
+        "run": "gguf_q8_0",
+        "status": "not run (unverified)",
+        "reason": "GGUF rows skipped by scope decision; harness not verified end to end"
+      }
     },
-    "torch_gpu_graph": {
-     "status": "done",
-     "backend": "torch_gpu",
-     "cuda_graph": true,
-     "file_size_bytes": 497728832,
-     "tokens_per_second": 255.15950458953685,
-     "tokens_per_second_min": 251.58908976061213,
-     "tokens_per_second_max": 258.45991811749286,
-     "tokens_per_second_repeats": 7,
-     "tps_samples": [
-      257.8017766171226,
-      258.45991811749286,
-      253.51102872219695,
-      255.15950458953685,
-      254.7091341087005,
-      256.6198910087076,
-      251.58908976061213
-     ],
-     "speedup_vs_baseline": 6.232182391141545,
-     "speed_target_reached": true
-    },
-    "cpu": {
-     "status": "done",
-     "backend": "cpu",
-     "cuda_graph": false,
-     "file_size_bytes": 497728832,
-     "tokens_per_second": 22.754794230708082,
-     "tokens_per_second_min": 21.82198987938993,
-     "tokens_per_second_max": 25.841239339378284,
-     "tokens_per_second_repeats": 7,
-     "tps_samples": [
-      21.82198987938993,
-      22.4474602724162,
-      22.759260156171855,
-      22.754794230708082,
-      22.663082523749377,
-      25.39114513568347,
-      25.841239339378284
-     ]
-    },
-    "gguf_q4_k_m": {
-     "status": "done",
-     "backend": "llama-bench.exe (cuda, -ngl 99, -p 4 -n 128; llama.cpp engine, not QUF runtime)",
-     "tokens_per_second": 764.179,
-     "tokens_per_second_min": 760.104,
-     "tokens_per_second_max": 770.34,
-     "tokens_per_second_repeats": 7,
-     "tps_samples": [
-      760.104,
-      764.903,
-      760.767,
-      764.179,
-      766.566,
-      762.703,
-      770.34
-     ]
+    "Qwen/Qwen2.5-1.5B": {
+      "fp16": {
+        "run": "fp16",
+        "status": "done",
+        "ppl_wikitext2": 9.265000854444182,
+        "ppl_c4_heldout": 14.660481584368847,
+        "ppl_wikitext2_subset": 9.277642292817838,
+        "ppl_c4_heldout_subset": 15.067721078823213,
+        "subset_windows": 32,
+        "file_size_bytes": 3087428608,
+        "tokens_per_second": 32.32343475282809,
+        "backend": "huggingface fp16 generate (cuda)",
+        "size_note": "fp16 parameter bytes (tied embeddings counted once)",
+        "tokens_per_second_min": 31.8409987884345,
+        "tokens_per_second_max": 32.49320460474817,
+        "tokens_per_second_repeats": 7,
+        "tps_samples": [
+          32.49320460474817,
+          32.32343475282809,
+          32.40450216003218,
+          32.01198208488632,
+          32.36396187889962,
+          32.22340162109277,
+          31.8409987884345
+        ],
+        "tps_measurement": "median of 7 timed repeats after 2 warm-up runs (task 22.3)"
+      },
+      "v010": {
+        "run": "v010",
+        "status": "done",
+        "group_size": 128,
+        "act_order": false,
+        "clip_search": false,
+        "preset": null,
+        "calibration": "legacy",
+        "method": "gptq",
+        "ppl_wikitext2": 9.843357146278452,
+        "ppl_c4_heldout": 15.693512963886736,
+        "ppl_wikitext2_subset": 9.875142784210933,
+        "ppl_c4_heldout_subset": 16.129967183539332,
+        "subset_windows": 32,
+        "file_size_bytes": 1158904640,
+        "tokens_per_second": 36.48198308763924,
+        "backend": "torch_gpu",
+        "convert_seconds": 279,
+        "bench_seconds": 237,
+        "size_report": "Size by precision:\n  int4: 680687616 bytes (196 modules: down_proj x28, gate_proj x28, up_proj x28, k_proj x28, o_proj x28, q_proj x28, v_proj x28)\n  int8: 0 bytes\n  fp16: 467037184 bytes (embeddings, norms, biases and fp16 modules)\n  tensor total: 1147724800 bytes\n  file total: 1158904640 bytes (tensors plus header and padding)\n  ratio to fp16 checkpoint: 0.3754 (3087428608 bytes)",
+        "increase_pct_wikitext2": 6.242377101960517,
+        "target_reached_wikitext2": false,
+        "increase_pct_c4_heldout": 7.04636729409569,
+        "target_reached_c4_heldout": false,
+        "increase_pct_wikitext2_subset": 6.440219104541711,
+        "target_reached_wikitext2_subset": false,
+        "increase_pct_c4_heldout_subset": 7.049812636955721,
+        "target_reached_c4_heldout_subset": false,
+        "tokens_per_second_min": 36.416668136643665,
+        "tokens_per_second_max": 37.153123346980976,
+        "tokens_per_second_repeats": 7,
+        "tps_samples": [
+          36.416668136643665,
+          36.43900713726286,
+          36.57946351187621,
+          37.02383015688717,
+          36.48198308763924,
+          37.153123346980976,
+          36.43981628412106
+        ],
+        "tps_measurement": "median of 7 timed repeats after 2 warm-up runs (task 22.3)"
+      },
+      "rtn_g128": {
+        "run": "rtn_g128",
+        "status": "done",
+        "group_size": 128,
+        "act_order": false,
+        "clip_search": false,
+        "preset": null,
+        "calibration": "none",
+        "method": "rtn",
+        "ppl_wikitext2": 10.355541270052527,
+        "ppl_c4_heldout": 16.139045914564175,
+        "ppl_wikitext2_subset": 10.411064344133294,
+        "ppl_c4_heldout_subset": 16.641978372977057,
+        "subset_windows": 32,
+        "file_size_bytes": 1158904640,
+        "tokens_per_second": 38.21475017702818,
+        "backend": "torch_gpu",
+        "convert_seconds": 23,
+        "bench_seconds": 242,
+        "size_report": "Size by precision:\n  int4: 680687616 bytes (196 modules: down_proj x28, gate_proj x28, up_proj x28, k_proj x28, o_proj x28, q_proj x28, v_proj x28)\n  int8: 0 bytes\n  fp16: 467037184 bytes (embeddings, norms, biases and fp16 modules)\n  tensor total: 1147724800 bytes\n  file total: 1158904640 bytes (tensors plus header and padding)\n  ratio to fp16 checkpoint: 0.3754 (3087428608 bytes)",
+        "increase_pct_wikitext2": 11.770537669030446,
+        "target_reached_wikitext2": false,
+        "increase_pct_c4_heldout": 10.08537353760457,
+        "target_reached_c4_heldout": false,
+        "increase_pct_wikitext2_subset": 12.216703506588944,
+        "target_reached_wikitext2_subset": false,
+        "increase_pct_c4_heldout_subset": 10.447879184373598,
+        "target_reached_c4_heldout_subset": false,
+        "tokens_per_second_min": 33.385271774365904,
+        "tokens_per_second_max": 39.27332565543286,
+        "tokens_per_second_repeats": 7,
+        "tps_samples": [
+          33.385271774365904,
+          34.01865327807261,
+          38.21475017702818,
+          39.22320886295112,
+          38.560321477408195,
+          37.81871574970631,
+          39.27332565543286
+        ],
+        "tps_measurement": "median of 7 timed repeats after 2 warm-up runs (task 22.3)"
+      },
+      "rtn_g32": {
+        "run": "rtn_g32",
+        "status": "done",
+        "group_size": 32,
+        "act_order": false,
+        "clip_search": false,
+        "preset": null,
+        "calibration": "none",
+        "method": "rtn",
+        "ppl_wikitext2": 9.857169437816257,
+        "ppl_c4_heldout": 15.46760930190529,
+        "ppl_wikitext2_subset": 9.88156324035005,
+        "ppl_c4_heldout_subset": 15.893013202753707,
+        "subset_windows": 32,
+        "file_size_bytes": 1235674048,
+        "tokens_per_second": 38.75358773446714,
+        "backend": "torch_gpu",
+        "convert_seconds": 24,
+        "bench_seconds": 242,
+        "size_report": "Size by precision:\n  int4: 757456896 bytes (196 modules: down_proj x28, gate_proj x28, up_proj x28, k_proj x28, o_proj x28, q_proj x28, v_proj x28)\n  int8: 0 bytes\n  fp16: 467037184 bytes (embeddings, norms, biases and fp16 modules)\n  tensor total: 1224494080 bytes\n  file total: 1235674048 bytes (tensors plus header and padding)\n  ratio to fp16 checkpoint: 0.4002 (3087428608 bytes)",
+        "increase_pct_wikitext2": 6.391457407022538,
+        "target_reached_wikitext2": false,
+        "increase_pct_c4_heldout": 5.505465239266161,
+        "target_reached_c4_heldout": false,
+        "increase_pct_wikitext2_subset": 6.509422636392559,
+        "target_reached_wikitext2_subset": false,
+        "increase_pct_c4_heldout_subset": 5.477219279632095,
+        "target_reached_c4_heldout_subset": false,
+        "tokens_per_second_min": 35.78517710866929,
+        "tokens_per_second_max": 40.27626497052388,
+        "tokens_per_second_repeats": 7,
+        "tps_samples": [
+          35.79783130027542,
+          35.78517710866929,
+          39.81721410150655,
+          39.974201649574994,
+          38.75358773446714,
+          40.27626497052388,
+          38.55756161984035
+        ],
+        "tps_measurement": "median of 7 timed repeats after 2 warm-up runs (task 22.3)"
+      },
+      "v020": {
+        "run": "v020",
+        "status": "done",
+        "group_size": 32,
+        "act_order": true,
+        "clip_search": true,
+        "preset": "sensitive",
+        "calibration": "default",
+        "method": "gptq",
+        "ppl_wikitext2": 9.358493960377901,
+        "ppl_c4_heldout": 14.899744154939428,
+        "ppl_wikitext2_subset": 9.385706298679713,
+        "ppl_c4_heldout_subset": 15.319029318264834,
+        "subset_windows": 32,
+        "file_size_bytes": 1413323520,
+        "tokens_per_second": 30.664761235076465,
+        "backend": "torch_gpu",
+        "convert_seconds": 263,
+        "bench_seconds": 238,
+        "size_report": "Size by precision:\n  int4: 516575232 bytes (162 modules: gate_proj x27, up_proj x27, k_proj x27, o_proj x27, q_proj x27, v_proj x27)\n  int8: 418510848 bytes (34 modules: down_proj x28, gate_proj x1, up_proj x1, k_proj x1, o_proj x1, q_proj x1, v_proj x1)\n  fp16: 467037184 bytes (embeddings, norms, biases and fp16 modules)\n  tensor total: 1402123264 bytes\n  file total: 1413323520 bytes (tensors plus header and padding)\n  ratio to fp16 checkpoint: 0.4578 (3087428608 bytes)",
+        "increase_pct_wikitext2": 1.0090998090828363,
+        "target_reached_wikitext2": true,
+        "increase_pct_c4_heldout": 1.6320239495112077,
+        "target_reached_c4_heldout": true,
+        "increase_pct_wikitext2_subset": 1.1647787492899075,
+        "target_reached_wikitext2_subset": true,
+        "increase_pct_c4_heldout_subset": 1.6678583186333196,
+        "target_reached_c4_heldout_subset": true,
+        "tokens_per_second_min": 30.211583045423083,
+        "tokens_per_second_max": 31.079973725774416,
+        "tokens_per_second_repeats": 7,
+        "tps_samples": [
+          30.94108768559736,
+          31.079973725774416,
+          30.664761235076465,
+          30.5759525292837,
+          30.81296740623882,
+          30.211583045423083,
+          30.65906155870633
+        ],
+        "tps_measurement": "median of 7 timed repeats after 2 warm-up runs (task 22.3)"
+      },
+      "gguf_q4_k_m": {
+        "run": "gguf_q4_k_m",
+        "status": "not run (unverified)",
+        "reason": "GGUF rows skipped by scope decision; harness not verified end to end"
+      },
+      "gguf_q8_0": {
+        "run": "gguf_q8_0",
+        "status": "not run (unverified)",
+        "reason": "GGUF rows skipped by scope decision; harness not verified end to end"
+      },
+      "gguf_q4_0": {
+        "run": "gguf_q4_0",
+        "status": "not run (unverified)",
+        "reason": "GGUF rows skipped by scope decision; harness not verified end to end"
+      }
     }
-   },
-   "Qwen/Qwen2.5-1.5B": {
-    "torch_gpu_eager": {
-     "status": "done",
-     "backend": "torch_gpu",
-     "cuda_graph": false,
-     "file_size_bytes": 1257449536,
-     "tokens_per_second": 46.572433283080336,
-     "tokens_per_second_min": 43.31440833460766,
-     "tokens_per_second_max": 48.85491269154525,
-     "tokens_per_second_repeats": 7,
-     "tps_samples": [
-      48.85491269154525,
-      48.533669375877686,
-      43.31440833460766,
-      46.097407075906524,
-      46.58348500372513,
-      46.572433283080336,
-      46.45362125048408
-     ],
-     "speedup_vs_baseline": 1.5187606688359792,
-     "speed_target_reached": false
+  },
+  "models_llama": {
+    "Qwen/Qwen2.5-0.5B": {
+      "fp16": {
+        "run": "fp16",
+        "status": "done",
+        "ppl_wikitext2": 11.739802220097932,
+        "ppl_c4_heldout": 18.23939220877998,
+        "protocol": "llama",
+        "windows": "all",
+        "file_size_bytes": 988065536,
+        "tokens_per_second": 45.813498116829855,
+        "tokens_per_second_min": 45.16449190227757,
+        "tokens_per_second_max": 46.0783242235113,
+        "tokens_per_second_repeats": 7,
+        "backend": "huggingface fp16 generate (cuda)",
+        "size_note": "fp16 parameter bytes (tied embeddings counted once)"
+      },
+      "v010": {
+        "run": "v010",
+        "status": "done",
+        "group_size": 128,
+        "act_order": false,
+        "clip_search": false,
+        "preset": null,
+        "calibration": "legacy",
+        "method": "gptq",
+        "ppl_wikitext2": 12.596312651702426,
+        "ppl_c4_heldout": 19.984847789475463,
+        "protocol": "llama",
+        "windows": "all",
+        "file_size_bytes": 469483072,
+        "tokens_per_second": 25.366027817970235,
+        "tokens_per_second_min": 23.29758706891849,
+        "tokens_per_second_max": 37.52615837095315,
+        "tokens_per_second_repeats": 7,
+        "backend": "torch_gpu",
+        "convert_seconds": 103,
+        "bench_seconds": 290,
+        "size_report": "Size by precision:\n  int4: 185902080 bytes (168 modules: down_proj x24, gate_proj x24, up_proj x24, k_proj x24, o_proj x24, q_proj x24, v_proj x24)\n  int8: 0 bytes\n  fp16: 272412416 bytes (embeddings, norms, biases and fp16 modules)\n  tensor total: 458314496 bytes\n  file total: 469483072 bytes (tensors plus header and padding)\n  ratio to fp16 checkpoint: 0.4752 (988065536 bytes)",
+        "increase_pct_wikitext2": 7.2957824633382184,
+        "target_reached_wikitext2": false,
+        "increase_pct_c4_heldout": 9.569702546641157,
+        "target_reached_c4_heldout": false
+      },
+      "rtn_g128": {
+        "run": "rtn_g128",
+        "status": "done",
+        "group_size": 128,
+        "act_order": false,
+        "clip_search": false,
+        "preset": null,
+        "calibration": "none",
+        "method": "rtn",
+        "ppl_wikitext2": 13.902831902717601,
+        "ppl_c4_heldout": 21.639683958722593,
+        "protocol": "llama",
+        "windows": "all",
+        "file_size_bytes": 469483072,
+        "tokens_per_second": 46.66750668178835,
+        "tokens_per_second_min": 46.62739862572816,
+        "tokens_per_second_max": 47.249018697017895,
+        "tokens_per_second_repeats": 7,
+        "backend": "torch_gpu",
+        "convert_seconds": 10,
+        "bench_seconds": 288,
+        "size_report": "Size by precision:\n  int4: 185902080 bytes (168 modules: down_proj x24, gate_proj x24, up_proj x24, k_proj x24, o_proj x24, q_proj x24, v_proj x24)\n  int8: 0 bytes\n  fp16: 272412416 bytes (embeddings, norms, biases and fp16 modules)\n  tensor total: 458314496 bytes\n  file total: 469483072 bytes (tensors plus header and padding)\n  ratio to fp16 checkpoint: 0.4752 (988065536 bytes)",
+        "increase_pct_wikitext2": 18.424754029643474,
+        "target_reached_wikitext2": false,
+        "increase_pct_c4_heldout": 18.64257158912237,
+        "target_reached_c4_heldout": false
+      },
+      "rtn_g32": {
+        "run": "rtn_g32",
+        "status": "done",
+        "group_size": 32,
+        "act_order": false,
+        "clip_search": false,
+        "preset": null,
+        "calibration": "none",
+        "method": "rtn",
+        "ppl_wikitext2": 12.868753725663321,
+        "ppl_c4_heldout": 19.82647327316754,
+        "protocol": "llama",
+        "windows": "all",
+        "file_size_bytes": 490449792,
+        "tokens_per_second": 47.25540601851371,
+        "tokens_per_second_min": 46.86331391877338,
+        "tokens_per_second_max": 47.561103756424224,
+        "tokens_per_second_repeats": 7,
+        "backend": "torch_gpu",
+        "convert_seconds": 8,
+        "bench_seconds": 287,
+        "size_report": "Size by precision:\n  int4: 206868480 bytes (168 modules: down_proj x24, gate_proj x24, up_proj x24, k_proj x24, o_proj x24, q_proj x24, v_proj x24)\n  int8: 0 bytes\n  fp16: 272412416 bytes (embeddings, norms, biases and fp16 modules)\n  tensor total: 479280896 bytes\n  file total: 490449792 bytes (tensors plus header and padding)\n  ratio to fp16 checkpoint: 0.4964 (988065536 bytes)",
+        "increase_pct_wikitext2": 9.616443994539225,
+        "target_reached_wikitext2": false,
+        "increase_pct_c4_heldout": 8.701392273496822,
+        "target_reached_c4_heldout": false
+      },
+      "v020": {
+        "run": "v020",
+        "status": "done",
+        "group_size": 32,
+        "act_order": true,
+        "clip_search": true,
+        "preset": "sensitive",
+        "calibration": "default",
+        "method": "gptq",
+        "ppl_wikitext2": 12.032610277960668,
+        "ppl_c4_heldout": 18.84406342472731,
+        "protocol": "llama",
+        "windows": "all",
+        "file_size_bytes": 539605632,
+        "tokens_per_second": 50.18814280027115,
+        "tokens_per_second_min": 48.92012642795483,
+        "tokens_per_second_max": 50.72250242004342,
+        "tokens_per_second_repeats": 7,
+        "backend": "torch_gpu",
+        "convert_seconds": 113,
+        "bench_seconds": 282,
+        "size_report": "Size by precision:\n  int4: 140793856 bytes (138 modules: gate_proj x23, up_proj x23, k_proj x23, o_proj x23, q_proj x23, v_proj x23)\n  int8: 115213312 bytes (30 modules: down_proj x24, gate_proj x1, up_proj x1, k_proj x1, o_proj x1, q_proj x1, v_proj x1)\n  fp16: 272412416 bytes (embeddings, norms, biases and fp16 modules)\n  tensor total: 528419584 bytes\n  file total: 539605632 bytes (tensors plus header and padding)\n  ratio to fp16 checkpoint: 0.5461 (988065536 bytes)",
+        "increase_pct_wikitext2": 2.494148132763807,
+        "target_reached_wikitext2": true,
+        "increase_pct_c4_heldout": 3.3151938892802546,
+        "target_reached_c4_heldout": false
+      },
+      "gguf_q4_k_m": {
+        "run": "gguf_q4_k_m",
+        "status": "done",
+        "quant": "Q4_K_M",
+        "ppl_wikitext2": 12.0425,
+        "ppl_c4_heldout": 18.7241,
+        "protocol": "llama",
+        "windows": "all",
+        "file_size_bytes": 397807584,
+        "backend": "llama-perplexity.exe (cuda, -ngl 99)",
+        "tokens_per_second": 481.071,
+        "tokens_per_second_min": 445.952,
+        "tokens_per_second_max": 542.329,
+        "tokens_per_second_repeats": 7,
+        "tps_backend": "llama-bench.exe (cuda, -ngl 99, -p 4 -n 32; llama.cpp engine, not QUF runtime)",
+        "increase_pct_wikitext2": 2.5783890923125163,
+        "target_reached_wikitext2": true,
+        "increase_pct_c4_heldout": 2.657477758423865,
+        "target_reached_c4_heldout": true
+      },
+      "gguf_q4_0": {
+        "run": "gguf_q4_0",
+        "status": "done",
+        "quant": "Q4_0",
+        "ppl_wikitext2": 13.1901,
+        "ppl_c4_heldout": 20.291,
+        "protocol": "llama",
+        "windows": "all",
+        "file_size_bytes": 352154592,
+        "backend": "llama-perplexity.exe (cuda, -ngl 99)",
+        "tokens_per_second": 561.623,
+        "tokens_per_second_min": 503.613,
+        "tokens_per_second_max": 604.402,
+        "tokens_per_second_repeats": 7,
+        "tps_backend": "llama-bench.exe (cuda, -ngl 99, -p 4 -n 32; llama.cpp engine, not QUF runtime)",
+        "increase_pct_wikitext2": 12.353681541748918,
+        "target_reached_wikitext2": false,
+        "increase_pct_c4_heldout": 11.248224544633834,
+        "target_reached_c4_heldout": false
+      },
+      "gguf_q8_0": {
+        "run": "gguf_q8_0",
+        "status": "done",
+        "quant": "Q8_0",
+        "ppl_wikitext2": 11.7662,
+        "ppl_c4_heldout": 18.2748,
+        "protocol": "llama",
+        "windows": "all",
+        "file_size_bytes": 531067872,
+        "backend": "llama-perplexity.exe (cuda, -ngl 99)",
+        "tokens_per_second": 461.81,
+        "tokens_per_second_min": 407.532,
+        "tokens_per_second_max": 473.461,
+        "tokens_per_second_repeats": 7,
+        "tps_backend": "llama-bench.exe (cuda, -ngl 99, -p 4 -n 32; llama.cpp engine, not QUF runtime)",
+        "increase_pct_wikitext2": 0.22485710923541014,
+        "target_reached_wikitext2": true,
+        "increase_pct_c4_heldout": 0.19412813110613047,
+        "target_reached_c4_heldout": true
+      }
     },
-    "torch_gpu_graph": {
-     "status": "done",
-     "backend": "torch_gpu",
-     "cuda_graph": true,
-     "file_size_bytes": 1257449536,
-     "tokens_per_second": 82.69387457399132,
-     "tokens_per_second_min": 81.19558105099611,
-     "tokens_per_second_max": 84.42510723270895,
-     "tokens_per_second_repeats": 7,
-     "tps_samples": [
-      82.77448383995103,
-      83.403694981109,
-      84.42510723270895,
-      82.47586731779278,
-      81.19558105099611,
-      82.69387457399132,
-      81.63253546399038
-     ],
-     "speedup_vs_baseline": 2.696706944497594,
-     "speed_target_reached": false
-    },
-    "gguf_q4_k_m": {
-     "status": "done",
-     "backend": "llama-bench.exe (cuda, -ngl 99, -p 4 -n 128; llama.cpp engine, not QUF runtime)",
-     "tokens_per_second": 450.765,
-     "tokens_per_second_min": 412.346,
-     "tokens_per_second_max": 459.379,
-     "tokens_per_second_repeats": 7,
-     "tps_samples": [
-      459.379,
-      458.809,
-      434.166,
-      412.346,
-      452.565,
-      450.765,
-      414.152
-     ]
+    "Qwen/Qwen2.5-1.5B": {
+      "fp16": {
+        "run": "fp16",
+        "status": "done",
+        "ppl_wikitext2": 8.296410829347662,
+        "ppl_c4_heldout": 13.475598007567775,
+        "protocol": "llama",
+        "windows": "all",
+        "file_size_bytes": 3087428608,
+        "tokens_per_second": 30.23616428554782,
+        "tokens_per_second_min": 28.920938108441998,
+        "tokens_per_second_max": 30.64767149526091,
+        "tokens_per_second_repeats": 7,
+        "backend": "huggingface fp16 generate (cuda)",
+        "size_note": "fp16 parameter bytes (tied embeddings counted once)"
+      },
+      "v010": {
+        "run": "v010",
+        "status": "done",
+        "group_size": 128,
+        "act_order": false,
+        "clip_search": false,
+        "preset": null,
+        "calibration": "legacy",
+        "method": "gptq",
+        "ppl_wikitext2": 8.752700708577246,
+        "ppl_c4_heldout": 14.347297100208058,
+        "protocol": "llama",
+        "windows": "all",
+        "file_size_bytes": 1158904640,
+        "tokens_per_second": 39.38606479181425,
+        "tokens_per_second_min": 38.7480504887761,
+        "tokens_per_second_max": 41.307325208754065,
+        "tokens_per_second_repeats": 7,
+        "backend": "torch_gpu",
+        "convert_seconds": 247,
+        "bench_seconds": 473,
+        "size_report": "Size by precision:\n  int4: 680687616 bytes (196 modules: down_proj x28, gate_proj x28, up_proj x28, k_proj x28, o_proj x28, q_proj x28, v_proj x28)\n  int8: 0 bytes\n  fp16: 467037184 bytes (embeddings, norms, biases and fp16 modules)\n  tensor total: 1147724800 bytes\n  file total: 1158904640 bytes (tensors plus header and padding)\n  ratio to fp16 checkpoint: 0.3754 (3087428608 bytes)",
+        "increase_pct_wikitext2": 5.499846724266688,
+        "target_reached_wikitext2": false,
+        "increase_pct_c4_heldout": 6.46872288822169,
+        "target_reached_c4_heldout": false
+      },
+      "rtn_g128": {
+        "run": "rtn_g128",
+        "status": "done",
+        "group_size": 128,
+        "act_order": false,
+        "clip_search": false,
+        "preset": null,
+        "calibration": "none",
+        "method": "rtn",
+        "ppl_wikitext2": 9.209636973016218,
+        "ppl_c4_heldout": 14.781015500570527,
+        "protocol": "llama",
+        "windows": "all",
+        "file_size_bytes": 1158904640,
+        "tokens_per_second": 41.92212415206566,
+        "tokens_per_second_min": 41.48154447202421,
+        "tokens_per_second_max": 42.42183610980468,
+        "tokens_per_second_repeats": 7,
+        "backend": "torch_gpu",
+        "convert_seconds": 16,
+        "bench_seconds": 365,
+        "size_report": "Size by precision:\n  int4: 680687616 bytes (196 modules: down_proj x28, gate_proj x28, up_proj x28, k_proj x28, o_proj x28, q_proj x28, v_proj x28)\n  int8: 0 bytes\n  fp16: 467037184 bytes (embeddings, norms, biases and fp16 modules)\n  tensor total: 1147724800 bytes\n  file total: 1158904640 bytes (tensors plus header and padding)\n  ratio to fp16 checkpoint: 0.3754 (3087428608 bytes)",
+        "increase_pct_wikitext2": 11.00748459126586,
+        "target_reached_wikitext2": false,
+        "increase_pct_c4_heldout": 9.68726947976366,
+        "target_reached_c4_heldout": false
+      },
+      "rtn_g32": {
+        "run": "rtn_g32",
+        "status": "done",
+        "group_size": 32,
+        "act_order": false,
+        "clip_search": false,
+        "preset": null,
+        "calibration": "none",
+        "method": "rtn",
+        "ppl_wikitext2": 8.789123202138247,
+        "ppl_c4_heldout": 14.184618751976442,
+        "protocol": "llama",
+        "windows": "all",
+        "file_size_bytes": 1235674048,
+        "tokens_per_second": 39.77569985659978,
+        "tokens_per_second_min": 37.70427172903453,
+        "tokens_per_second_max": 41.22901636329326,
+        "tokens_per_second_repeats": 7,
+        "backend": "torch_gpu",
+        "convert_seconds": 17,
+        "bench_seconds": 361,
+        "size_report": "Size by precision:\n  int4: 757456896 bytes (196 modules: down_proj x28, gate_proj x28, up_proj x28, k_proj x28, o_proj x28, q_proj x28, v_proj x28)\n  int8: 0 bytes\n  fp16: 467037184 bytes (embeddings, norms, biases and fp16 modules)\n  tensor total: 1224494080 bytes\n  file total: 1235674048 bytes (tensors plus header and padding)\n  ratio to fp16 checkpoint: 0.4002 (3087428608 bytes)",
+        "increase_pct_wikitext2": 5.938861791266015,
+        "target_reached_wikitext2": false,
+        "increase_pct_c4_heldout": 5.261515993653765,
+        "target_reached_c4_heldout": false
+      },
+      "v020": {
+        "run": "v020",
+        "status": "done",
+        "group_size": 32,
+        "act_order": true,
+        "clip_search": true,
+        "preset": "sensitive",
+        "calibration": "default",
+        "method": "gptq",
+        "ppl_wikitext2": 8.395440268803094,
+        "ppl_c4_heldout": 13.677370899475218,
+        "protocol": "llama",
+        "windows": "all",
+        "file_size_bytes": 1413323520,
+        "tokens_per_second": 39.94655650072199,
+        "tokens_per_second_min": 38.95840800365741,
+        "tokens_per_second_max": 40.45887955455585,
+        "tokens_per_second_repeats": 7,
+        "backend": "torch_gpu",
+        "convert_seconds": 241,
+        "bench_seconds": 365,
+        "size_report": "Size by precision:\n  int4: 516575232 bytes (162 modules: gate_proj x27, up_proj x27, k_proj x27, o_proj x27, q_proj x27, v_proj x27)\n  int8: 418510848 bytes (34 modules: down_proj x28, gate_proj x1, up_proj x1, k_proj x1, o_proj x1, q_proj x1, v_proj x1)\n  fp16: 467037184 bytes (embeddings, norms, biases and fp16 modules)\n  tensor total: 1402123264 bytes\n  file total: 1413323520 bytes (tensors plus header and padding)\n  ratio to fp16 checkpoint: 0.4578 (3087428608 bytes)"
+      },
+      "gguf_q4_k_m": {
+        "run": "gguf_q4_k_m",
+        "status": "done",
+        "quant": "Q4_K_M",
+        "ppl_wikitext2": 8.5998,
+        "ppl_c4_heldout": 13.9536,
+        "protocol": "llama",
+        "windows": "all",
+        "file_size_bytes": 986048160,
+        "backend": "llama-perplexity.exe (cuda, -ngl 99)",
+        "tokens_per_second": 209.183,
+        "tokens_per_second_min": 70.4649,
+        "tokens_per_second_max": 278.822,
+        "tokens_per_second_repeats": 7,
+        "tps_backend": "llama-bench.exe (cuda, -ngl 99, -p 4 -n 32; llama.cpp engine, not QUF runtime)",
+        "increase_pct_wikitext2": 3.6568725548056458,
+        "target_reached_wikitext2": false,
+        "increase_pct_c4_heldout": 3.547167199287049,
+        "target_reached_c4_heldout": false
+      },
+      "gguf_q4_0": {
+        "run": "gguf_q4_0",
+        "status": "done",
+        "quant": "Q4_0",
+        "ppl_wikitext2": 8.9146,
+        "ppl_c4_heldout": 14.393,
+        "protocol": "llama",
+        "windows": "all",
+        "file_size_bytes": 934954656,
+        "backend": "llama-perplexity.exe (cuda, -ngl 99)",
+        "tokens_per_second": 230.847,
+        "tokens_per_second_min": 99.3317,
+        "tokens_per_second_max": 314.844,
+        "tokens_per_second_repeats": 7,
+        "tps_backend": "llama-bench.exe (cuda, -ngl 99, -p 4 -n 32; llama.cpp engine, not QUF runtime)",
+        "increase_pct_wikitext2": 7.451284457437435,
+        "target_reached_wikitext2": false,
+        "increase_pct_c4_heldout": 6.807875924445206,
+        "target_reached_c4_heldout": false
+      },
+      "gguf_q8_0": {
+        "run": "gguf_q8_0",
+        "status": "done",
+        "quant": "Q8_0",
+        "ppl_wikitext2": 8.3163,
+        "ppl_c4_heldout": 13.5018,
+        "protocol": "llama",
+        "windows": "all",
+        "file_size_bytes": 1646572704,
+        "backend": "llama-perplexity.exe (cuda, -ngl 99)",
+        "tokens_per_second": 143.635,
+        "tokens_per_second_min": 61.1036,
+        "tokens_per_second_max": 196.021,
+        "tokens_per_second_repeats": 7,
+        "tps_backend": "llama-bench.exe (cuda, -ngl 99, -p 4 -n 32; llama.cpp engine, not QUF runtime)",
+        "increase_pct_wikitext2": 0.23973222953210804,
+        "target_reached_wikitext2": true,
+        "increase_pct_c4_heldout": 0.19444029435657928,
+        "target_reached_c4_heldout": true
+      }
     }
-   }
+  },
+  "lm_eval": {
+    "harness": "lm_eval 0.4.13",
+    "tasks": [
+      "hellaswag",
+      "arc_easy"
+    ],
+    "num_fewshot": 0,
+    "limit": 500,
+    "seed": 1234,
+    "device": "cuda",
+    "results": {
+      "qwen2.5-0.5b": {
+        "hf_fp16": {
+          "hellaswag": {
+            "name": "hellaswag",
+            "alias": "hellaswag",
+            "sample_len": 500,
+            "acc,none": 0.41,
+            "acc_stderr,none": 0.02201748257812769,
+            "acc_norm,none": 0.502,
+            "acc_norm_stderr,none": 0.022382894986483586
+          },
+          "arc_easy": {
+            "name": "arc_easy",
+            "alias": "arc_easy",
+            "sample_len": 500,
+            "acc,none": 0.636,
+            "acc_stderr,none": 0.021539170637317653,
+            "acc_norm,none": 0.586,
+            "acc_norm_stderr,none": 0.022049497969827858
+          },
+          "_seconds": 96.41962027549744
+        },
+        "quf_0_2_0_sensitive": {
+          "hellaswag": {
+            "name": "hellaswag",
+            "alias": "hellaswag",
+            "sample_len": 500,
+            "acc,none": 0.424,
+            "acc_stderr,none": 0.022122993778135334,
+            "acc_norm,none": 0.496,
+            "acc_norm_stderr,none": 0.022382357781962105
+          },
+          "arc_easy": {
+            "name": "arc_easy",
+            "alias": "arc_easy",
+            "sample_len": 500,
+            "acc,none": 0.62,
+            "acc_stderr,none": 0.021728881438701678,
+            "acc_norm,none": 0.564,
+            "acc_norm_stderr,none": 0.022198954641476896
+          },
+          "_seconds": 32.642786264419556
+        },
+        "quf_size_b": {
+          "hellaswag": {
+            "name": "hellaswag",
+            "alias": "hellaswag",
+            "sample_len": 500,
+            "acc,none": 0.41,
+            "acc_stderr,none": 0.02201748257812769,
+            "acc_norm,none": 0.5,
+            "acc_norm_stderr,none": 0.022383074051792257
+          },
+          "arc_easy": {
+            "name": "arc_easy",
+            "alias": "arc_easy",
+            "sample_len": 500,
+            "acc,none": 0.612,
+            "acc_stderr,none": 0.021814300984787705,
+            "acc_norm,none": 0.588,
+            "acc_norm_stderr,none": 0.02203367799374094
+          },
+          "_seconds": 69.67913961410522
+        },
+        "quf_0_4_0": {
+          "hellaswag": {
+            "name": "hellaswag",
+            "alias": "hellaswag",
+            "sample_len": 500,
+            "acc,none": 0.416,
+            "acc_stderr,none": 0.02206494331392886,
+            "acc_norm,none": 0.504,
+            "acc_norm_stderr,none": 0.022382357781962105
+          },
+          "arc_easy": {
+            "name": "arc_easy",
+            "alias": "arc_easy",
+            "sample_len": 500,
+            "acc,none": 0.636,
+            "acc_stderr,none": 0.021539170637317653,
+            "acc_norm,none": 0.578,
+            "acc_norm_stderr,none": 0.022109039310618563
+          },
+          "_seconds": 171.35293984413147
+        }
+      },
+      "qwen2.5-1.5b": {
+        "hf_fp16": {
+          "hellaswag": {
+            "name": "hellaswag",
+            "alias": "hellaswag",
+            "sample_len": 500,
+            "acc,none": 0.486,
+            "acc_stderr,none": 0.022374298166353144,
+            "acc_norm,none": 0.602,
+            "acc_norm_stderr,none": 0.021912377885779953
+          },
+          "arc_easy": {
+            "name": "arc_easy",
+            "alias": "arc_easy",
+            "sample_len": 500,
+            "acc,none": 0.75,
+            "acc_stderr,none": 0.019384310743640384,
+            "acc_norm,none": 0.71,
+            "acc_norm_stderr,none": 0.020313179231745138
+          },
+          "_seconds": 46.093441009521484
+        },
+        "quf_0_2_0_sensitive": {
+          "hellaswag": {
+            "name": "hellaswag",
+            "alias": "hellaswag",
+            "sample_len": 500,
+            "acc,none": 0.484,
+            "acc_stderr,none": 0.022371610982580396,
+            "acc_norm,none": 0.608,
+            "acc_norm_stderr,none": 0.02185468495561119
+          },
+          "arc_easy": {
+            "name": "arc_easy",
+            "alias": "arc_easy",
+            "sample_len": 500,
+            "acc,none": 0.748,
+            "acc_stderr,none": 0.019435727282249564,
+            "acc_norm,none": 0.724,
+            "acc_norm_stderr,none": 0.02001121929807355
+          },
+          "_seconds": 44.51696419715881
+        },
+        "quf_size_b": {
+          "hellaswag": {
+            "name": "hellaswag",
+            "alias": "hellaswag",
+            "sample_len": 500,
+            "acc,none": 0.48,
+            "acc_stderr,none": 0.022365160424231326,
+            "acc_norm,none": 0.59,
+            "acc_norm_stderr,none": 0.02201748257812769
+          },
+          "arc_easy": {
+            "name": "arc_easy",
+            "alias": "arc_easy",
+            "sample_len": 500,
+            "acc,none": 0.744,
+            "acc_stderr,none": 0.019536923574747664,
+            "acc_norm,none": 0.704,
+            "acc_norm_stderr,none": 0.020435342091896225
+          },
+          "_seconds": 36.29137110710144
+        },
+        "quf_0_4_0": {
+          "hellaswag": {
+            "name": "hellaswag",
+            "alias": "hellaswag",
+            "sample_len": 500,
+            "acc,none": 0.47,
+            "acc_stderr,none": 0.0223427481925028,
+            "acc_norm,none": 0.588,
+            "acc_norm_stderr,none": 0.02203367799374094
+          },
+          "arc_easy": {
+            "name": "arc_easy",
+            "alias": "arc_easy",
+            "sample_len": 500,
+            "acc,none": 0.74,
+            "acc_stderr,none": 0.019635965529725526,
+            "acc_norm,none": 0.73,
+            "acc_norm_stderr,none": 0.019874354831287473
+          },
+          "_seconds": 54.098554372787476
+        }
+      }
+    },
+    "note": "quf_0_2_0_sensitive: 0.2.0 sensitive files. quf_size_b: 0.2.1 default preset, converted with plain CLI defaults. quf_0_4_0: 0.4.0 defaults (size_f, int8 g64 embedding, g32 act-order body), plain CLI defaults, files in eval_cache/lm040/.",
+    "gguf_q4_k_m": {
+      "status": "not run",
+      "reason": "lm_eval 0.4.13 gguf backend (models/gguf.py) posts to /v1/completions with echo=true and reads logprobs.text_offset/tokens/token_logprobs/top_logprobs dicts (OpenAI legacy format). The local llama-server (b12567) ignores echo (probe returned only the 1 generated token) and returns logprobs.content[] in the new format, so prompt-token log-likelihoods are unavailable and the backend cannot score choices. No llama-cpp-python is installed. Probe: eval_cache/lm040/probe.py"
+    }
+  },
+  "decode_speed": {
+    "task": "26.8",
+    "measurement": "median of 7 timed repeats after 2 warm-up runs; prompt 'The quick brown fox'; 128 new tokens, greedy; time includes prefill and, in graph mode, the per-generate graph capture (scripts/measure_decode_speed.py)",
+    "files": "default convert preset size_b (quf convert with no flags)",
+    "baseline_tokens_per_second": {
+      "Qwen/Qwen2.5-0.5B": 40.9422395840375,
+      "Qwen/Qwen2.5-1.5B": 30.664761235076465
+    },
+    "baseline_source": "models.<model>.v020 (pre-change, task 22.3, 32 new tokens)",
+    "speed_target_factor": 3.0,
+    "models": {
+      "Qwen/Qwen2.5-0.5B": {
+        "torch_gpu_eager": {
+          "status": "done",
+          "backend": "torch_gpu",
+          "cuda_graph": false,
+          "file_size_bytes": 497728832,
+          "tokens_per_second": 57.81794619356787,
+          "tokens_per_second_min": 56.91938503062158,
+          "tokens_per_second_max": 59.637396244215175,
+          "tokens_per_second_repeats": 7,
+          "tps_samples": [
+            58.49353555033963,
+            57.81794619356787,
+            59.45043368851088,
+            59.637396244215175,
+            56.91938503062158,
+            57.45695172560909,
+            57.648002915687705
+          ],
+          "speedup_vs_baseline": 1.4121832801767358,
+          "speed_target_reached": false
+        },
+        "torch_gpu_graph": {
+          "status": "done",
+          "backend": "torch_gpu",
+          "cuda_graph": true,
+          "file_size_bytes": 497728832,
+          "tokens_per_second": 255.15950458953685,
+          "tokens_per_second_min": 251.58908976061213,
+          "tokens_per_second_max": 258.45991811749286,
+          "tokens_per_second_repeats": 7,
+          "tps_samples": [
+            257.8017766171226,
+            258.45991811749286,
+            253.51102872219695,
+            255.15950458953685,
+            254.7091341087005,
+            256.6198910087076,
+            251.58908976061213
+          ],
+          "speedup_vs_baseline": 6.232182391141545,
+          "speed_target_reached": true
+        },
+        "cpu": {
+          "status": "done",
+          "backend": "cpu",
+          "cuda_graph": false,
+          "file_size_bytes": 497728832,
+          "tokens_per_second": 22.754794230708082,
+          "tokens_per_second_min": 21.82198987938993,
+          "tokens_per_second_max": 25.841239339378284,
+          "tokens_per_second_repeats": 7,
+          "tps_samples": [
+            21.82198987938993,
+            22.4474602724162,
+            22.759260156171855,
+            22.754794230708082,
+            22.663082523749377,
+            25.39114513568347,
+            25.841239339378284
+          ]
+        },
+        "gguf_q4_k_m": {
+          "status": "done",
+          "backend": "llama-bench.exe (cuda, -ngl 99, -p 4 -n 128; llama.cpp engine, not QUF runtime)",
+          "tokens_per_second": 764.179,
+          "tokens_per_second_min": 760.104,
+          "tokens_per_second_max": 770.34,
+          "tokens_per_second_repeats": 7,
+          "tps_samples": [
+            760.104,
+            764.903,
+            760.767,
+            764.179,
+            766.566,
+            762.703,
+            770.34
+          ]
+        }
+      },
+      "Qwen/Qwen2.5-1.5B": {
+        "torch_gpu_eager": {
+          "status": "done",
+          "backend": "torch_gpu",
+          "cuda_graph": false,
+          "file_size_bytes": 1257449536,
+          "tokens_per_second": 46.572433283080336,
+          "tokens_per_second_min": 43.31440833460766,
+          "tokens_per_second_max": 48.85491269154525,
+          "tokens_per_second_repeats": 7,
+          "tps_samples": [
+            48.85491269154525,
+            48.533669375877686,
+            43.31440833460766,
+            46.097407075906524,
+            46.58348500372513,
+            46.572433283080336,
+            46.45362125048408
+          ],
+          "speedup_vs_baseline": 1.5187606688359792,
+          "speed_target_reached": false
+        },
+        "torch_gpu_graph": {
+          "status": "done",
+          "backend": "torch_gpu",
+          "cuda_graph": true,
+          "file_size_bytes": 1257449536,
+          "tokens_per_second": 82.69387457399132,
+          "tokens_per_second_min": 81.19558105099611,
+          "tokens_per_second_max": 84.42510723270895,
+          "tokens_per_second_repeats": 7,
+          "tps_samples": [
+            82.77448383995103,
+            83.403694981109,
+            84.42510723270895,
+            82.47586731779278,
+            81.19558105099611,
+            82.69387457399132,
+            81.63253546399038
+          ],
+          "speedup_vs_baseline": 2.696706944497594,
+          "speed_target_reached": false
+        },
+        "gguf_q4_k_m": {
+          "status": "done",
+          "backend": "llama-bench.exe (cuda, -ngl 99, -p 4 -n 128; llama.cpp engine, not QUF runtime)",
+          "tokens_per_second": 450.765,
+          "tokens_per_second_min": 412.346,
+          "tokens_per_second_max": 459.379,
+          "tokens_per_second_repeats": 7,
+          "tps_samples": [
+            459.379,
+            458.809,
+            434.166,
+            412.346,
+            452.565,
+            450.765,
+            414.152
+          ]
+        }
+      }
+    }
+  },
+  "int4_backend": {
+    "task": "31.1",
+    "device": "NVIDIA GeForce RTX 5080 Laptop GPU",
+    "settings": "prompt 'The quick brown fox', 128 new tokens, greedy, EOS suppressed, 2 warm-up, median of 7, backends alternate per repeat; steady = mean gap between decode_token calls",
+    "speed": {
+      "sb05": {
+        "file": "sb05.quf",
+        "file_size_bytes": 497728832,
+        "prompt": "The quick brown fox",
+        "new_tokens": 128,
+        "warmup": 2,
+        "repeats": 7,
+        "eos_suppressed": true,
+        "order": "backends alternate within every repeat",
+        "results": {
+          "torch_gpu/eager": {
+            "backend": "torch_gpu",
+            "mode": "eager",
+            "e2e_tok_s": {
+              "median": 58.39617194837035,
+              "min": 57.018640507287756,
+              "max": 59.18271627952566,
+              "repeats": 7,
+              "samples": [
+                59.18271627952566,
+                58.71867232648051,
+                58.90032720977946,
+                58.39617194837035,
+                57.018640507287756,
+                57.98964839484886,
+                57.25680841616591
+              ]
+            },
+            "steady_ms_per_tok": {
+              "median": 17.082343650852433,
+              "min": 16.87218095240597,
+              "max": 17.517248412736485,
+              "repeats": 7,
+              "samples": [
+                16.87218095240597,
+                17.008004761933872,
+                16.950963492115353,
+                17.082343650852433,
+                17.517248412736485,
+                17.22401666668861,
+                17.447691269764967
+              ]
+            },
+            "steady_tok_s_median": 58.53997674084367,
+            "graph_replay_used": [
+              false
+            ],
+            "tokens_generated_per_run": [
+              128
+            ]
+          },
+          "triton_int4/eager": {
+            "backend": "triton_int4",
+            "mode": "eager",
+            "e2e_tok_s": {
+              "median": 46.661165752524056,
+              "min": 44.44297998653252,
+              "max": 47.59167178444947,
+              "repeats": 7,
+              "samples": [
+                46.81538353499821,
+                47.59167178444947,
+                47.12527710029874,
+                46.661165752524056,
+                46.36743058944679,
+                46.3422480009562,
+                44.44297998653252
+              ]
+            },
+            "steady_ms_per_tok": {
+              "median": 21.381868254037627,
+              "min": 20.976537301658748,
+              "max": 22.476704761968918,
+              "repeats": 7,
+              "samples": [
+                21.323746825348483,
+                20.976537301658748,
+                21.187853968253226,
+                21.381868254037627,
+                21.53036666670001,
+                21.51850476192998,
+                22.476704761968918
+              ]
+            },
+            "steady_tok_s_median": 46.76859795968324,
+            "graph_replay_used": [
+              false
+            ],
+            "tokens_generated_per_run": [
+              128
+            ]
+          },
+          "torch_gpu/graph": {
+            "backend": "torch_gpu",
+            "mode": "graph",
+            "e2e_tok_s": {
+              "median": 234.3933835111518,
+              "min": 227.85807005505114,
+              "max": 240.07100100118484,
+              "repeats": 7,
+              "samples": [
+                237.96841899032847,
+                240.07100100118484,
+                231.0759618847171,
+                234.3933835111518,
+                231.78680828891993,
+                234.7036911758107,
+                227.85807005505114
+              ]
+            },
+            "steady_ms_per_tok": {
+              "median": 3.624851587307011,
+              "min": 3.533134126983997,
+              "max": 3.7321460317581936,
+              "repeats": 7,
+              "samples": [
+                3.548861904756262,
+                3.533134126983997,
+                3.66674444445553,
+                3.6115912698155697,
+                3.6602111110354714,
+                3.624851587307011,
+                3.7321460317581936
+              ]
+            },
+            "steady_tok_s_median": 275.87336361622573,
+            "graph_replay_used": [
+              true
+            ],
+            "tokens_generated_per_run": [
+              128
+            ]
+          },
+          "triton_int4/graph": {
+            "backend": "triton_int4",
+            "mode": "graph",
+            "e2e_tok_s": {
+              "median": 284.1954892044421,
+              "min": 275.91219697556005,
+              "max": 295.5219194110654,
+              "repeats": 7,
+              "samples": [
+                289.86715025448996,
+                295.5219194110654,
+                284.1954892044421,
+                289.28639148755997,
+                279.8917256358357,
+                275.91219697556005,
+                283.1073598412672
+              ]
+            },
+            "steady_ms_per_tok": {
+              "median": 2.6536873015824574,
+              "min": 2.575894444441748,
+              "max": 2.8038126984029077,
+              "repeats": 7,
+              "samples": [
+                2.575894444441748,
+                2.579019047617395,
+                2.6536873015824574,
+                2.62263888899248,
+                2.7211611110639446,
+                2.8038126984029077,
+                2.654684920604008
+              ]
+            },
+            "steady_tok_s_median": 376.834150505855,
+            "graph_replay_used": [
+              true
+            ],
+            "tokens_generated_per_run": [
+              128
+            ]
+          }
+        }
+      },
+      "sb15": {
+        "file": "sb15.quf",
+        "file_size_bytes": 1257449536,
+        "prompt": "The quick brown fox",
+        "new_tokens": 128,
+        "warmup": 2,
+        "repeats": 7,
+        "eos_suppressed": true,
+        "order": "backends alternate within every repeat",
+        "results": {
+          "torch_gpu/eager": {
+            "backend": "torch_gpu",
+            "mode": "eager",
+            "e2e_tok_s": {
+              "median": 40.55141433039608,
+              "min": 39.05774532021336,
+              "max": 41.57682040297485,
+              "repeats": 7,
+              "samples": [
+                41.57682040297485,
+                40.94871256913671,
+                40.60796725786342,
+                39.58571691672473,
+                39.65287010102413,
+                39.05774532021336,
+                40.55141433039608
+              ]
+            },
+            "steady_ms_per_tok": {
+              "median": 24.601257142854767,
+              "min": 24.017216666603446,
+              "max": 25.579022222137567,
+              "repeats": 7,
+              "samples": [
+                24.017216666603446,
+                24.385259523807605,
+                24.59125714281866,
+                25.217410317429948,
+                25.175065873005973,
+                25.579022222137567,
+                24.601257142854767
+              ]
+            },
+            "steady_tok_s_median": 40.64832923753418,
+            "graph_replay_used": [
+              false
+            ],
+            "tokens_generated_per_run": [
+              128
+            ]
+          },
+          "triton_int4/eager": {
+            "backend": "triton_int4",
+            "mode": "eager",
+            "e2e_tok_s": {
+              "median": 30.864208694169225,
+              "min": 30.140622723654968,
+              "max": 34.3429130205745,
+              "repeats": 7,
+              "samples": [
+                32.26371310521048,
+                31.240145168133967,
+                30.864208694169225,
+                30.453502616731193,
+                30.140622723654968,
+                30.539794688520487,
+                34.3429130205745
+              ]
+            },
+            "steady_ms_per_tok": {
+              "median": 32.33059444443955,
+              "min": 29.0392817460954,
+              "max": 33.133661904786194,
+              "repeats": 7,
+              "samples": [
+                30.953187301560003,
+                31.96127142857424,
+                32.33059444443955,
+                32.77016507929638,
+                33.133661904786194,
+                32.692135714266136,
+                29.0392817460954
+              ]
+            },
+            "steady_tok_s_median": 30.930455105566033,
+            "graph_replay_used": [
+              false
+            ],
+            "tokens_generated_per_run": [
+              128
+            ]
+          },
+          "torch_gpu/graph": {
+            "backend": "torch_gpu",
+            "mode": "graph",
+            "e2e_tok_s": {
+              "median": 99.71185610534435,
+              "min": 98.05065342631461,
+              "max": 101.12196399121555,
+              "repeats": 7,
+              "samples": [
+                99.78540680487485,
+                100.00780529708162,
+                101.12196399121555,
+                99.71185610534435,
+                98.10279916443939,
+                98.26962544152421,
+                98.05065342631461
+              ]
+            },
+            "steady_ms_per_tok": {
+              "median": 9.157165873076005,
+              "min": 9.012632539596535,
+              "max": 9.350109523756334,
+              "repeats": 7,
+              "samples": [
+                9.112999206413479,
+                9.100116666689116,
+                9.012632539596535,
+                9.157165873076005,
+                9.325130952342915,
+                9.3129698412552,
+                9.350109523756334
+              ]
+            },
+            "steady_tok_s_median": 109.20409369674196,
+            "graph_replay_used": [
+              true
+            ],
+            "tokens_generated_per_run": [
+              128
+            ]
+          },
+          "triton_int4/graph": {
+            "backend": "triton_int4",
+            "mode": "graph",
+            "e2e_tok_s": {
+              "median": 145.6145062979769,
+              "min": 141.16665639162363,
+              "max": 148.50137172407443,
+              "repeats": 7,
+              "samples": [
+                148.50137172407443,
+                146.7814834227913,
+                145.6145062979769,
+                142.43614548580328,
+                141.16665639162363,
+                143.04031747763366,
+                148.00622320011186
+              ]
+            },
+            "steady_ms_per_tok": {
+              "median": 5.779039682469345,
+              "min": 5.632573015833577,
+              "max": 5.907326190416435,
+              "repeats": 7,
+              "samples": [
+                5.632573015833577,
+                5.718469841263464,
+                5.779039682469345,
+                5.889209523812742,
+                5.907326190416435,
+                5.887234920616417,
+                5.664083333353379
+              ]
+            },
+            "steady_tok_s_median": 173.03913019207832,
+            "graph_replay_used": [
+              true
+            ],
+            "tokens_generated_per_run": [
+              128
+            ]
+          }
+        }
+      }
+    },
+    "memory": {
+      "sb05": {
+        "torch_gpu": {
+          "file": "sb05.quf",
+          "backend": "torch_gpu",
+          "after_load": {
+            "allocated_mib": 946.65478515625,
+            "reserved_mib": 1508.0,
+            "device_used_delta_mib": 1554.0
+          },
+          "tokens_generated": 128,
+          "peak_allocated_mib": 976.3134765625,
+          "peak_reserved_mib": 1530.0,
+          "device_used_after_generate_delta_mib": 1562.0,
+          "note": "generation = graph mode, 128 new tokens, EOS suppressed; includes graph capture and KV cache"
+        },
+        "triton_int4": {
+          "file": "sb05.quf",
+          "backend": "triton_int4",
+          "after_load": {
+            "allocated_mib": 507.54638671875,
+            "reserved_mib": 728.0,
+            "device_used_delta_mib": 786.0
+          },
+          "tokens_generated": 128,
+          "peak_allocated_mib": 528.5859375,
+          "peak_reserved_mib": 750.0,
+          "device_used_after_generate_delta_mib": 812.0,
+          "note": "generation = graph mode, 128 new tokens, EOS suppressed; includes graph capture and KV cache"
+        }
+      },
+      "sb15": {
+        "torch_gpu": {
+          "file": "sb15.quf",
+          "backend": "torch_gpu",
+          "after_load": {
+            "allocated_mib": 2950.65185546875,
+            "reserved_mib": 4972.0,
+            "device_used_delta_mib": 5018.0
+          },
+          "tokens_generated": 128,
+          "peak_allocated_mib": 2983.71044921875,
+          "peak_reserved_mib": 4994.0,
+          "device_used_after_generate_delta_mib": 3920.0,
+          "note": "generation = graph mode, 128 new tokens, EOS suppressed; includes graph capture and KV cache"
+        },
+        "triton_int4": {
+          "file": "sb15.quf",
+          "backend": "triton_int4",
+          "after_load": {
+            "allocated_mib": 1319.91552734375,
+            "reserved_mib": 2112.0,
+            "device_used_delta_mib": 2170.0
+          },
+          "tokens_generated": 128,
+          "peak_allocated_mib": 1343.69287109375,
+          "peak_reserved_mib": 2134.0,
+          "device_used_after_generate_delta_mib": 2120.0,
+          "note": "generation = graph mode, 128 new tokens, EOS suppressed; includes graph capture and KV cache"
+        }
+      }
+    },
+    "perplexity_llama_protocol": {
+      "sb05": {
+        "torch_gpu": {
+          "file": "sb05.quf",
+          "backend": "torch_gpu",
+          "ppl_wikitext2": 12.0769038523057,
+          "ppl_c4_heldout": 19.047274450630162,
+          "protocol": "llama",
+          "windows": "all",
+          "seconds": 200
+        },
+        "triton_int4": {
+          "file": "sb05.quf",
+          "backend": "triton_int4",
+          "ppl_wikitext2": 12.0769038523057,
+          "ppl_c4_heldout": 19.047274450630162,
+          "protocol": "llama",
+          "windows": "all",
+          "seconds": 206
+        },
+        "rel_diff_pct_ppl_wikitext2": 0.0,
+        "within_0_1_pct_ppl_wikitext2": true,
+        "rel_diff_pct_ppl_c4_heldout": 0.0,
+        "within_0_1_pct_ppl_c4_heldout": true
+      },
+      "sb15": {
+        "torch_gpu": {
+          "file": "sb15.quf",
+          "backend": "torch_gpu",
+          "ppl_wikitext2": 8.444217877970335,
+          "ppl_c4_heldout": 13.866347370984961,
+          "protocol": "llama",
+          "windows": "all",
+          "seconds": 227
+        },
+        "triton_int4": {
+          "file": "sb15.quf",
+          "backend": "triton_int4",
+          "ppl_wikitext2": 8.444217877970335,
+          "ppl_c4_heldout": 13.866347370984961,
+          "protocol": "llama",
+          "windows": "all",
+          "seconds": 252
+        },
+        "rel_diff_pct_ppl_wikitext2": 0.0,
+        "within_0_1_pct_ppl_wikitext2": true,
+        "rel_diff_pct_ppl_c4_heldout": 0.0,
+        "within_0_1_pct_ppl_c4_heldout": true
+      }
+    },
+    "decode_path_perplexity_2_windows": {
+      "sb05": {
+        "torch_gpu": {
+          "ppl": 12.641968571331633,
+          "windows": 2,
+          "seconds": 81
+        },
+        "triton_int4": {
+          "ppl": 12.644131587225708,
+          "windows": 2,
+          "seconds": 110
+        },
+        "rel_diff_pct": 0.017109802811732244
+      },
+      "sb15": {
+        "torch_gpu": {
+          "ppl": 8.795241859577429,
+          "windows": 2,
+          "seconds": 102
+        },
+        "triton_int4": {
+          "ppl": 8.793123568910747,
+          "windows": 2,
+          "seconds": 123
+        },
+        "rel_diff_pct": -0.02408450728815792
+      }
+    },
+    "llama_cpp_q4_k_m": {
+      "sb05": {
+        "mode": "llama.cpp Q4_K_M (-ngl 99, -p 4)",
+        "file": "qwen2_5-0_5b-Q4_K_M.gguf",
+        "new_tokens": 128,
+        "median": 756.502,
+        "min": 724.667,
+        "max": 795.534,
+        "repeats": 7,
+        "samples": [
+          756.502,
+          755.888,
+          724.667,
+          756.034,
+          781.156,
+          795.534,
+          762.372
+        ]
+      },
+      "sb15": {
+        "mode": "llama.cpp Q4_K_M (-ngl 99, -p 4)",
+        "file": "qwen2_5-1_5b-Q4_K_M.gguf",
+        "new_tokens": 128,
+        "median": 422.815,
+        "min": 410.32,
+        "max": 450.975,
+        "repeats": 7,
+        "samples": [
+          445.523,
+          450.975,
+          414.569,
+          411.117,
+          441.088,
+          422.815,
+          410.32
+        ]
+      }
+    },
+    "speed_target": {
+      "sb05": {
+        "baseline_tok_s": 255.0,
+        "required_tok_s": 382.5,
+        "measured_graph_e2e_tok_s": 284.1954892044421,
+        "speedup_vs_baseline": 1.114492114527224,
+        "met": false
+      },
+      "sb15": {
+        "baseline_tok_s": 83.0,
+        "required_tok_s": 124.5,
+        "measured_graph_e2e_tok_s": 145.6145062979769,
+        "speedup_vs_baseline": 1.7543916421443,
+        "met": true
+      }
+    },
+    "perplexity_note": "Prefill with M>16 dequantizes to fp16 and calls F.linear, so full-window perplexity runs the same math on both backends and matches bit for bit. decode_path_perplexity_2_windows scores teacher-forced tokens through decode_token (M=1, the Triton GEMV kernels)."
+  },
+  "speed_040": {
+    "note": "Requested state was power-capped (~55 W, ~900 MHz). Observed state was NOT at that cap: see power blocks. Numbers are laptop-GPU, battery/plugged state as sampled, not the 55 W cap.",
+    "method": "alternating runs, warm-up 2, median of 7, 128 new tokens, EOS suppressed, prompt 'The quick brown fox'; QUF graph mode backend triton_int4; llama-bench -n 128 -p 0 -ngl 99 -r 1 repeated 9 rounds alternating, first 2 discarded",
+    "quf": {
+      "05": {
+        "size": "05",
+        "prompt": "The quick brown fox",
+        "new_tokens": 128,
+        "warmup": 2,
+        "repeats": 7,
+        "mode": "graph",
+        "backend": "triton_int4",
+        "power": {
+          "samples": 19,
+          "power_w_median": 111.72,
+          "power_w_max": 114.6,
+          "sm_mhz_median": 2497.0,
+          "sm_mhz_max": 2647.0,
+          "temp_c_max": 69.88,
+          "throttle_reason_counts_hex": {
+            "0x0000000000000400": 16,
+            "0x0000000000000004": 3
+          },
+          "label": "observed (not the 55 W / 900 MHz cap)"
+        },
+        "results": {
+          "quf040": {
+            "fused_decode": true,
+            "file": "eval_cache/lm040/q05.quf",
+            "file_size_bytes": 367911680,
+            "e2e_tok_s_median": 343.9094443424,
+            "e2e_samples": [
+              346.9206993529415,
+              343.89272049469105,
+              343.5276966713011,
+              343.9094443424,
+              346.74430127216436,
+              345.0707718760661,
+              343.1243509486132
+            ],
+            "steady_ms_per_tok_median": 1.9900929132351783,
+            "steady_samples": [
+              1.988580314979676,
+              1.9897944882867755,
+              1.989110236149648,
+              1.9913842520258558,
+              1.9904031497554664,
+              1.991237795134405,
+              1.9900929132351783
+            ],
+            "steady_tok_s_median": 502.48910156378486
+          },
+          "quf030_file_current_code": {
+            "fused_decode": true,
+            "file": "eval_cache/lm/sb05.quf",
+            "file_size_bytes": 497728832,
+            "e2e_tok_s_median": 579.3952562210756,
+            "e2e_samples": [
+              584.1494692976511,
+              576.176108252101,
+              578.8934541431848,
+              569.2686543386309,
+              584.7779556430808,
+              579.3952562210756,
+              585.811820794965
+            ],
+            "steady_ms_per_tok_median": 1.240089763731395,
+            "steady_samples": [
+              1.2351755904378443,
+              1.240089763731395,
+              1.2391259844275557,
+              1.242713385818922,
+              1.2397897639678512,
+              1.2411685038530305,
+              1.2407401575721566
+            ],
+            "steady_tok_s_median": 806.3932380112777
+          },
+          "quf030_path": {
+            "fused_decode": false,
+            "file": "eval_cache/lm/sb05.quf",
+            "file_size_bytes": 497728832,
+            "e2e_tok_s_median": 287.569235662087,
+            "e2e_samples": [
+              288.91661685909855,
+              289.01570957992175,
+              286.2960802497934,
+              286.38768032667366,
+              287.64762448132916,
+              287.569235662087,
+              286.8753625211015
+            ],
+            "steady_ms_per_tok_median": 2.527754761912446,
+            "steady_samples": [
+              2.5261023808510914,
+              2.526814285721186,
+              2.532617460394884,
+              2.5271309524892813,
+              2.527754761912446,
+              2.5320880952113796,
+              2.533030158716313
+            ],
+            "steady_tok_s_median": 395.60799768543257
+          }
+        }
+      },
+      "15": {
+        "size": "15",
+        "prompt": "The quick brown fox",
+        "new_tokens": 128,
+        "warmup": 2,
+        "repeats": 7,
+        "mode": "graph",
+        "backend": "triton_int4",
+        "power": {
+          "samples": 31,
+          "power_w_median": 127.24,
+          "power_w_max": 138.0,
+          "sm_mhz_median": 2310.0,
+          "sm_mhz_max": 2610.0,
+          "temp_c_max": 75.66,
+          "throttle_reason_counts_hex": {
+            "0x0000000000000400": 6,
+            "0x0000000000000004": 9,
+            "0x0000000000000020": 14
+          },
+          "label": "observed (not the 55 W / 900 MHz cap)"
+        },
+        "results": {
+          "quf040": {
+            "fused_decode": true,
+            "file": "eval_cache/lm040/q15.quf",
+            "file_size_bytes": 1040011648,
+            "e2e_tok_s_median": 203.524730325519,
+            "e2e_samples": [
+              207.28966495803766,
+              208.89446521154417,
+              204.5365242343718,
+              201.65346388324033,
+              203.524730325519,
+              200.35876741197723,
+              196.46250834932653
+            ],
+            "steady_ms_per_tok_median": 3.7767456692742463,
+            "steady_samples": [
+              3.647518897654606,
+              3.628442519734885,
+              3.771720472429916,
+              3.7767456692742463,
+              3.781293700797498,
+              3.810942519729312,
+              3.9273094489902816
+            ],
+            "steady_tok_s_median": 264.778221137714
+          },
+          "quf030_file_current_code": {
+            "fused_decode": true,
+            "file": "eval_cache/lm/sb15.quf",
+            "file_size_bytes": 1257449536,
+            "e2e_tok_s_median": 290.40365653664577,
+            "e2e_samples": [
+              306.10014544472995,
+              304.1854732969017,
+              300.51942903610194,
+              290.12469921620936,
+              290.40365653664577,
+              287.9822746901258,
+              283.8411243537284
+            ],
+            "steady_ms_per_tok_median": 2.826917322772357,
+            "steady_samples": [
+              2.684433858128499,
+              2.692833070975076,
+              2.7348606299066285,
+              2.834043306973213,
+              2.826917322772357,
+              2.8743803149133216,
+              2.916486614372757
+            ],
+            "steady_tok_s_median": 353.7422166345142
+          },
+          "quf030_path": {
+            "fused_decode": false,
+            "file": "eval_cache/lm/sb15.quf",
+            "file_size_bytes": 1257449536,
+            "e2e_tok_s_median": 171.70963096424111,
+            "e2e_samples": [
+              180.08273676278316,
+              179.7480914743005,
+              177.20937869380555,
+              171.70963096424111,
+              169.1824180377664,
+              167.980215085778,
+              167.31271595926012
+            ],
+            "steady_ms_per_tok_median": 4.631149999950717,
+            "steady_samples": [
+              4.383152381042092,
+              4.368795238117436,
+              4.445531746208121,
+              4.631149999950717,
+              4.725385714361134,
+              4.729107936515311,
+              4.759589682743397
+            ],
+            "steady_tok_s_median": 215.92908888950728
+          }
+        }
+      }
+    },
+    "llama_cpp": {
+      "05": {
+        "size": "05",
+        "new_tokens": 128,
+        "warmup": "2 alternating rounds plus llama-bench's own warm-up",
+        "repeats": 7,
+        "ngl": 99,
+        "power": {
+          "samples": 69,
+          "power_w_median": 48.4,
+          "power_w_max": 67.5,
+          "sm_mhz_median": 1627.0,
+          "sm_mhz_max": 2347.0,
+          "temp_c_max": 72.25,
+          "throttle_reason_counts_hex": {
+            "0x0000000000000400": 67
+          },
+          "label": "observed (not the 55 W / 900 MHz cap)"
+        },
+        "results": {
+          "Q4_K_M": {
+            "file": "eval_cache/qwen2_5-0_5b-Q4_K_M.gguf",
+            "file_size_bytes": 397807584,
+            "tg128_tok_s_median": 773.078,
+            "samples": [
+              779.425,
+              765.38,
+              776.889,
+              773.078,
+              781.358,
+              769.673,
+              770.11
+            ]
+          },
+          "Q4_K_S": {
+            "file": "eval_cache/gguf040/qwen2_5-0_5b-Q4_K_S.gguf",
+            "file_size_bytes": 385471456,
+            "tg128_tok_s_median": 781.852,
+            "samples": [
+              781.167,
+              781.852,
+              784.438,
+              789.077,
+              786.011,
+              775.225,
+              773.433
+            ]
+          },
+          "IQ4_XS": {
+            "file": "eval_cache/gguf040/qwen2_5-0_5b-IQ4_XS.gguf",
+            "file_size_bytes": 349402304,
+            "tg128_tok_s_median": 791.444,
+            "samples": [
+              792.144,
+              788.743,
+              793.455,
+              759.012,
+              791.615,
+              786.385,
+              791.444
+            ]
+          },
+          "Q4_K_M-imat": {
+            "file": "eval_cache/gguf040/qwen2_5-0_5b-Q4_K_M-imat.gguf",
+            "file_size_bytes": 397807808,
+            "tg128_tok_s_median": 774.533,
+            "samples": [
+              780.18,
+              782.262,
+              781.671,
+              769.237,
+              774.533,
+              765.585,
+              769.086
+            ]
+          },
+          "Q5_K_M": {
+            "file": "eval_cache/gguf040/qwen2_5-0_5b-Q5_K_M.gguf",
+            "file_size_bytes": 420085728,
+            "tg128_tok_s_median": 789.507,
+            "samples": [
+              791.67,
+              790.335,
+              794.247,
+              782.02,
+              784.103,
+              781.403,
+              789.507
+            ]
+          }
+        }
+      },
+      "15": {
+        "size": "15",
+        "new_tokens": 128,
+        "warmup": "2 alternating rounds plus llama-bench's own warm-up",
+        "repeats": 7,
+        "ngl": 99,
+        "power": {
+          "samples": 108,
+          "power_w_median": 63.51,
+          "power_w_max": 70.74,
+          "sm_mhz_median": 1541.0,
+          "sm_mhz_max": 2482.0,
+          "temp_c_max": 73.28,
+          "throttle_reason_counts_hex": {
+            "0x0000000000000400": 85,
+            "0x0000000000000004": 23
+          },
+          "label": "observed (not the 55 W / 900 MHz cap)"
+        },
+        "results": {
+          "Q4_K_M": {
+            "file": "eval_cache/qwen2_5-1_5b-Q4_K_M.gguf",
+            "file_size_bytes": 986048160,
+            "tg128_tok_s_median": 448.849,
+            "samples": [
+              448.894,
+              448.849,
+              449.054,
+              447.185,
+              445.887,
+              444.831,
+              449.392
+            ]
+          },
+          "Q4_K_S": {
+            "file": "eval_cache/gguf040/qwen2_5-1_5b-Q4_K_S.gguf",
+            "file_size_bytes": 940312224,
+            "tg128_tok_s_median": 458.081,
+            "samples": [
+              461.393,
+              459.359,
+              455.622,
+              453.537,
+              457.985,
+              458.081,
+              459.327
+            ]
+          },
+          "IQ4_XS": {
+            "file": "eval_cache/gguf040/qwen2_5-1_5b-IQ4_XS.gguf",
+            "file_size_bytes": 895731584,
+            "tg128_tok_s_median": 446.96,
+            "samples": [
+              446.96,
+              450.683,
+              448.852,
+              445.138,
+              449.583,
+              446.847,
+              446.236
+            ]
+          },
+          "Q4_K_M-imat": {
+            "file": "eval_cache/gguf040/qwen2_5-1_5b-Q4_K_M-imat.gguf",
+            "file_size_bytes": 986048384,
+            "tg128_tok_s_median": 448.255,
+            "samples": [
+              450.432,
+              448.255,
+              447.716,
+              442.388,
+              448.044,
+              448.799,
+              449.57
+            ]
+          },
+          "Q5_K_M": {
+            "file": "eval_cache/gguf040/qwen2_5-1_5b-Q5_K_M.gguf",
+            "file_size_bytes": 1125050016,
+            "tg128_tok_s_median": 410.837,
+            "samples": [
+              411.658,
+              406.38,
+              408.473,
+              413.41,
+              411.157,
+              409.638,
+              410.837
+            ]
+          }
+        }
+      }
+    },
+    "targets": {
+      "05": {
+        "speedup_vs_030_path_e2e": 1.1959187621394816,
+        "speedup_vs_030_path_steady": 1.2701692192869638,
+        "required_2x_met": false,
+        "q4km_tg128": 773.078,
+        "quf040_steady_tok_s": 502.48910156378486,
+        "quf040_e2e_tok_s": 343.9094443424,
+        "stretch_met": false
+      },
+      "15": {
+        "speedup_vs_030_path_e2e": 1.1852843034058085,
+        "speedup_vs_030_path_steady": 1.226227658808875,
+        "required_2x_met": false,
+        "q4km_tg128": 448.849,
+        "quf040_steady_tok_s": 264.778221137714,
+        "quf040_e2e_tok_s": 203.524730325519,
+        "stretch_met": false
+      }
+    },
+    "profile_1_5b_040": {
+      "file": "eval_cache/lm040/q15.quf",
+      "tokens": 64,
+      "gpu_us_per_token_total": 3791.616343749925,
+      "fused_decode": true,
+      "kernels": [
+        {
+          "name": "_int4_gemv1_kernel",
+          "us_per_token": 1738.3174531250024,
+          "launches_per_token": 111.375,
+          "share": 0.4584634349913681
+        },
+        {
+          "name": "_embed_gemv_kernel",
+          "us_per_token": 318.74529687500103,
+          "launches_per_token": 1.046875,
+          "share": 0.08406580940089539
+        },
+        {
+          "name": "_ZN8internal5gemvx6kernelIii6__halfS2_S2_fLb0ELb1ELb1ELb0ELi7ELb0E18cublasGemvParamsExIi30cublasGemvTensorStridedBatchedIKS2_ES6_S4_IS2_EfEEENSt9enable_ifIXntT5_EvE4typeET11_",
+          "us_per_token": 207.3221562499956,
+          "launches_per_token": 56.71875,
+          "share": 0.05467909657888886
+        },
+        {
+          "name": "_ZN2at6native18elementwise_kernelILi128ELi4EZNS0_22gpu_kernel_impl_nocastINS0_13BinaryFunctorIN3c104HalfES5_S5_NS0_15binary_internal10MulFunctorIfEEEEEEvRNS_18TensorIteratorBaseERKT_EUliE_EEviT1_",
+          "us_per_token": 153.05248437503892,
+          "launches_per_token": 118.578125,
+          "share": 0.04036602612163797
+        },
+        {
+          "name": "_ZN2at6native29vectorized_elementwise_kernelILi4ENS0_15CUDAFunctor_addIN3c104HalfEEESt5arrayIPcLy3EEEEviT0_T1_",
+          "us_per_token": 138.49403124996593,
+          "launches_per_token": 143.1875,
+          "share": 0.0365263831289942
+        },
+        {
+          "name": "_ZN2at6native18elementwise_kernelILi128ELi4EZNS0_22gpu_kernel_impl_nocastIZZZNS0_23direct_copy_kernel_cudaERNS_18TensorIteratorBaseEENKUlvE1_clEvENKUlvE8_clEvEUlN3c104HalfEE_EEvS4_RKT_EUliE_EEviT1_",
+          "us_per_token": 132.26034374997064,
+          "launches_per_token": 59.0625,
+          "share": 0.03488231185836819
+        },
+        {
+          "name": "_ZN2at6native27unrolled_elementwise_kernelIZZZNS0_23direct_copy_kernel_cudaERNS_18TensorIteratorBaseEENKUlvE1_clEvENKUlvE5_clEvEUlfE_St5arrayIPcLy2EELi4E23TrivialOffsetCalculatorILi1EjESB_NS0_6memory12LoadWithCastILi1EEENSC_13StoreWithCastILi1EEEEEviT_T0_T2_T3_T4_T5_",
+          "us_per_token": 119.28499999996049,
+          "launches_per_token": 62.671875,
+          "share": 0.031460197758823645
+        },
+        {
+          "name": "_ZN8internal5gemvx6kernelIii6__halfS2_S2_fLb0ELb1ELb1ELb0ELi6ELb0E18cublasGemvParamsExIi30cublasGemvTensorStridedBatchedIKS2_ES6_S4_IS2_EfEEENSt9enable_ifIXntT5_EvE4typeET11_",
+          "us_per_token": 103.47957812499453,
+          "launches_per_token": 3.09375,
+          "share": 0.02729167952226221
+        },
+        {
+          "name": "_ZN2at6native40_GLOBAL__N__0b46c3ea_8_Shape_cu_85d9f36c19CatArrayBatchedCopyINS1_10OpaqueTypeILj2EEEjLi4ELi64ELi64EEEvPT_NS1_25CatArrInputTensorMetadataIS5_T0_XT2_EXT3_EEENS1_16TensorSizeStrideIS8_Lj4EEEiS8_",
+          "us_per_token": 91.98854687500352,
+          "launches_per_token": 58.625,
+          "share": 0.024261037651300568
+        },
+        {
+          "name": "_add_rmsnorm_kernel",
+          "us_per_token": 80.07140624998021,
+          "launches_per_token": 58.78125,
+          "share": 0.021118013794293664
+        },
+        {
+          "name": "_ZN2at6native24index_elementwise_kernelILi128ELi4EZNS0_22index_copy_kernel_implINS0_10OpaqueTypeILi2EEEEEvRNS_14TensorIteratorExxxEUliE_EEvxT1_",
+          "us_per_token": 77.45914062499122,
+          "launches_per_token": 58.625,
+          "share": 0.0204290554746327
+        },
+        {
+          "name": "_ZN2at6native18elementwise_kernelILi128ELi4EZNS0_22gpu_kernel_impl_nocastIZZZNS0_15neg_kernel_cudaERNS_18TensorIteratorBaseEENKUlvE0_clEvENKUlvE6_clEvEUlN3c104HalfEE_EEvS4_RKT_EUliE_EEviT1_",
+          "us_per_token": 70.62540624999193,
+          "launches_per_token": 58.625,
+          "share": 0.018626727982753416
+        },
+        {
+          "name": "_ZN2at6native13reduce_kernelILi128ELi4ENS0_8ReduceOpIfNS0_14func_wrapper_tIfZNS0_11sum_functorIfffEclERNS_14TensorIteratorEEUlffE_EEjfLi4ELi4EEEEEvT1_",
+          "us_per_token": 68.06251562497712,
+          "launches_per_token": 28.265625,
+          "share": 0.017950791813937324
+        },
+        {
+          "name": "_int4_gemv_kernel",
+          "us_per_token": 60.306859375000585,
+          "launches_per_token": 1.6875,
+          "share": 0.015905316864247093
+        },
+        {
+          "name": "_ZN2at6native29vectorized_elementwise_kernelILi4EZNS0_24float16_copy_kernel_cudaERNS_18TensorIteratorBaseEEUlfE_St5arrayIPcLy2EEEEviT0_T1_",
+          "us_per_token": 58.98371875003758,
+          "launches_per_token": 61.640625,
+          "share": 0.015556352067968572
+        }
+      ]
+    }
+  },
+  "speed_040_final": {
+    "power_source": {
+      "power_online_ac": false,
+      "raw": "False",
+      "battery_pct": "71"
+    },
+    "label": "BATTERY (not on AC)",
+    "prompt": "The quick brown fox",
+    "new_tokens": 128,
+    "warmup_rounds": 2,
+    "measured_rounds": 7,
+    "order": "rotated one row per round",
+    "quf_backend": "triton_int4",
+    "mode": "CUDA graph",
+    "llama_bench_args": "-p 0 -n 128 -ngl 99 -r 1",
+    "wall_s": 115.25748205184937,
+    "results": {
+      "0.5B": {
+        "QUF": {
+          "steady_tok_s": {
+            "median": 662.1670590136338,
+            "min": 658.3756266228323,
+            "max": 666.0575998217446
+          },
+          "samples_steady": [
+            660.7504356020431,
+            664.6869115294212,
+            662.1670590136338,
+            661.7885382395525,
+            658.3756266228323,
+            666.0575998217446,
+            665.4287247248594
+          ],
+          "power_w_median": 48.08,
+          "sm_mhz_median": 1447.0,
+          "throttle_reason_counts_hex": {
+            "0x0000000000000004": 3,
+            "0x0000000000000400": 4
+          },
+          "e2e_tok_s": {
+            "median": 371.0218056473316,
+            "min": 322.39434218061825,
+            "max": 384.6302936625969
+          }
+        },
+        "Q4_K_M": {
+          "steady_tok_s": {
+            "median": 494.17,
+            "min": 458.507,
+            "max": 510.005
+          },
+          "samples_steady": [
+            506.223,
+            466.418,
+            475.649,
+            498.837,
+            458.507,
+            494.17,
+            510.005
+          ],
+          "power_w_median": 38.45,
+          "sm_mhz_median": 1863.5,
+          "throttle_reason_counts_hex": {
+            "0x0000000000000400": 8,
+            "0x0000000000000004": 10
+          },
+          "quf_vs_this": "faster",
+          "quf_median_ratio": 1.3399580286412243
+        },
+        "Q4_K_S": {
+          "steady_tok_s": {
+            "median": 496.238,
+            "min": 485.695,
+            "max": 538.106
+          },
+          "samples_steady": [
+            501.594,
+            488.015,
+            498.055,
+            488.642,
+            485.695,
+            496.238,
+            538.106
+          ],
+          "power_w_median": 35.775000000000006,
+          "sm_mhz_median": 1792.0,
+          "throttle_reason_counts_hex": {
+            "0x0000000000000004": 9,
+            "0x0000000000000400": 6
+          },
+          "quf_vs_this": "faster",
+          "quf_median_ratio": 1.3343739476090783
+        },
+        "IQ4_XS-imat": {
+          "steady_tok_s": {
+            "median": 496.29,
+            "min": 488.511,
+            "max": 522.621
+          },
+          "samples_steady": [
+            522.621,
+            515.42,
+            488.511,
+            495.725,
+            492.61,
+            496.29,
+            522.277
+          ],
+          "power_w_median": 34.185,
+          "sm_mhz_median": 1796.0,
+          "throttle_reason_counts_hex": {
+            "0x0000000000000004": 9,
+            "0x0000000000000400": 5
+          },
+          "quf_vs_this": "faster",
+          "quf_median_ratio": 1.3342341353112772
+        },
+        "Q5_K_M": {
+          "steady_tok_s": {
+            "median": 506.088,
+            "min": 482.651,
+            "max": 533.602
+          },
+          "samples_steady": [
+            497.32,
+            506.088,
+            533.602,
+            493.99,
+            506.515,
+            482.651,
+            510.302
+          ],
+          "power_w_median": 34.785,
+          "sm_mhz_median": 1803.5,
+          "throttle_reason_counts_hex": {
+            "0x0000000000000004": 8,
+            "0x0000000000000400": 8
+          },
+          "quf_vs_this": "faster",
+          "quf_median_ratio": 1.3084030030619849
+        }
+      },
+      "1.5B": {
+        "QUF": {
+          "steady_tok_s": {
+            "median": 282.8206707614,
+            "min": 262.9608647974342,
+            "max": 285.1920858521206
+          },
+          "samples_steady": [
+            273.1174572808373,
+            285.1920858521206,
+            282.8206707614,
+            263.2470801857104,
+            262.9608647974342,
+            283.63079578311607,
+            283.1659198444377
+          ],
+          "power_w_median": 43.9,
+          "sm_mhz_median": 1668.5,
+          "throttle_reason_counts_hex": {
+            "0x0000000000000400": 2,
+            "0x0000000000000004": 12
+          },
+          "e2e_tok_s": {
+            "median": 200.28647224485374,
+            "min": 187.00821769618017,
+            "max": 210.61516906385427
+          }
+        },
+        "Q4_K_M": {
+          "steady_tok_s": {
+            "median": 273.862,
+            "min": 268.115,
+            "max": 279.115
+          },
+          "samples_steady": [
+            273.862,
+            269.715,
+            272.641,
+            268.115,
+            275.131,
+            275.755,
+            279.115
+          ],
+          "power_w_median": 44.95,
+          "sm_mhz_median": 1507.0,
+          "throttle_reason_counts_hex": {
+            "0x0000000000000004": 19,
+            "0x0000000000000400": 6,
+            "0x0000000000000020": 1
+          },
+          "quf_vs_this": "equal within noise",
+          "quf_median_ratio": 1.0327123542565233
+        },
+        "Q4_K_S": {
+          "steady_tok_s": {
+            "median": 281.883,
+            "min": 270.266,
+            "max": 286.503
+          },
+          "samples_steady": [
+            284.607,
+            270.266,
+            279.695,
+            280.199,
+            281.883,
+            283.055,
+            286.503
+          ],
+          "power_w_median": 39.8,
+          "sm_mhz_median": 1582.0,
+          "throttle_reason_counts_hex": {
+            "0x0000000000000400": 6,
+            "0x0000000000000004": 17
+          },
+          "quf_vs_this": "equal within noise",
+          "quf_median_ratio": 1.0033264537464126
+        },
+        "IQ4_XS-imat": {
+          "steady_tok_s": {
+            "median": 273.522,
+            "min": 270.379,
+            "max": 278.385
+          },
+          "samples_steady": [
+            278.385,
+            273.522,
+            273.396,
+            273.945,
+            270.707,
+            270.379,
+            277.207
+          ],
+          "power_w_median": 37.76,
+          "sm_mhz_median": 1589.5,
+          "throttle_reason_counts_hex": {
+            "0x0000000000000004": 20,
+            "0x0000000000000400": 3
+          },
+          "quf_vs_this": "equal within noise",
+          "quf_median_ratio": 1.0339960616016262
+        },
+        "Q5_K_M": {
+          "steady_tok_s": {
+            "median": 247.648,
+            "min": 242.139,
+            "max": 250.53
+          },
+          "samples_steady": [
+            247.882,
+            250.53,
+            242.139,
+            248.309,
+            244.214,
+            247.648,
+            246.213
+          ],
+          "power_w_median": 41.385,
+          "sm_mhz_median": 1541.0,
+          "throttle_reason_counts_hex": {
+            "0x0000000000000400": 5,
+            "0x0000000000000004": 23
+          },
+          "quf_vs_this": "faster",
+          "quf_median_ratio": 1.1420268718560214
+        }
+      }
+    },
+    "targets": {
+      "0.5B QUF median >= Q4_K_M median": true,
+      "1.5B QUF median >= 398 tok/s": false,
+      "1.5B vs Q4_K_M": "equal within noise"
+    }
+  },
+  "pareto_040": {
+    "0.5B": {
+      "Q4_K_M": {
+        "ppl_wikitext2": 12.0425,
+        "ppl_c4_heldout": 18.7241,
+        "file_size_bytes": 397807584,
+        "source": "reused from models_llama.gguf_q4_k_m (task 20.3)"
+      },
+      "Q4_K_S": {
+        "file": "qwen2_5-0_5b-Q4_K_S.gguf",
+        "file_size_bytes": 385471456,
+        "protocol": "llama",
+        "backend": "llama-perplexity.exe (cuda, -ngl 99)",
+        "ppl_wikitext2": 12.2067,
+        "ppl_c4_heldout": 19.0017
+      },
+      "IQ4_XS": {
+        "file": "qwen2_5-0_5b-IQ4_XS.gguf",
+        "file_size_bytes": 349402304,
+        "protocol": "llama",
+        "backend": "llama-perplexity.exe (cuda, -ngl 99)",
+        "ppl_wikitext2": 12.286,
+        "ppl_c4_heldout": 19.046
+      },
+      "Q4_K_M-imat": {
+        "file": "qwen2_5-0_5b-Q4_K_M-imat.gguf",
+        "file_size_bytes": 397807808,
+        "protocol": "llama",
+        "backend": "llama-perplexity.exe (cuda, -ngl 99)",
+        "ppl_wikitext2": 11.9594,
+        "ppl_c4_heldout": 18.5925
+      },
+      "Q5_K_M": {
+        "file": "qwen2_5-0_5b-Q5_K_M.gguf",
+        "file_size_bytes": 420085728,
+        "protocol": "llama",
+        "backend": "llama-perplexity.exe (cuda, -ngl 99)",
+        "ppl_wikitext2": 11.961,
+        "ppl_c4_heldout": 18.5053
+      },
+      "QUF": {
+        "file": "q05.quf",
+        "backend": "torch_gpu",
+        "ppl_wikitext2": 11.986908173687105,
+        "ppl_c4_heldout": 18.776541599771676,
+        "protocol": "llama",
+        "windows": "all",
+        "seconds": 311,
+        "file_size_bytes": 367911680
+      }
+    },
+    "1.5B": {
+      "Q4_K_M": {
+        "ppl_wikitext2": 8.5998,
+        "ppl_c4_heldout": 13.9536,
+        "file_size_bytes": 986048160,
+        "source": "reused from models_llama.gguf_q4_k_m (task 20.3)"
+      },
+      "Q4_K_S": {
+        "file": "qwen2_5-1_5b-Q4_K_S.gguf",
+        "file_size_bytes": 940312224,
+        "protocol": "llama",
+        "backend": "llama-perplexity.exe (cuda, -ngl 99)",
+        "ppl_wikitext2": 8.6791,
+        "ppl_c4_heldout": 14.075
+      },
+      "IQ4_XS": {
+        "file": "qwen2_5-1_5b-IQ4_XS.gguf",
+        "file_size_bytes": 895731584,
+        "protocol": "llama",
+        "backend": "llama-perplexity.exe (cuda, -ngl 99)",
+        "ppl_wikitext2": 8.5772,
+        "ppl_c4_heldout": 13.8794
+      },
+      "Q4_K_M-imat": {
+        "file": "qwen2_5-1_5b-Q4_K_M-imat.gguf",
+        "file_size_bytes": 986048384,
+        "protocol": "llama",
+        "backend": "llama-perplexity.exe (cuda, -ngl 99)",
+        "ppl_wikitext2": 8.4968,
+        "ppl_c4_heldout": 13.7574
+      },
+      "Q5_K_M": {
+        "file": "qwen2_5-1_5b-Q5_K_M.gguf",
+        "file_size_bytes": 1125050016,
+        "protocol": "llama",
+        "backend": "llama-perplexity.exe (cuda, -ngl 99)",
+        "ppl_wikitext2": 8.389,
+        "ppl_c4_heldout": 13.6326
+      },
+      "QUF": {
+        "file": "q15.quf",
+        "backend": "torch_gpu",
+        "ppl_wikitext2": 8.41973034522315,
+        "ppl_c4_heldout": 13.763088479401446,
+        "protocol": "llama",
+        "windows": "all",
+        "seconds": 288,
+        "file_size_bytes": 1040011648
+      }
+    }
+  },
+  "scaling_3b": {
+    "env": {
+      "power_source": "AC (Win32_Battery BatteryStatus=2)",
+      "gpu_free_mib_before": 16303,
+      "disk_free_gb": 1235,
+      "model": "Qwen/Qwen2.5-3B",
+      "fits": true
+    },
+    "Q4_K_M": {
+      "file": "eval_cache/scale3b/qwen2_5-3b-Q4_K_M.gguf",
+      "file_size_bytes": 1929902368,
+      "build": "b6100 convert_hf_to_gguf.py f16 then llama-quantize Q4_K_M, no imatrix",
+      "ppl_wikitext2": 7.4648,
+      "ppl_wikitext2_pm": 0.04727,
+      "protocol": "llama (llama-perplexity -c 2048 -ngl 99)",
+      "ppl_c4_heldout": 12.3108,
+      "ppl_c4_pm": 0.08737
+    },
+    "QUF": {
+      "file": "eval_cache/scale3b/q3b.quf",
+      "file_size_bytes": 1987397696,
+      "convert": "plain quf convert defaults, ~15 min wall, GPU peak seen ~4.9 GB",
+      "ppl_wikitext2": 7.291214681313423,
+      "ppl_c4_heldout": 12.154387867614577,
+      "protocol": "llama",
+      "ppl_backend": "torch_gpu"
+    },
+    "speed": {
+      "quf_e2e_tok_s_median": 190.7,
+      "quf_steady_tok_s_median": 229.05,
+      "llama_bench_tg128_tok_s_median": 235.96,
+      "quf_samples": [
+        198.5,
+        198.0,
+        190.7,
+        186.3,
+        180.5
+      ],
+      "llama_samples": [
+        244.4,
+        238.0,
+        236.0,
+        231.0,
+        225.2
+      ],
+      "note": "interleaved, 1 warm-up round, both drift down over the run (thermal); AC power; raw in eval_cache/scale3b/speed.json"
+    },
+    "verdict": {
+      "size": "QUF loses (1987.4 MB vs 1929.9 MB, +3.0%)",
+      "wikitext2_ppl": "QUF beats (7.291 vs 7.465, -2.3%; Q4_K_M +/-0.047)",
+      "c4_ppl": "QUF beats (12.154 vs 12.311, -1.3%)",
+      "speed": "QUF loses (190.7 vs 236.0 tok/s end-to-end, -19%; steady-state 229.1, -3%)",
+      "beat_target": "not reached: smaller-and-better-and-faster not met, QUF is larger and slower"
+    }
   }
- },
- "int4_backend": {
-  "task": "31.1",
-  "device": "NVIDIA GeForce RTX 5080 Laptop GPU",
-  "settings": "prompt 'The quick brown fox', 128 new tokens, greedy, EOS suppressed, 2 warm-up, median of 7, backends alternate per repeat; steady = mean gap between decode_token calls",
-  "speed": {
-   "sb05": {
-    "file": "sb05.quf",
-    "file_size_bytes": 497728832,
-    "prompt": "The quick brown fox",
-    "new_tokens": 128,
-    "warmup": 2,
-    "repeats": 7,
-    "eos_suppressed": true,
-    "order": "backends alternate within every repeat",
-    "results": {
-     "torch_gpu/eager": {
-      "backend": "torch_gpu",
-      "mode": "eager",
-      "e2e_tok_s": {
-       "median": 58.39617194837035,
-       "min": 57.018640507287756,
-       "max": 59.18271627952566,
-       "repeats": 7,
-       "samples": [
-        59.18271627952566,
-        58.71867232648051,
-        58.90032720977946,
-        58.39617194837035,
-        57.018640507287756,
-        57.98964839484886,
-        57.25680841616591
-       ]
-      },
-      "steady_ms_per_tok": {
-       "median": 17.082343650852433,
-       "min": 16.87218095240597,
-       "max": 17.517248412736485,
-       "repeats": 7,
-       "samples": [
-        16.87218095240597,
-        17.008004761933872,
-        16.950963492115353,
-        17.082343650852433,
-        17.517248412736485,
-        17.22401666668861,
-        17.447691269764967
-       ]
-      },
-      "steady_tok_s_median": 58.53997674084367,
-      "graph_replay_used": [
-       false
-      ],
-      "tokens_generated_per_run": [
-       128
-      ]
-     },
-     "triton_int4/eager": {
-      "backend": "triton_int4",
-      "mode": "eager",
-      "e2e_tok_s": {
-       "median": 46.661165752524056,
-       "min": 44.44297998653252,
-       "max": 47.59167178444947,
-       "repeats": 7,
-       "samples": [
-        46.81538353499821,
-        47.59167178444947,
-        47.12527710029874,
-        46.661165752524056,
-        46.36743058944679,
-        46.3422480009562,
-        44.44297998653252
-       ]
-      },
-      "steady_ms_per_tok": {
-       "median": 21.381868254037627,
-       "min": 20.976537301658748,
-       "max": 22.476704761968918,
-       "repeats": 7,
-       "samples": [
-        21.323746825348483,
-        20.976537301658748,
-        21.187853968253226,
-        21.381868254037627,
-        21.53036666670001,
-        21.51850476192998,
-        22.476704761968918
-       ]
-      },
-      "steady_tok_s_median": 46.76859795968324,
-      "graph_replay_used": [
-       false
-      ],
-      "tokens_generated_per_run": [
-       128
-      ]
-     },
-     "torch_gpu/graph": {
-      "backend": "torch_gpu",
-      "mode": "graph",
-      "e2e_tok_s": {
-       "median": 234.3933835111518,
-       "min": 227.85807005505114,
-       "max": 240.07100100118484,
-       "repeats": 7,
-       "samples": [
-        237.96841899032847,
-        240.07100100118484,
-        231.0759618847171,
-        234.3933835111518,
-        231.78680828891993,
-        234.7036911758107,
-        227.85807005505114
-       ]
-      },
-      "steady_ms_per_tok": {
-       "median": 3.624851587307011,
-       "min": 3.533134126983997,
-       "max": 3.7321460317581936,
-       "repeats": 7,
-       "samples": [
-        3.548861904756262,
-        3.533134126983997,
-        3.66674444445553,
-        3.6115912698155697,
-        3.6602111110354714,
-        3.624851587307011,
-        3.7321460317581936
-       ]
-      },
-      "steady_tok_s_median": 275.87336361622573,
-      "graph_replay_used": [
-       true
-      ],
-      "tokens_generated_per_run": [
-       128
-      ]
-     },
-     "triton_int4/graph": {
-      "backend": "triton_int4",
-      "mode": "graph",
-      "e2e_tok_s": {
-       "median": 284.1954892044421,
-       "min": 275.91219697556005,
-       "max": 295.5219194110654,
-       "repeats": 7,
-       "samples": [
-        289.86715025448996,
-        295.5219194110654,
-        284.1954892044421,
-        289.28639148755997,
-        279.8917256358357,
-        275.91219697556005,
-        283.1073598412672
-       ]
-      },
-      "steady_ms_per_tok": {
-       "median": 2.6536873015824574,
-       "min": 2.575894444441748,
-       "max": 2.8038126984029077,
-       "repeats": 7,
-       "samples": [
-        2.575894444441748,
-        2.579019047617395,
-        2.6536873015824574,
-        2.62263888899248,
-        2.7211611110639446,
-        2.8038126984029077,
-        2.654684920604008
-       ]
-      },
-      "steady_tok_s_median": 376.834150505855,
-      "graph_replay_used": [
-       true
-      ],
-      "tokens_generated_per_run": [
-       128
-      ]
-     }
-    }
-   },
-   "sb15": {
-    "file": "sb15.quf",
-    "file_size_bytes": 1257449536,
-    "prompt": "The quick brown fox",
-    "new_tokens": 128,
-    "warmup": 2,
-    "repeats": 7,
-    "eos_suppressed": true,
-    "order": "backends alternate within every repeat",
-    "results": {
-     "torch_gpu/eager": {
-      "backend": "torch_gpu",
-      "mode": "eager",
-      "e2e_tok_s": {
-       "median": 40.55141433039608,
-       "min": 39.05774532021336,
-       "max": 41.57682040297485,
-       "repeats": 7,
-       "samples": [
-        41.57682040297485,
-        40.94871256913671,
-        40.60796725786342,
-        39.58571691672473,
-        39.65287010102413,
-        39.05774532021336,
-        40.55141433039608
-       ]
-      },
-      "steady_ms_per_tok": {
-       "median": 24.601257142854767,
-       "min": 24.017216666603446,
-       "max": 25.579022222137567,
-       "repeats": 7,
-       "samples": [
-        24.017216666603446,
-        24.385259523807605,
-        24.59125714281866,
-        25.217410317429948,
-        25.175065873005973,
-        25.579022222137567,
-        24.601257142854767
-       ]
-      },
-      "steady_tok_s_median": 40.64832923753418,
-      "graph_replay_used": [
-       false
-      ],
-      "tokens_generated_per_run": [
-       128
-      ]
-     },
-     "triton_int4/eager": {
-      "backend": "triton_int4",
-      "mode": "eager",
-      "e2e_tok_s": {
-       "median": 30.864208694169225,
-       "min": 30.140622723654968,
-       "max": 34.3429130205745,
-       "repeats": 7,
-       "samples": [
-        32.26371310521048,
-        31.240145168133967,
-        30.864208694169225,
-        30.453502616731193,
-        30.140622723654968,
-        30.539794688520487,
-        34.3429130205745
-       ]
-      },
-      "steady_ms_per_tok": {
-       "median": 32.33059444443955,
-       "min": 29.0392817460954,
-       "max": 33.133661904786194,
-       "repeats": 7,
-       "samples": [
-        30.953187301560003,
-        31.96127142857424,
-        32.33059444443955,
-        32.77016507929638,
-        33.133661904786194,
-        32.692135714266136,
-        29.0392817460954
-       ]
-      },
-      "steady_tok_s_median": 30.930455105566033,
-      "graph_replay_used": [
-       false
-      ],
-      "tokens_generated_per_run": [
-       128
-      ]
-     },
-     "torch_gpu/graph": {
-      "backend": "torch_gpu",
-      "mode": "graph",
-      "e2e_tok_s": {
-       "median": 99.71185610534435,
-       "min": 98.05065342631461,
-       "max": 101.12196399121555,
-       "repeats": 7,
-       "samples": [
-        99.78540680487485,
-        100.00780529708162,
-        101.12196399121555,
-        99.71185610534435,
-        98.10279916443939,
-        98.26962544152421,
-        98.05065342631461
-       ]
-      },
-      "steady_ms_per_tok": {
-       "median": 9.157165873076005,
-       "min": 9.012632539596535,
-       "max": 9.350109523756334,
-       "repeats": 7,
-       "samples": [
-        9.112999206413479,
-        9.100116666689116,
-        9.012632539596535,
-        9.157165873076005,
-        9.325130952342915,
-        9.3129698412552,
-        9.350109523756334
-       ]
-      },
-      "steady_tok_s_median": 109.20409369674196,
-      "graph_replay_used": [
-       true
-      ],
-      "tokens_generated_per_run": [
-       128
-      ]
-     },
-     "triton_int4/graph": {
-      "backend": "triton_int4",
-      "mode": "graph",
-      "e2e_tok_s": {
-       "median": 145.6145062979769,
-       "min": 141.16665639162363,
-       "max": 148.50137172407443,
-       "repeats": 7,
-       "samples": [
-        148.50137172407443,
-        146.7814834227913,
-        145.6145062979769,
-        142.43614548580328,
-        141.16665639162363,
-        143.04031747763366,
-        148.00622320011186
-       ]
-      },
-      "steady_ms_per_tok": {
-       "median": 5.779039682469345,
-       "min": 5.632573015833577,
-       "max": 5.907326190416435,
-       "repeats": 7,
-       "samples": [
-        5.632573015833577,
-        5.718469841263464,
-        5.779039682469345,
-        5.889209523812742,
-        5.907326190416435,
-        5.887234920616417,
-        5.664083333353379
-       ]
-      },
-      "steady_tok_s_median": 173.03913019207832,
-      "graph_replay_used": [
-       true
-      ],
-      "tokens_generated_per_run": [
-       128
-      ]
-     }
-    }
-   }
-  },
-  "memory": {
-   "sb05": {
-    "torch_gpu": {
-     "file": "sb05.quf",
-     "backend": "torch_gpu",
-     "after_load": {
-      "allocated_mib": 946.65478515625,
-      "reserved_mib": 1508.0,
-      "device_used_delta_mib": 1554.0
-     },
-     "tokens_generated": 128,
-     "peak_allocated_mib": 976.3134765625,
-     "peak_reserved_mib": 1530.0,
-     "device_used_after_generate_delta_mib": 1562.0,
-     "note": "generation = graph mode, 128 new tokens, EOS suppressed; includes graph capture and KV cache"
-    },
-    "triton_int4": {
-     "file": "sb05.quf",
-     "backend": "triton_int4",
-     "after_load": {
-      "allocated_mib": 507.54638671875,
-      "reserved_mib": 728.0,
-      "device_used_delta_mib": 786.0
-     },
-     "tokens_generated": 128,
-     "peak_allocated_mib": 528.5859375,
-     "peak_reserved_mib": 750.0,
-     "device_used_after_generate_delta_mib": 812.0,
-     "note": "generation = graph mode, 128 new tokens, EOS suppressed; includes graph capture and KV cache"
-    }
-   },
-   "sb15": {
-    "torch_gpu": {
-     "file": "sb15.quf",
-     "backend": "torch_gpu",
-     "after_load": {
-      "allocated_mib": 2950.65185546875,
-      "reserved_mib": 4972.0,
-      "device_used_delta_mib": 5018.0
-     },
-     "tokens_generated": 128,
-     "peak_allocated_mib": 2983.71044921875,
-     "peak_reserved_mib": 4994.0,
-     "device_used_after_generate_delta_mib": 3920.0,
-     "note": "generation = graph mode, 128 new tokens, EOS suppressed; includes graph capture and KV cache"
-    },
-    "triton_int4": {
-     "file": "sb15.quf",
-     "backend": "triton_int4",
-     "after_load": {
-      "allocated_mib": 1319.91552734375,
-      "reserved_mib": 2112.0,
-      "device_used_delta_mib": 2170.0
-     },
-     "tokens_generated": 128,
-     "peak_allocated_mib": 1343.69287109375,
-     "peak_reserved_mib": 2134.0,
-     "device_used_after_generate_delta_mib": 2120.0,
-     "note": "generation = graph mode, 128 new tokens, EOS suppressed; includes graph capture and KV cache"
-    }
-   }
-  },
-  "perplexity_llama_protocol": {
-   "sb05": {
-    "torch_gpu": {
-     "file": "sb05.quf",
-     "backend": "torch_gpu",
-     "ppl_wikitext2": 12.0769038523057,
-     "ppl_c4_heldout": 19.047274450630162,
-     "protocol": "llama",
-     "windows": "all",
-     "seconds": 200
-    },
-    "triton_int4": {
-     "file": "sb05.quf",
-     "backend": "triton_int4",
-     "ppl_wikitext2": 12.0769038523057,
-     "ppl_c4_heldout": 19.047274450630162,
-     "protocol": "llama",
-     "windows": "all",
-     "seconds": 206
-    },
-    "rel_diff_pct_ppl_wikitext2": 0.0,
-    "within_0_1_pct_ppl_wikitext2": true,
-    "rel_diff_pct_ppl_c4_heldout": 0.0,
-    "within_0_1_pct_ppl_c4_heldout": true
-   },
-   "sb15": {
-    "torch_gpu": {
-     "file": "sb15.quf",
-     "backend": "torch_gpu",
-     "ppl_wikitext2": 8.444217877970335,
-     "ppl_c4_heldout": 13.866347370984961,
-     "protocol": "llama",
-     "windows": "all",
-     "seconds": 227
-    },
-    "triton_int4": {
-     "file": "sb15.quf",
-     "backend": "triton_int4",
-     "ppl_wikitext2": 8.444217877970335,
-     "ppl_c4_heldout": 13.866347370984961,
-     "protocol": "llama",
-     "windows": "all",
-     "seconds": 252
-    },
-    "rel_diff_pct_ppl_wikitext2": 0.0,
-    "within_0_1_pct_ppl_wikitext2": true,
-    "rel_diff_pct_ppl_c4_heldout": 0.0,
-    "within_0_1_pct_ppl_c4_heldout": true
-   }
-  },
-  "decode_path_perplexity_2_windows": {
-   "sb05": {
-    "torch_gpu": {
-     "ppl": 12.641968571331633,
-     "windows": 2,
-     "seconds": 81
-    },
-    "triton_int4": {
-     "ppl": 12.644131587225708,
-     "windows": 2,
-     "seconds": 110
-    },
-    "rel_diff_pct": 0.017109802811732244
-   },
-   "sb15": {
-    "torch_gpu": {
-     "ppl": 8.795241859577429,
-     "windows": 2,
-     "seconds": 102
-    },
-    "triton_int4": {
-     "ppl": 8.793123568910747,
-     "windows": 2,
-     "seconds": 123
-    },
-    "rel_diff_pct": -0.02408450728815792
-   }
-  },
-  "llama_cpp_q4_k_m": {
-   "sb05": {
-    "mode": "llama.cpp Q4_K_M (-ngl 99, -p 4)",
-    "file": "qwen2_5-0_5b-Q4_K_M.gguf",
-    "new_tokens": 128,
-    "median": 756.502,
-    "min": 724.667,
-    "max": 795.534,
-    "repeats": 7,
-    "samples": [
-     756.502,
-     755.888,
-     724.667,
-     756.034,
-     781.156,
-     795.534,
-     762.372
-    ]
-   },
-   "sb15": {
-    "mode": "llama.cpp Q4_K_M (-ngl 99, -p 4)",
-    "file": "qwen2_5-1_5b-Q4_K_M.gguf",
-    "new_tokens": 128,
-    "median": 422.815,
-    "min": 410.32,
-    "max": 450.975,
-    "repeats": 7,
-    "samples": [
-     445.523,
-     450.975,
-     414.569,
-     411.117,
-     441.088,
-     422.815,
-     410.32
-    ]
-   }
-  },
-  "speed_target": {
-   "sb05": {
-    "baseline_tok_s": 255.0,
-    "required_tok_s": 382.5,
-    "measured_graph_e2e_tok_s": 284.1954892044421,
-    "speedup_vs_baseline": 1.114492114527224,
-    "met": false
-   },
-   "sb15": {
-    "baseline_tok_s": 83.0,
-    "required_tok_s": 124.5,
-    "measured_graph_e2e_tok_s": 145.6145062979769,
-    "speedup_vs_baseline": 1.7543916421443,
-    "met": true
-   }
-  },
-  "perplexity_note": "Prefill with M>16 dequantizes to fp16 and calls F.linear, so full-window perplexity runs the same math on both backends and matches bit for bit. decode_path_perplexity_2_windows scores teacher-forced tokens through decode_token (M=1, the Triton GEMV kernels)."
- }
 }

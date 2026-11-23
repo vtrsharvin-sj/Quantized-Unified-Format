@@ -119,7 +119,7 @@ def _convert(tmp_path, out, **kw):
 
 def test_default_conversion_stays_version_1(tmp_path, cpu_run):
     out = tmp_path / "d.quf"
-    res, msgs = _convert(tmp_path, out)
+    res, msgs = _convert(tmp_path, out, embed_precision="fp16")
     assert out.read_bytes()[4:8] == (1).to_bytes(4, "little")
     assert "modules" not in QUFReader(out).header.quantization
     assert res.report.int8 == 0 and "Size by precision" in msgs[0]
@@ -130,7 +130,8 @@ def test_mixed_precision_conversion_writes_modules_and_tensors(tmp_path, cpu_run
     plan = PrecisionPlan.from_options(
         ["*.v_proj=fp16", "lm_head=int8"], int8_modules=["*.down_proj"]
     )
-    res, msgs = _convert(tmp_path, out, precision_plan=plan, group_size=64, act_order=True, clip_search=True)
+    res, msgs = _convert(tmp_path, out, precision_plan=plan, group_size=64, act_order=True, clip_search=True,
+                           embed_precision="fp16")
     assert out.read_bytes()[4:8] == (2).to_bytes(4, "little")
     with QUFReader(out) as r:
         q = r.header.quantization
@@ -215,3 +216,36 @@ def test_cli_accepts_size_presets_and_records_modules(tmp_path, cpu_run, monkeyp
             assert mods.get("model.layers.0.mlp.down_proj", "int4") == down
             assert mods.get("model.layers.1.self_attn.q_proj", "int4") == last_q
             assert "model.layers.0.self_attn.q_proj.g_idx" in {t.name for t in r.header.tensors}
+
+# --- Budget-constrained presets (task 34.4) -----------------------------------
+def test_size_d_and_size_e_rules():
+    n_layers = 24
+    names = [f"model.layers.{i}.{p}" for i in range(n_layers)
+             for p in ("self_attn.q_proj", "self_attn.v_proj", "mlp.up_proj", "mlp.down_proj")]
+    attn = {n for n in names if ".self_attn." in n}
+    last = {n for n in names if ".layers.23." in n}
+    d = _int8_modules("size_d", names, n_layers)
+    assert d == attn | last  # all attention int8, MLP int4 except the last layer
+    e = _int8_modules("size_e", names, n_layers)
+    tail_down = {f"model.layers.{i}.mlp.down_proj" for i in range(18, 24)}  # last quarter
+    assert e == d | tail_down
+    assert "model.layers.17.mlp.down_proj" not in e and "model.layers.11.mlp.up_proj" not in e
+    # 28 layers: last quarter is 7 layers (21..27); a 4-layer model keeps at least one
+    e28 = PrecisionPlan.from_options(presets=["size_e"], num_layers=28)
+    assert e28.precision("model.layers.21.mlp.down_proj") == "int8"
+    assert e28.precision("model.layers.20.mlp.down_proj") == "int4"
+    e4 = PrecisionPlan.from_options(presets=["size_e"], num_layers=4)
+    assert e4.precision("model.layers.3.mlp.down_proj") == "int8"
+    assert e4.precision("model.layers.2.mlp.down_proj") == "int4"
+
+
+def test_size_f_and_size_g_rules():
+    n_layers = 24
+    names = [f"model.layers.{i}.{p}" for i in range(n_layers)
+             for p in ("self_attn.q_proj", "self_attn.k_proj", "self_attn.v_proj", "self_attn.o_proj",
+                       "mlp.up_proj", "mlp.down_proj")]
+    kv = {n for n in names if n.endswith(("k_proj", "v_proj"))}
+    last = {n for n in names if ".layers.23." in n}
+    f = _int8_modules("size_f", names, n_layers)
+    assert f == kv | last
+    assert _int8_modules("size_g", names, n_layers) == f | {n for n in names if n.endswith("o_proj")}

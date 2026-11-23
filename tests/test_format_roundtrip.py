@@ -46,10 +46,10 @@ def _tensor(draw):
     return draw(hnp.arrays(dt, draw(_shapes), elements=elems))
 
 
-# names avoid the special suffixes (.qweight, embed_tokens.weight, lm_head.weight)
+# names avoid the special suffixes (.qweight, embed_tokens.weight, lm_head.weight, and the reserved v3 .embed_q4/.embed_q8/.embed_scales)
 _names = st.text(
     alphabet=st.sampled_from("abcdefghijklmnopqrstuvwxyz0123456789._"), min_size=1, max_size=20
-).filter(lambda n: not n.endswith((".qweight", ".g_idx", ".qweight_int8", "embed_tokens.weight", "lm_head.weight")))
+).filter(lambda n: not n.endswith((".qweight", ".g_idx", ".qweight_int8", "embed_tokens.weight", "lm_head.weight", ".embed_q4", ".embed_q8", ".embed_scales")))
 
 
 @given(

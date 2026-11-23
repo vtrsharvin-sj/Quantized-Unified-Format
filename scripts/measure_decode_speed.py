@@ -91,6 +91,13 @@ def _timed_run(m, ids, graph):
             stamps.append(time.perf_counter())
             return self.inner.decode_token(tok_id, cache)
 
+        def step_greedy(self):  # on-device greedy loop (task 33.2): one stamp per launched token
+            stamps.append(time.perf_counter())
+            return self.inner.step_greedy()
+
+        def __getattr__(self, name):
+            return getattr(self.inner, name)
+
     def patched(model, cache, enabled=None):
         d = orig(model, cache, enabled)
         used["graph"] = d is not None
@@ -105,7 +112,11 @@ def _timed_run(m, ids, graph):
         dt = time.perf_counter() - t
     finally:
         cg.make_decoder = orig
-    steady = 1000.0 * (stamps[-1] - stamps[0]) / (len(stamps) - 1)
+    if used["graph"] and getattr(m, "fused_decode", False):
+        # Launches run ahead of the GPU, so close the window at the synchronized end of generate.
+        steady = 1000.0 * (t + dt - stamps[0]) / len(stamps)
+    else:
+        steady = 1000.0 * (stamps[-1] - stamps[0]) / (len(stamps) - 1)
     return len(out) / dt, steady, used["graph"], len(out)
 
 

@@ -22,7 +22,8 @@ COMMANDS = ("info", "convert", "run", "bench")
 DEFAULT_GROUP_SIZE = 32
 DEFAULT_ACT_ORDER = True
 DEFAULT_CLIP_SEARCH = True
-DEFAULT_PRESET = "size_b"
+DEFAULT_PRESET = "size_f"
+DEFAULT_EMBED_PRECISION = "int8"
 DEFAULT_MAX_WINDOWS = 40
 
 
@@ -86,13 +87,25 @@ def _build_parser() -> argparse.ArgumentParser:
                              "the last matching rule wins")
     p_conv.add_argument("--int8-modules", action="append", default=[], metavar="PATTERN",
                         help="shortcut for --mixed \"PATTERN=int8\"; repeatable")
-    p_conv.add_argument("--preset", action="append", default=[], choices=("down_proj", "sensitive", "size_a", "size_b", "size_c", "none"),
+    p_conv.add_argument("--preset", action="append", default=[], choices=("down_proj", "sensitive", "size_a", "size_b", "size_c", "size_d", "size_e", "size_f", "size_g", "none"),
                         help="precision preset from docs/ACCURACY.md: down_proj (all down_proj at int8), "
                              "sensitive (down_proj and the last layer at int8; the v020 plan), "
                              "size_a (down_proj int8, last layer int4), "
                              "size_b (last layer int8, down_proj int4), size_c (all int4 by plan), "
+                             "size_d (every attention projection and the last layer int8, rest int4), "
+                             "size_e (size_d plus down_proj int8 in the last quarter of the layers), "
+                             "size_f (k_proj, v_proj and the last layer int8, rest int4), "
+                             "size_g (size_f plus o_proj int8), "
                              "or none (all int4). "
                              f"Default when no --preset, --mixed or --int8-modules is given: {DEFAULT_PRESET}")
+    p_conv.add_argument("--embed-precision", choices=("fp16", "int8", "int4"), default=DEFAULT_EMBED_PRECISION,
+                        help="store the embedding table (and an untied lm_head) as fp16, or as per-row "
+                             "group-wise int8 or int4 (format version 3); default: int8")
+    p_conv.add_argument("--embed-group-size", type=int, choices=(32, 64), default=64,
+                        help="group size of a quantized embedding (default: 64)")
+    p_conv.add_argument("--embed-method", choices=("clip", "rtn"), default="clip",
+                        help="quantized embedding rounding: clip (MSE-optimal clipping per group) "
+                             "or rtn (plain round-to-nearest); default: clip")
     p_conv.add_argument("--overwrite", action="store_true",
                         help="replace the output file if it exists")
 
@@ -465,6 +478,17 @@ def _cmd_info(args: argparse.Namespace) -> int:
     return 0
 
 
+def _embedding_line(quantization: dict) -> str:
+    """One line for ``quf info`` naming the embedding precision (fp16 when not quantized)."""
+    parts = []
+    for key in ("embedding", "lm_head"):
+        spec = quantization.get(key)
+        if isinstance(spec, dict) and "bits" in spec:
+            how = "rtn + clip search" if spec.get("clip_search") else str(spec.get("method", "rtn"))
+            parts.append(f"{key} int{spec['bits']} group {spec.get('group_size')} ({how})")
+    return "Embedding precision: " + (", ".join(parts) if parts else "fp16")
+
+
 def _backend_report() -> list[str]:
     """Lines for ``quf info``: the Triton_Gate result and the Backend the selector would pick."""
     if os.environ.get("QUF_NO_TRITON", "") == "1":
@@ -543,6 +567,9 @@ def _cmd_convert(args: argparse.Namespace) -> int:
         act_order=args.act_order,
         clip_search=args.clip_search,
         precision_plan=plan,
+        embed_precision=args.embed_precision,
+        embed_group_size=args.embed_group_size,
+        embed_method=args.embed_method,
     )
     return 0
 

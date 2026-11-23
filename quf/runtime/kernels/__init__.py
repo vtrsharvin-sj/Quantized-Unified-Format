@@ -10,6 +10,7 @@ from quf.runtime.kernels.triton_kernels import (  # noqa: F401
 )
 from quf.runtime.kernels.dispatch import (  # noqa: F401
     CachedFp16Weight,
+    Int8KernelWeight,
     kernel_linear,
     prepare_for_kernel,
 )

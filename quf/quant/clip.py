@@ -70,5 +70,7 @@ def search_clip(
 
 def _group_error(g: torch.Tensor, scale16: torch.Tensor, zero: torch.Tensor) -> torch.Tensor:
     q = quantize_with(g, scale16, zero)
-    deq = (q - zero.unsqueeze(-1)) * scale16.to(torch.float32).unsqueeze(-1)
-    return ((deq - g) ** 2).sum(dim=-1)
+    # Round to fp16 exactly as reference_dequantize does, so the search ranks the weights that
+    # are actually reconstructed from the stored (q, scale, zero), not an idealised fp32 version.
+    deq = ((q - zero.unsqueeze(-1)) * scale16.to(torch.float32).unsqueeze(-1)).to(torch.float16)
+    return ((deq.to(torch.float32) - g) ** 2).sum(dim=-1)

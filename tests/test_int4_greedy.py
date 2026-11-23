@@ -41,6 +41,11 @@ VOCAB = 16  # fewer tokens means wider top-2 gaps relative to kernel noise
 LOGIT_ATOL = 2e-2
 NEAR_TIE_GAP = 1e-3
 MAX_NEAR_TIE_FRACTION = 0.05
+# The 5% cap is only meaningful with enough samples: at 40 examples one extra tie moves the rate by
+# 2.5 points, and the true rate with the gemv_int8 and flash-decode fast path (about 2 to 3%) made
+# the old cap of 2 flaky. With 200 examples the cap is 10 and the binomial sd at p=0.03 is about 2.4,
+# so the cap sits 2 sd above the mean. The cap itself is unchanged.
+N_EXAMPLES = 200
 
 _TOP_MODEL_CACHE: dict[tuple, tuple[QUFModel, QUFModel]] = {}
 _STATS = {"examples": 0, "near_ties": 0}
@@ -65,6 +70,9 @@ def _build(path, shape: str, group_size: int, act_order: bool, mix: str, seed: i
             prec = {"int4": "int4", "int8": "int8", "fp16": "fp16"}.get(mix) or str(
                 rng.choice(["int4", "int8", "fp16"])
             )
+            if mix == "size_f":  # the 0.4.0 default: k/v and the whole last layer int8, rest random
+                if prefix.endswith((".k_proj", ".v_proj")) or f".layers.{layers - 1}." in prefix:
+                    prec = "int8"
             modules[prefix] = prec
             qweight = torch.from_numpy(tensors[qname])
             scales = torch.from_numpy(tensors[prefix + ".scales"])
@@ -142,7 +150,7 @@ def model_root(tmp_path_factory):
     torch.cuda.empty_cache()
 
 
-@settings(max_examples=40, deadline=None, suppress_health_check=list(HealthCheck))
+@settings(max_examples=N_EXAMPLES, deadline=None, suppress_health_check=list(HealthCheck))
 @given(
     shape=st.sampled_from(sorted(SHAPES)),
     group_size=st.sampled_from([32, 64, 128]),

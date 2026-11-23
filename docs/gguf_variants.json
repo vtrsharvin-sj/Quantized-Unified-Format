@@ -1,0 +1,116 @@
+{
+  "llama_cpp": "b12567 CUDA build (eval_cache/llama_cpp)",
+  "calibration": {
+    "source": "WikiText-2 train (Salesforce/wikitext wikitext-2-raw-v1)",
+    "tokens": "128 x 1024 = 131072, the QUF calibration tokens (eval_cache/calib_wikitext_128x1024.npy) decoded with the Qwen2.5 tokenizer",
+    "text_file": "eval_cache/gguf040/calib_wikitext2_train_128x1024.txt",
+    "imatrix_args": [
+      "-c",
+      "1024",
+      "--chunks",
+      "128",
+      "-ngl",
+      "99"
+    ]
+  },
+  "models": {
+    "qwen2_5-0_5b": {
+      "f16_source": "eval_cache/qwen2_5-0_5b-f16.gguf",
+      "files": {
+        "Q4_K_M (no imatrix, reused from task 20)": {
+          "path": "eval_cache/qwen2_5-0_5b-Q4_K_M.gguf",
+          "bytes": 397807584
+        },
+        "imatrix": {
+          "command": "C:\\Users\\vtrsh\\Desktop\\Quantized Unified Format ( QUF )\\eval_cache\\llama_cpp\\llama-imatrix.exe -m C:\\Users\\vtrsh\\Desktop\\Quantized Unified Format ( QUF )\\eval_cache\\qwen2_5-0_5b-f16.gguf -f C:\\Users\\vtrsh\\Desktop\\Quantized Unified Format ( QUF )\\eval_cache\\gguf040\\calib_wikitext2_train_128x1024.txt -o C:\\Users\\vtrsh\\Desktop\\Quantized Unified Format ( QUF )\\eval_cache\\gguf040\\qwen2_5-0_5b.imatrix.gguf -c 1024 --chunks 128 -ngl 99",
+          "log": "eval_cache\\gguf040\\qwen2_5-0_5b.imatrix.log",
+          "returncode": 0,
+          "seconds": 69.3,
+          "path": "eval_cache/gguf040/qwen2_5-0_5b.imatrix.gguf",
+          "bytes": 2022976
+        },
+        "Q4_K_S": {
+          "command": "C:\\Users\\vtrsh\\Desktop\\Quantized Unified Format ( QUF )\\eval_cache\\llama_cpp\\llama-quantize.exe C:\\Users\\vtrsh\\Desktop\\Quantized Unified Format ( QUF )\\eval_cache\\qwen2_5-0_5b-f16.gguf C:\\Users\\vtrsh\\Desktop\\Quantized Unified Format ( QUF )\\eval_cache\\gguf040\\qwen2_5-0_5b-Q4_K_S.gguf Q4_K_S",
+          "log": "eval_cache\\gguf040\\qwen2_5-0_5b.Q4_K_S.log",
+          "returncode": 0,
+          "seconds": 3.6,
+          "path": "eval_cache/gguf040/qwen2_5-0_5b-Q4_K_S.gguf",
+          "bytes": 385471456
+        },
+        "IQ4_XS": {
+          "command": "C:\\Users\\vtrsh\\Desktop\\Quantized Unified Format ( QUF )\\eval_cache\\llama_cpp\\llama-quantize.exe --imatrix C:\\Users\\vtrsh\\Desktop\\Quantized Unified Format ( QUF )\\eval_cache\\gguf040\\qwen2_5-0_5b.imatrix.gguf C:\\Users\\vtrsh\\Desktop\\Quantized Unified Format ( QUF )\\eval_cache\\qwen2_5-0_5b-f16.gguf C:\\Users\\vtrsh\\Desktop\\Quantized Unified Format ( QUF )\\eval_cache\\gguf040\\qwen2_5-0_5b-IQ4_XS.gguf IQ4_XS",
+          "log": "eval_cache\\gguf040\\qwen2_5-0_5b.IQ4_XS.log",
+          "returncode": 0,
+          "seconds": 5.8,
+          "path": "eval_cache/gguf040/qwen2_5-0_5b-IQ4_XS.gguf",
+          "bytes": 349402304
+        },
+        "Q4_K_M-imat": {
+          "command": "C:\\Users\\vtrsh\\Desktop\\Quantized Unified Format ( QUF )\\eval_cache\\llama_cpp\\llama-quantize.exe --imatrix C:\\Users\\vtrsh\\Desktop\\Quantized Unified Format ( QUF )\\eval_cache\\gguf040\\qwen2_5-0_5b.imatrix.gguf C:\\Users\\vtrsh\\Desktop\\Quantized Unified Format ( QUF )\\eval_cache\\qwen2_5-0_5b-f16.gguf C:\\Users\\vtrsh\\Desktop\\Quantized Unified Format ( QUF )\\eval_cache\\gguf040\\qwen2_5-0_5b-Q4_K_M-imat.gguf Q4_K_M",
+          "log": "eval_cache\\gguf040\\qwen2_5-0_5b.Q4_K_M-imat.log",
+          "returncode": 0,
+          "seconds": 4.1,
+          "path": "eval_cache/gguf040/qwen2_5-0_5b-Q4_K_M-imat.gguf",
+          "bytes": 397807808
+        },
+        "Q5_K_M": {
+          "command": "C:\\Users\\vtrsh\\Desktop\\Quantized Unified Format ( QUF )\\eval_cache\\llama_cpp\\llama-quantize.exe C:\\Users\\vtrsh\\Desktop\\Quantized Unified Format ( QUF )\\eval_cache\\qwen2_5-0_5b-f16.gguf C:\\Users\\vtrsh\\Desktop\\Quantized Unified Format ( QUF )\\eval_cache\\gguf040\\qwen2_5-0_5b-Q5_K_M.gguf Q5_K_M",
+          "log": "eval_cache\\gguf040\\qwen2_5-0_5b.Q5_K_M.log",
+          "returncode": 0,
+          "seconds": 3.3,
+          "path": "eval_cache/gguf040/qwen2_5-0_5b-Q5_K_M.gguf",
+          "bytes": 420085728
+        }
+      }
+    },
+    "qwen2_5-1_5b": {
+      "f16_source": "eval_cache/qwen2_5-1_5b-f16.gguf",
+      "files": {
+        "Q4_K_M (no imatrix, reused from task 20)": {
+          "path": "eval_cache/qwen2_5-1_5b-Q4_K_M.gguf",
+          "bytes": 986048160
+        },
+        "imatrix": {
+          "command": "C:\\Users\\vtrsh\\Desktop\\Quantized Unified Format ( QUF )\\eval_cache\\llama_cpp\\llama-imatrix.exe -m C:\\Users\\vtrsh\\Desktop\\Quantized Unified Format ( QUF )\\eval_cache\\qwen2_5-1_5b-f16.gguf -f C:\\Users\\vtrsh\\Desktop\\Quantized Unified Format ( QUF )\\eval_cache\\gguf040\\calib_wikitext2_train_128x1024.txt -o C:\\Users\\vtrsh\\Desktop\\Quantized Unified Format ( QUF )\\eval_cache\\gguf040\\qwen2_5-1_5b.imatrix.gguf -c 1024 --chunks 128 -ngl 99",
+          "log": "eval_cache\\gguf040\\qwen2_5-1_5b.imatrix.log",
+          "returncode": 0,
+          "seconds": 111.2,
+          "path": "eval_cache/gguf040/qwen2_5-1_5b.imatrix.gguf",
+          "bytes": 4137760
+        },
+        "Q4_K_S": {
+          "command": "C:\\Users\\vtrsh\\Desktop\\Quantized Unified Format ( QUF )\\eval_cache\\llama_cpp\\llama-quantize.exe C:\\Users\\vtrsh\\Desktop\\Quantized Unified Format ( QUF )\\eval_cache\\qwen2_5-1_5b-f16.gguf C:\\Users\\vtrsh\\Desktop\\Quantized Unified Format ( QUF )\\eval_cache\\gguf040\\qwen2_5-1_5b-Q4_K_S.gguf Q4_K_S",
+          "log": "eval_cache\\gguf040\\qwen2_5-1_5b.Q4_K_S.log",
+          "returncode": 0,
+          "seconds": 13.8,
+          "path": "eval_cache/gguf040/qwen2_5-1_5b-Q4_K_S.gguf",
+          "bytes": 940312224
+        },
+        "IQ4_XS": {
+          "command": "C:\\Users\\vtrsh\\Desktop\\Quantized Unified Format ( QUF )\\eval_cache\\llama_cpp\\llama-quantize.exe --imatrix C:\\Users\\vtrsh\\Desktop\\Quantized Unified Format ( QUF )\\eval_cache\\gguf040\\qwen2_5-1_5b.imatrix.gguf C:\\Users\\vtrsh\\Desktop\\Quantized Unified Format ( QUF )\\eval_cache\\qwen2_5-1_5b-f16.gguf C:\\Users\\vtrsh\\Desktop\\Quantized Unified Format ( QUF )\\eval_cache\\gguf040\\qwen2_5-1_5b-IQ4_XS.gguf IQ4_XS",
+          "log": "eval_cache\\gguf040\\qwen2_5-1_5b.IQ4_XS.log",
+          "returncode": 0,
+          "seconds": 17.0,
+          "path": "eval_cache/gguf040/qwen2_5-1_5b-IQ4_XS.gguf",
+          "bytes": 895731584
+        },
+        "Q4_K_M-imat": {
+          "command": "C:\\Users\\vtrsh\\Desktop\\Quantized Unified Format ( QUF )\\eval_cache\\llama_cpp\\llama-quantize.exe --imatrix C:\\Users\\vtrsh\\Desktop\\Quantized Unified Format ( QUF )\\eval_cache\\gguf040\\qwen2_5-1_5b.imatrix.gguf C:\\Users\\vtrsh\\Desktop\\Quantized Unified Format ( QUF )\\eval_cache\\qwen2_5-1_5b-f16.gguf C:\\Users\\vtrsh\\Desktop\\Quantized Unified Format ( QUF )\\eval_cache\\gguf040\\qwen2_5-1_5b-Q4_K_M-imat.gguf Q4_K_M",
+          "log": "eval_cache\\gguf040\\qwen2_5-1_5b.Q4_K_M-imat.log",
+          "returncode": 0,
+          "seconds": 17.1,
+          "path": "eval_cache/gguf040/qwen2_5-1_5b-Q4_K_M-imat.gguf",
+          "bytes": 986048384
+        },
+        "Q5_K_M": {
+          "command": "C:\\Users\\vtrsh\\Desktop\\Quantized Unified Format ( QUF )\\eval_cache\\llama_cpp\\llama-quantize.exe C:\\Users\\vtrsh\\Desktop\\Quantized Unified Format ( QUF )\\eval_cache\\qwen2_5-1_5b-f16.gguf C:\\Users\\vtrsh\\Desktop\\Quantized Unified Format ( QUF )\\eval_cache\\gguf040\\qwen2_5-1_5b-Q5_K_M.gguf Q5_K_M",
+          "log": "eval_cache\\gguf040\\qwen2_5-1_5b.Q5_K_M.log",
+          "returncode": 0,
+          "seconds": 12.2,
+          "path": "eval_cache/gguf040/qwen2_5-1_5b-Q5_K_M.gguf",
+          "bytes": 1125050016
+        }
+      }
+    }
+  }
+}

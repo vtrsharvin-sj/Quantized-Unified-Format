@@ -103,7 +103,7 @@ def test_wrong_magic(tmp, tensors, magic):
         _open(tmp, magic + data[4:])
 
 
-@given(tensors=valid_files(), version=st.integers(3, 2**32 - 1))
+@given(tensors=valid_files(), version=st.integers(4, 2**32 - 1))
 def test_unsupported_version(tmp, tensors, version):
     data = _build(tmp, tensors)
     with pytest.raises(UnsupportedVersionError):

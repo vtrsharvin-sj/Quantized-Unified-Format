@@ -607,3 +607,131 @@ With CUDA graphs, decode is GPU-bound, and about 73% of GPU time is in fp16 gemv
 5. WHEN release 0.3.0 is prepared, THE CHANGELOG SHALL list the Int4_Backend, the `quf[fast]` extra, `--backend int4`, and QUF_NO_TRITON, and THE package version SHALL be 0.3.0.
 6. WHEN release 0.3.0 is built, THE build SHALL pass `twine check`, and a fresh virtual environment smoke test SHALL pass with and without the fast extra.
 7. THE release procedure SHALL commit and push the release and confirm that CI passes, and THE release procedure SHALL NOT upload to PyPI.
+
+## Beat Q4_K_M Extension (release 0.4.0)
+
+QUF 0.3.0 under the llama protocol on the RTX 5080 measures the following against llama.cpp GGUF Q4_K_M (docs/bench_accuracy.json, docs/BACKENDS.md).
+
+| Model | Metric | QUF 0.3.0 | Q4_K_M |
+|---|---|---|---|
+| Qwen2.5-0.5B | WikiText-2 Perplexity | 12.08 | 12.04 |
+| Qwen2.5-0.5B | File size | 498 MB | 398 MB |
+| Qwen2.5-0.5B | Decode tokens per second | 284 | 757 |
+| Qwen2.5-1.5B | WikiText-2 Perplexity | 8.44 | 8.60 |
+| Qwen2.5-1.5B | File size | 1257 MB | 986 MB |
+| Qwen2.5-1.5B | Decode tokens per second | 146 | 423 |
+
+The fp16 tied embedding is about 272 MB of the 0.5B file. With CUDA graphs, the int4 GEMVs take about 1.5 to 2 ms of the 6 ms per token on 1.5B, and the remainder is attention, RMSNorm, RoPE, residual adds, the fp16 lm_head, sampling, and launch gaps. This extension targets a QUF file that beats Q4_K_M on accuracy, speed, and file size at the same time on both models. The Results_Doc SHALL report the measured numbers whether or not the targets are reached, and SHALL NOT claim superiority on any axis beyond what was measured.
+
+### Glossary additions
+
+- **Fused_Decode_Kernels**: The Triton kernels for fused residual-add plus RMSNorm, fused RoPE plus KV-cache write, flash-decode GQA attention, the quantized lm_head GEMV, and GPU greedy argmax.
+- **Flash_Decode_Kernel**: A Triton attention kernel for one query row (M equal to 1) over the static KV cache that splits the sequence length into chunks and merges the partial softmax results.
+- **Quantized_Embedding**: An embedding table stored with per-row group-wise int4 (group size 32 or 64) or int8 weights and fp16 scales.
+- **Embed_Precision**: The storage precision of the embedding table and the tied lm_head, one of fp16, int8, or int4.
+- **QUF_V3**: Format version 3, used only when a Quantized_Embedding or another new dtype or layout rule is present. Readers of versions 1 and 2 reject a QUF_V3 file with a clear error, and the current reader loads versions 1, 2, and 3.
+- **Beat_Target**: For one model, a QUF file whose file size is at most the Q4_K_M file size, whose WikiText-2 Perplexity is at most the Q4_K_M Perplexity, and whose decode tokens per second is at least the Q4_K_M tokens per second, all under the llama protocol on the RTX 5080.
+- **Speed_Floor**: A median graph-mode decode rate of at least 2 times the 0.3.0 rate, which is 568 tokens per second on Qwen2.5-0.5B and 292 tokens per second on Qwen2.5-1.5B.
+- **Pareto_Table**: A table of file size, WikiText-2 Perplexity, C4 Perplexity, and decode tokens per second for each GGUF variant and for QUF 0.4.0 on each model.
+- **Gate**: The Triton_Gate from the 0.3.0 extension, which decides whether any Triton kernel may be used.
+
+### Requirement 37: Fused decode kernels
+
+**User Story:** As a user with an NVIDIA GPU, I want decode to spend its time in a few fused kernels, so that generation approaches the memory bandwidth limit.
+
+#### Acceptance Criteria
+
+1. WHEN profiling is run, THE profiling script SHALL record per-kernel GPU time of graph-mode decode on Qwen2.5-0.5B and Qwen2.5-1.5B with torch.profiler, and THE Results_Doc SHALL record the breakdown in docs/BACKENDS.md.
+2. WHERE the profile shows the time share justifies the kernel, THE Int4_Backend SHALL apply a fused residual-add plus RMSNorm kernel, a fused RoPE plus KV-cache write kernel, and the Flash_Decode_Kernel with split-K over sequence length for M equal to 1 over the static cache.
+3. THE Int4_Backend SHALL apply the lm_head through the int4 or int8 GEMV when the lm_head weights are stored in that precision.
+4. WHEN greedy decoding runs under the CUDA_Graph_Decoder, THE Int4_Backend SHALL compute the argmax token on the GPU inside the graph and SHALL NOT synchronize with the host once per token.
+5. WHERE sampling with temperature above 0 is requested, THE Int4_Backend SHALL sample on the host or on the GPU with the Gumbel-max trick and a seeded Philox generator, and the same seed SHALL produce the same tokens.
+6. THE Fused_Decode_Kernels SHALL be capturable in a CUDA graph.
+7. IF the Gate fails or a Fused_Decode_Kernel is unavailable for a shape, THEN THE Int4_Backend SHALL apply the 0.3.0 path for that operation and SHALL log the reason at INFO level.
+8. THE Gate SHALL control every Fused_Decode_Kernel, and WHEN QUF_NO_TRITON equals 1, THE runtime SHALL NOT import any Fused_Decode_Kernel.
+9. THE Results_Doc SHALL report whether each model reached the Speed_Floor and, as a stretch target, the Q4_K_M decode rate, and SHALL state the measured speedup when a target is not reached.
+
+### Requirement 38: Quantized embedding and lm_head
+
+**User Story:** As a model distributor, I want the embedding table and lm_head stored in 4 or 8 bits, so that the file is smaller than Q4_K_M.
+
+#### Acceptance Criteria
+
+1. THE QUF_File format SHALL store a Quantized_Embedding with per-row group-wise int4 (group size 32 or 64) or int8 weights and fp16 scales.
+2. WHEN a Quantized_Embedding is present, THE QUF_File header SHALL carry format version 3.
+3. WHEN a QUF_V3 file is opened by a reader of version 1 or 2, THE reader SHALL reject the file with an error that names the unsupported version.
+4. WHEN a version 1 or version 2 file is opened, THE current reader SHALL load the file unchanged.
+5. WHEN the embedding gathers a row from a Quantized_Embedding, THE runtime SHALL dequantize that row on the fly.
+6. WHILE the lm_head is tied to a Quantized_Embedding, THE runtime SHALL apply the lm_head through the same quantized tensor with the int4 or int8 GEMV.
+7. THE `quf convert` command SHALL accept `--embed-precision fp16|int8|int4`, and THE default SHALL be the value chosen in Requirement 39.
+8. WHERE error compensation for the embedding and lm_head is cheap, THE quantizer SHALL use RTN or GPTQ-like error compensation, and THE converter SHALL record the method in the file metadata.
+9. THE cpu, torch_gpu, and triton_int4 Backends SHALL each support a Quantized_Embedding.
+10. WHEN Embed_Precision is fp16, THE converter SHALL write a file that is byte-identical in tensor data to the 0.3.0 file and carries the same format version as 0.3.0.
+11. FOR ALL Quantized_Embedding tensors, writing then reading SHALL return the same quantized values, scales, and shape (round-trip property).
+
+### Requirement 39: Size study, accuracy guard, and quantizer improvements
+
+**User Story:** As a maintainer, I want the defaults chosen from measurements, so that QUF is small without losing accuracy.
+
+#### Acceptance Criteria
+
+1. WHEN the size study runs under the llama protocol on both models, THE Results_Doc SHALL record file size, WikiText-2 Perplexity, and C4 Perplexity for each Embed_Precision, mixed preset, and last-layer rule tried.
+2. THE size study SHALL choose the default Embed_Precision and mixed preset so that file size is at most the Q4_K_M file size and WikiText-2 Perplexity is at most the Q4_K_M Perplexity on both models, and so that C4 Perplexity rises by at most 1 percent against 0.3.0.
+3. THE size study SHALL re-examine the int8 last-layer rule of the size_b preset as part of the same search.
+4. IF no combination meets the targets in 39.2, THEN THE Results_Doc SHALL record the best Pareto points and SHALL state which target was missed.
+5. WHEN the new size defaults are chosen, THE evaluation script SHALL run lm-eval hellaswag and arc_easy with limit 500, 0-shot, and seed 1234 on both models for fp16, QUF 0.4.0, and Q4_K_M.
+6. IF the lm_eval gguf or llama-cpp backend cannot run on Windows, THEN THE Results_Doc SHALL record the Q4_K_M row as "not run" with the reason.
+7. THE quantizer study SHALL evaluate 256 calibration samples of 2048 tokens, a GPTQ damping sweep of 0.005, 0.01, and 0.05, per-layer group size selection by sensitivity, and true-sequential quantization within attention.
+8. THE quantizer SHALL keep an improvement as a default only when it lowers WikiText-2 Perplexity, and THE Results_Doc SHALL record each tried improvement with its measured effect.
+
+### Requirement 40: Broader comparison
+
+**User Story:** As a reader, I want an honest comparison with the common GGUF variants, so that I can choose a format from facts.
+
+#### Acceptance Criteria
+
+1. THE comparison script SHALL produce GGUF Q4_K_S, IQ4_XS, and Q5_K_M files for both models with the tools in eval_cache/llama_cpp.
+2. THE comparison script SHALL create the imatrix for IQ4_XS with llama-imatrix on the WikiText-2 train calibration text.
+3. THE comparison script SHALL measure WikiText-2 Perplexity and C4 Perplexity under the llama protocol, file size, and GPU decode tokens per second with llama-bench for every GGUF variant and for QUF 0.4.0 on both models.
+4. THE Results_Doc and the README SHALL contain the Pareto_Table.
+5. THE Results_Doc SHALL state for each model and each axis whether QUF 0.4.0 beats, ties, or loses against each GGUF variant, and SHALL NOT make a claim of superiority that the measurements do not support.
+6. WHERE GPU memory of 16 GB allows, THE comparison script SHALL also measure QUF 0.4.0 and Q4_K_M on Qwen2.5-3B.
+7. IF conversion or evaluation of Qwen2.5-3B is too slow, THEN THE Results_Doc SHALL record that the 3B run was skipped and the reason.
+8. THE Results_Doc SHALL state for each model whether the Beat_Target was reached.
+
+### Requirement 41: Release 0.4.0
+
+**User Story:** As a maintainer, I want a verified 0.4.0 build, so that the orchestrator can upload it.
+
+#### Acceptance Criteria
+
+1. THE CHANGELOG SHALL list the Fused_Decode_Kernels, the Quantized_Embedding, QUF_V3, `--embed-precision`, and the new defaults, and THE package version SHALL be 0.4.0.
+2. WHEN release 0.4.0 is built, THE build SHALL pass `twine check`.
+3. THE release procedure SHALL run a smoke test in a fresh virtual environment with and without the fast extra, and both SHALL pass.
+4. THE release procedure SHALL commit and push the release and confirm that CI passes.
+5. THE release procedure SHALL NOT upload to PyPI.
+
+## Int8 Fast Decode Extension (release 0.4.0)
+
+Task 33.5 measured the 0.4.0 default file at 502 tokens per second on Qwen2.5-0.5B and 265 on Qwen2.5-1.5B, against 806 and 354 for the 0.3.0 all-int4 file and 773 and 449 for Q4_K_M. The 0.4.0 preset size_f stores k_proj, v_proj, and the last layer as int8, and the fused fast path handles only int4, so those layers use cuBLAS fp16 GEMV and lose the fused RoPE plus KV-cache write.
+
+### Glossary additions
+
+- **Int8_Kernel**: The Triton GEMV kernel for M equal to 1 that multiplies an fp16 activation by an int8 per-output-channel weight and accumulates in fp32.
+- **Mixed_Group**: A fused projection group (qkv or gate_up) whose members have different precisions among int4 and int8.
+- **Fast_Path**: The decode path that applies every module through Triton kernels and uses the Fused_Decode_Kernels.
+
+### Requirement 42: Fast decode path for int8 modules
+
+**User Story:** As a user of the 0.4.0 default file, I want int8 modules to decode on the Fast_Path, so that the size savings do not cost decode speed.
+
+#### Acceptance Criteria
+
+1. WHEN the Fast_Path applies an int8 module at M equal to 1, THE Int8_Kernel SHALL accumulate in fp32 and SHALL equal the dequantized weight times the activation in fp32 within an absolute tolerance of 1e-2 plus a relative tolerance of 2e-3.
+2. THE Int8_Kernel SHALL support the bias add and the scatter output index epilogues of the int4 decode GEMV and SHALL be capturable in a CUDA graph.
+3. WHEN a Mixed_Group is applied, THE Fast_Path SHALL write all member outputs into one scattered output buffer and SHALL keep the fused RoPE plus KV-cache write, the fused residual-add plus RMSNorm, and the Flash_Decode_Kernel for that layer.
+4. WHEN a layer holds only int8 modules, THE Fast_Path SHALL apply that layer through the Int8_Kernel.
+5. IF the Fast_Path cannot handle a module, THEN THE runtime SHALL log the reason once at DEBUG level and SHALL use the unfused path for that module.
+6. WHEN the 1.5B 0.4.0 file is profiled in steady decode, THE profile SHALL show no cuBLAS fp16 GEMV kernel and no neg, cat, or index_copy kernel.
+7. WHEN the 0.4.0 speed is re-measured, THE measurement SHALL alternate runs, take the median of 7, use the same session as the llama.cpp rows, and record the power state.
+8. THE Results_Doc SHALL report the re-measured tokens per second for both models against the targets of 773 (0.5B) and 398 (1.5B) whether or not the targets are reached.

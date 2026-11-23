@@ -29,7 +29,7 @@ _config = st.dictionaries(
 )
 
 
-_RESERVED_QUANT_KEYS = {"modules", "bits", "group_size", "symmetric", "act_order"}
+_RESERVED_QUANT_KEYS = {"modules", "bits", "group_size", "symmetric", "act_order", "embedding", "lm_head"}
 
 
 @given(

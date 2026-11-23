@@ -21,7 +21,7 @@ from typing import Sequence
 import torch
 
 from quf.quant.quantize import SYMMETRIC_ZERO
-from quf.runtime.kernels.dispatch import CachedFp16Weight, kernel_linear
+from quf.runtime.kernels.dispatch import CachedFp16Weight, Int8KernelWeight, kernel_linear
 from quf.runtime.kernels.triton_kernels import Int4Layout
 
 log = logging.getLogger(__name__)
@@ -37,7 +37,7 @@ def reset_fusion_log() -> None:
 def _log_once(kind: str, message: str, *args) -> None:
     if kind not in _LOGGED:
         _LOGGED.add(kind)
-        log.info(message + " (logged once; later occurrences are silent)", *args)
+        log.debug(message + " (logged once; later occurrences are silent)", *args)
 
 
 @dataclass
@@ -49,8 +49,8 @@ class FusedKernelWeight:
     """
 
     widths: tuple[int, ...]
-    fused: Int4Layout | CachedFp16Weight | None = None
-    parts: tuple[Int4Layout | CachedFp16Weight, ...] | None = None
+    fused: Int4Layout | CachedFp16Weight | Int8KernelWeight | None = None
+    parts: tuple[Int4Layout | CachedFp16Weight | Int8KernelWeight, ...] | None = None
     reason: str = ""
 
     @property
@@ -99,7 +99,7 @@ def _fuse_int4(parts: Sequence[Int4Layout]) -> Int4Layout:
     )
 
 
-def fuse_projections(parts: Sequence[Int4Layout | CachedFp16Weight], name: str | None = None) -> FusedKernelWeight:
+def fuse_projections(parts: Sequence[Int4Layout | CachedFp16Weight | Int8KernelWeight], name: str | None = None) -> FusedKernelWeight:
     """Fuse prepared projection weights that share their input into one weight when it is exact.
 
     * All `Int4Layout` with equal ``K``, ``group_size`` and perm: concatenated along N. Symmetric
@@ -134,6 +134,10 @@ def fuse_projections(parts: Sequence[Int4Layout | CachedFp16Weight], name: str |
         w = torch.cat([p.weight for p in parts], dim=0).contiguous()
         return FusedKernelWeight(widths=widths, fused=CachedFp16Weight(w, "fp16 fused"), reason="fp16")
 
+    if all(isinstance(p, Int8KernelWeight) for p in parts):
+        q = torch.cat([p.q for p in parts], dim=0).contiguous()
+        s = torch.cat([p.scales for p in parts], dim=0).contiguous()
+        return FusedKernelWeight(widths=widths, fused=Int8KernelWeight(q, s, "int8 fused"), reason="int8")
     return refuse("mixed", "members mix int4 with fp16/int8 weights")
 
 

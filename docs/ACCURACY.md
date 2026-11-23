@@ -157,3 +157,81 @@ Candidates: A = last layer int4; B = down_proj int4 with act-order, last layer s
 - Extra check on C4 (should not degrade more than about 1.5%): C reaches +1.59% and +1.61%, so C fails it. B stays at +1.08% and +1.38%.
 - **Default changed from `sensitive` (v020) to `size_b`**: the smallest candidate that also passes the C4 check. It is 7.8% smaller on 0.5B (497,728,832 bytes) and 11.0% smaller on 1.5B (1,257,449,536 bytes), at +0.37% and +0.58% wikitext2 perplexity. `--preset sensitive` restores v020. `--preset size_c` gives the smallest files if the C4 loss of about 1.6% is acceptable.
 - Single conversion per row, so differences of a few hundredths of a percent are within calibration noise.
+
+## Quantizer improvement study (task 35.2, Requirement 39.7 and 39.8)
+
+Qwen2.5-0.5B, base `b_e8g64` (size_b body, group 32, act-order, clip search, int8 g64 embedding, 365.8 MB).
+Quick screen = first 16 llama-protocol windows. Keep rule: WikiText-2 down by at least 0.1 percent and C4 up by at most 0.1 percent.
+Raw rows: `docs/size_study.json` -> `v040` -> `Qwen/Qwen2.5-0.5B` (keys `q_*@w16`).
+
+| Candidate | Wiki-2 (16 win) | vs base | C4 (16 win) | vs base | Kept |
+|---|---|---|---|---|---|
+| b_e8g64 (128 x 1024, damp 0.01) | 11.8994 | - | 20.9241 | - | base |
+| calibration 256 x 2048 | 11.8937 | -0.05% | 20.8740 | -0.24% | no (Wiki gain under 0.1%) |
+| damp 0.005 | 11.9001 | +0.01% | 20.8764 | -0.23% | no |
+| damp 0.05 | 11.8976 | -0.02% | 20.8479 | -0.37% | no |
+| 256 x 2048 + damp 0.05 | 11.9453 | +0.38% | 20.8526 | -0.35% | no (worse) |
+| true-sequential within attention | not run | | | | already implemented |
+| per-layer group size by sensitivity | not evaluated | | | | format limitation |
+
+Notes:
+- 256 x 1024 and 128 x 2048 were not needed: 256 x 2048 converted in 325 s.
+- `quantize_model_sequential` already quantizes q/k/v, re-collects activations, then quantizes o_proj, then gate/up, then down_proj (`_SEQUENTIAL_GROUPS` in `quf/quant/gptq.py`).
+- Per-module group size is not supported. The header has one `quantization.group_size` for all int4 modules (`check_group_size` in `quf/format/validate.py`), and the backends read that single value. Only the embedding has its own group size. The size_b body is already group 32, so "32 for sensitive, 64 for the rest" would also shrink the file less than it costs in a format change. No format change was made.
+- Run-to-run differences on 16 windows are about 0.4% on Wiki-2, larger than the 0.1% keep threshold, so these screens cannot resolve small gains. The C4 drops (0.2 to 0.4%) appear for every changed setting and are not specific to one of them.
+- No improvement met the keep rule, so no converter or CLI default changed. The only code change is an opt-in `damp` argument on `convert_checkpoint` and `run_native_gptq` (default 0.01, unchanged).
+
+Full llama protocol (all windows), Qwen2.5-0.5B:
+
+| Config | Size | Wiki-2 | C4 |
+|---|---|---|---|
+| QUF b_e8g64 (final, no improvement kept) | 365.8 MB | 12.0783 | 19.0493 |
+| QUF 0.3.0 size_b (earlier run) | 497.7 MB | 12.077 | |
+| GGUF Q4_K_M | 398 MB | 12.043 | |
+
+Result: 0.5B is smaller than Q4_K_M (365.8 MB, under the 397.8 MB limit) but WikiText-2 12.078 is 0.29% above Q4_K_M 12.043. The accuracy target is still missed.
+
+## Size study and default choice (task 34.4, Requirement 39.1 to 39.4)
+Full llama protocol (all windows) unless marked 16w. Body is int4 g32 with act-order and clip search, embedding int8 g64 (clip) unless the name says otherwise. Raw rows: `docs/size_study.json` -> `v040`; decision: `v040_decision`.
+Targets: 0.5B size at most 397.8 MB, WikiText-2 at most 12.043, C4 at most 19.238 (0.3.0 size_b 19.047 + 1%). 1.5B size at most 986.0 MB, WikiText-2 at most 8.600, C4 at most 14.005.
+
+Step 1, per-module probe (Qwen2.5-0.5B, windows 16 to 31, `scripts/mixed_precision_study.py`, `docs/mixed_precision_0.5B.json`, `docs/mixed_plans_0.5B.json`). Making one module int8 and dividing the perplexity gain by the extra bytes ranks k_proj and v_proj far above everything else: they are small under GQA, so int8 costs about 45 KB per module. Whole plans against the size_b body on those windows:
+
+| Plan (int8 on top of size_b) | Extra MB | WikiText-2 | C4 |
+|---|---:|---:|---:|
+| k_proj, v_proj | 2.1 | -1.08% | -1.54% |
+| k, v, o_proj | 9.8 | -1.33% | -1.73% |
+| all attention | 17.6 | -1.37% | -1.78% |
+| all attention + down_proj layers 0 to 5 | 28.5 | -1.52% | -2.03% |
+| all attention + down_proj layers 17 to 22 | 28.5 | -1.55% | -2.06% |
+| all attention + all down_proj | 59.5 | -1.93% | -2.46% |
+
+So almost all of the attention gain comes from k_proj and v_proj for 12% of the bytes. The rule is by module type, not a list for one model.
+
+Step 1 and 2, full protocol:
+
+| Model | Config | Size MB | vs Q4_K_M size | WikiText-2 | C4 |
+|---|---|---:|---:|---:|---:|
+| 0.5B | b_e8g64 (size_b, 0.4.0 base) | 365.8 | -8.0% | 12.0783 | 19.0493 |
+| 0.5B | b_bg64_e8g64 (body g64) | 352.5 | -11.4% | 12.2273 | 19.3079 |
+| 0.5B | **f_e8g64 (size_f, chosen)** | **367.9** | **-7.5%** | **11.9644** | **18.7459** |
+| 0.5B | g_e8g64 (size_g, k v o) | 375.7 | -5.6% | 11.9550 | 18.7413 |
+| 0.5B | d_e8g64 (size_d, all attention) | 383.4 | -3.6% | 11.9554 | 18.7146 |
+| 0.5B | e_e8g64 (size_e, attention + tail down_proj) | 392.5 | -1.3% | 11.9295 | 18.6644 |
+| 0.5B | Q4_K_M | 397.8 | 0 | 12.043 | |
+| 1.5B | b_e4g32 (int4 embedding) | 922.0 | -6.5% | 8.9255 | 14.7787 |
+| 1.5B | b_bg64_e8g64 (body g64) | 982.0 | -0.4% | 8.4957 | 13.9736 |
+| 1.5B | d_e4g32 | 984.2 | -0.2% | 8.8805 | 14.6386 |
+| 1.5B | b_e8g64 | 1031.4 | +4.6% | 8.4470 | 13.8700 |
+| 1.5B | **f_e8g64 (size_f, chosen)** | **1040.0** | **+5.5%** | **8.4141** | **13.8094** |
+| 1.5B | d_e8g64 | 1093.6 | +10.9% | 8.4066 | 13.7488 |
+| 1.5B | Q4_K_M | 986.0 | 0 | 8.600 | 14.005 (limit) |
+
+### Decision
+- Default is now `size_f` with the int8 g64 embedding, body g32: k_proj and v_proj int8 in every layer, the whole last layer int8, everything else int4. `quf convert` default `--preset` changed from `size_d` to `size_f` (embed int8 g64 unchanged).
+- Qwen2.5-0.5B: **all targets met**. 367.9 MB (29.9 MB under Q4_K_M), WikiText-2 11.9644 (0.65% under Q4_K_M 12.043), C4 18.7459 (1.6% better than 0.3.0 size_b).
+- Qwen2.5-1.5B: WikiText-2 8.4141 (target 8.600) and C4 13.8094 (target 14.005) are met. **Size is missed**: 1040.0 MB against 986.0 MB, +54.0 MB (+5.5%).
+- No single configuration meets every target on both models. The 1.5B size target needs body group size 64 (b_bg64_e8g64, 982.0 MB, all 1.5B targets met), which costs 0.5B WikiText-2 12.2273 and C4 +1.4%. The format has one group size for all int4 modules, so it cannot be applied to the 1.5B only. Every g32 body config that meets the 0.5B targets is at least 1031 MB on the 1.5B.
+- Why size_f over d, e, g: g and d are 8 MB and 16 MB larger on 0.5B for at most 0.01 WikiText-2 gain, and on 1.5B d adds 53 MB. e reaches 11.9295 at 392.5 MB, but only buys 0.03 WikiText-2 over f for 24.6 MB, and would push the 1.5B further from 986 MB.
+- Last-layer int8 rule (39.3): size_c (last layer int4) saves 6.3 MB on 0.5B and 19.7 MB on 1.5B but raised C4 by 1.6% in the earlier study, so the rule stays.
+- The 0.5B and 1.5B differences between neighbouring rows of a few hundredths are within the single-conversion noise noted above.

@@ -16,6 +16,7 @@ from typing import Callable, Sequence
 import numpy as np
 import torch
 
+from quf.quant.embedding import QuantizedEmbedding
 from quf.quant.quantize import QuantizedWeight
 
 BITS = 4
@@ -38,6 +39,53 @@ class GPTQResult:
     int8: dict[str, tuple[np.ndarray, np.ndarray]] = field(default_factory=dict)  # name -> (q, scales)
     modules: dict[str, str] = field(default_factory=dict)  # precision per linear; empty = all int4
     act_order: bool = False
+    embeddings: dict[str, QuantizedEmbedding] = field(default_factory=dict)  # "model.embed_tokens" / "lm_head"
+    embed_method: str = "clip"
+
+
+EMBED_PRECISIONS = ("fp16", "int8", "int4")
+EMBED_TABLES = (("embedding", "model.embed_tokens"), ("lm_head", "lm_head"))
+
+
+def quantize_embeddings(
+    result: GPTQResult, precision: str, group_size: int = 64, method: str = "clip"
+) -> GPTQResult:
+    """Replace the fp16 embedding table (and an untied lm_head) in ``result`` by Quantized_Embeddings.
+
+    ``precision`` is ``fp16`` (no change), ``int8`` or ``int4``. A lm_head that the precision
+    plan already stores as ``lm_head.qweight_int8`` is left as it is. A tied lm_head has no
+    tensor of its own and uses the embedding table at run time.
+    """
+    if precision not in EMBED_PRECISIONS:
+        raise ValueError(f"unsupported embed precision {precision!r}: use fp16, int8 or int4")
+    if precision == "fp16":
+        return result
+    from quf.quant.embedding import quantize_embedding  # noqa: PLC0415
+
+    bits = 4 if precision == "int4" else 8
+    for _, name in EMBED_TABLES:
+        w = result.others.get(f"{name}.weight")
+        if w is None:
+            continue
+        result.embeddings[name] = quantize_embedding(w, bits, group_size, method)
+        del result.others[f"{name}.weight"]
+    if not result.embeddings:
+        raise ValueError("embed precision requested but the model has no embedding table")
+    result.embed_method = method
+    return result
+
+
+def embedding_header_specs(result: GPTQResult) -> dict[str, dict]:
+    """The ``quantization.embedding`` / ``quantization.lm_head`` objects for the header."""
+    specs: dict[str, dict] = {}
+    for key, name in EMBED_TABLES:
+        qe = result.embeddings.get(name)
+        if qe is not None:
+            specs[key] = {
+                "name": name, "bits": qe.bits, "group_size": qe.group_size,
+                "method": "rtn", "clip_search": result.embed_method == "clip",
+            }
+    return specs
 
 
 def to_tensor_dict(result: GPTQResult) -> dict[str, np.ndarray]:
@@ -53,6 +101,10 @@ def to_tensor_dict(result: GPTQResult) -> dict[str, np.ndarray]:
     for name, (q8, s8) in result.int8.items():
         out[f"{name}.qweight_int8"] = q8
         out[f"{name}.scales"] = s8
+    for name, qe in result.embeddings.items():
+        suffix = ".embed_q4" if qe.bits == 4 else ".embed_q8"
+        out[name + suffix] = qe.packed
+        out[name + ".embed_scales"] = qe.scales
     return out
 
 
@@ -71,6 +123,7 @@ def run_native_gptq(
     symmetric: bool = False,
     act_order: bool = False,
     clip_search: bool = False,
+    damp: float = 0.01,
     precision_plan=None,
     device: str | torch.device | None = None,
     progress: Callable[[int, int], None] | None = None,
@@ -107,6 +160,7 @@ def run_native_gptq(
         group_size=group_size,
         act_order=act_order,
         clip_search=clip_search,
+        damp=damp,
         precision=plan.precision if plan else None,
         int8_out=int8,
         progress=progress,

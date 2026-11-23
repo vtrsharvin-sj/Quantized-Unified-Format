@@ -27,6 +27,16 @@ PRESETS: dict[str, tuple[str, ...]] = {
     "size_a": ("*.down_proj=int8",),  # A: last layer int4 g32 instead of int8
     "size_b": ("*.layers.{last}.*=int8",),  # B: down_proj int4 g32 + act-order instead of int8
     "size_c": (),  # C: A and B together, every decoder linear int4 g32
+    # Budget-constrained plans (task 34.4). Per-module probes on Qwen2.5-0.5B (docs/mixed_precision_0.5B.json)
+    # show v_proj and k_proj give 0.6 to 0.9 percent perplexity gain per MB at int8, o_proj and q_proj
+    # 0.02 to 0.04, and gate/up/down about 0.02. So the attention projections are the cheap bytes.
+    "size_d": ("*.layers.{last}.*=int8", "*.self_attn.*=int8"),
+    # size_d plus down_proj int8 in the last quarter of the layers (``{tail}`` expands to one rule per layer).
+    "size_e": ("*.layers.{last}.*=int8", "*.self_attn.*=int8", "*.layers.{tail}.mlp.down_proj=int8"),
+    # Cheapest bytes first: k_proj and v_proj are tiny under GQA (about 2 MB on 0.5B), so int8 for all of them
+    # costs little. size_g adds o_proj.
+    "size_f": ("*.layers.{last}.*=int8", "*.k_proj=int8", "*.v_proj=int8"),
+    "size_g": ("*.layers.{last}.*=int8", "*.k_proj=int8", "*.v_proj=int8", "*.o_proj=int8"),
 }
 
 # Presets whose conversion needs group size 32 and act-order to match their definition.
@@ -79,9 +89,15 @@ class PrecisionPlan:
                     f"unknown preset {name!r}: available presets are {', '.join(sorted(PRESETS))}"
                 )
             for r in PRESETS[name]:
+                if ("{last}" in r or "{tail}" in r) and not num_layers:
+                    raise PrecisionRuleError(f"preset {name!r} needs the number of layers")
+                if "{tail}" in r:
+                    # last quarter of the layers (at least one), one rule per layer index
+                    first = num_layers - max(1, round(num_layers / 4))
+                    for i in range(first, num_layers):
+                        rules.append(parse_rule(r.replace("{tail}", str(i)).replace("{last}", str(num_layers - 1))))
+                    continue
                 if "{last}" in r:
-                    if not num_layers:
-                        raise PrecisionRuleError(f"preset {name!r} needs the number of layers")
                     r = r.replace("{last}", str(num_layers - 1))
                 rules.append(parse_rule(r))
         rules += [(p.strip(), "int8") for p in int8_modules if p.strip()]
@@ -162,6 +178,8 @@ class SizeReport:
         names = {n for n, _, _ in items}
         int4_mods = {n[: -len(".qweight")] for n in names if n.endswith(".qweight")}
         int8_mods = {n[: -len(INT8_SUFFIX)] for n in names if n.endswith(INT8_SUFFIX)}
+        emb4 = {n[: -len(".embed_q4")] for n in names if n.endswith(".embed_q4")}
+        emb8 = {n[: -len(".embed_q8")] for n in names if n.endswith(".embed_q8")}
         fp16_mods = {m for m, p in (modules or {}).items() if p == "fp16"}
         rep = cls(file_bytes=file_bytes)
         for name, dtype, shape in items:
@@ -170,6 +188,14 @@ class SizeReport:
                 n_el *= d
             nbytes = n_el * ({"fp16": 2, "fp32": 4, "int32": 4, "int8": 1}[dtype])
             base = name.rsplit(".", 1)[0]
+            if name.endswith(".embed_q4") or (name.endswith(".embed_scales") and base in emb4):
+                rep.int4 += nbytes
+                rep.fp16_equivalent += 2 * n_el * 2 if name.endswith(".embed_q4") else 0
+                continue
+            if name.endswith(".embed_q8") or (name.endswith(".embed_scales") and base in emb8):
+                rep.int8 += nbytes
+                rep.fp16_equivalent += 2 * n_el if name.endswith(".embed_q8") else 0
+                continue
             if name.endswith(INT8_SUFFIX) or (name.endswith(".scales") and base in int8_mods):
                 rep.int8 += nbytes
             elif name.endswith(_INT4_SUFFIXES) and base in int4_mods:
@@ -185,7 +211,7 @@ class SizeReport:
                 pass
             else:
                 rep.fp16_equivalent += 2 * n_el
-        for prec, mods in (("int4", int4_mods), ("int8", int8_mods), ("fp16", fp16_mods)):
+        for prec, mods in (("int4", int4_mods | emb4), ("int8", int8_mods | emb8), ("fp16", fp16_mods)):
             counts: dict[str, int] = {}
             for m in sorted(mods):
                 label = m.rsplit(".", 1)[-1]

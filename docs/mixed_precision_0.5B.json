@@ -1,0 +1,1618 @@
+{
+ "model": "Qwen/Qwen2.5-0.5B",
+ "base_wiki": 12.422004101410801,
+ "base_c4": 21.74369318922729,
+ "windows": "16..31",
+ "rows": [
+  {
+   "name": "model.layers.11.self_attn.v_proj",
+   "layer": 11,
+   "kind": "v_proj",
+   "wiki": 12.398676270334107,
+   "c4": 21.69239789140851,
+   "gain": 0.002118516400184456,
+   "delta_bytes": 45056,
+   "gain_per_mb": 0.047019628910343926
+  },
+  {
+   "name": "model.layers.16.self_attn.v_proj",
+   "layer": 16,
+   "kind": "v_proj",
+   "wiki": 12.41740844545357,
+   "c4": 21.699666219069734,
+   "gain": 0.0011973882783203327,
+   "delta_bytes": 45056,
+   "gain_per_mb": 0.026575556603345454
+  },
+  {
+   "name": "model.layers.10.self_attn.v_proj",
+   "layer": 10,
+   "kind": "v_proj",
+   "wiki": 12.412303496836014,
+   "c4": 21.72853313317792,
+   "gain": 0.0007390686495005738,
+   "delta_bytes": 45056,
+   "gain_per_mb": 0.016403334727906914
+  },
+  {
+   "name": "model.layers.21.self_attn.v_proj",
+   "layer": 21,
+   "kind": "v_proj",
+   "wiki": 12.409985038385448,
+   "c4": 21.738776684165515,
+   "gain": 0.0005968370441902238,
+   "delta_bytes": 45056,
+   "gain_per_mb": 0.013246560817432168
+  },
+  {
+   "name": "model.layers.8.self_attn.v_proj",
+   "layer": 8,
+   "kind": "v_proj",
+   "wiki": 12.415283011116498,
+   "c4": 21.72957739840373,
+   "gain": 0.0005951267011978234,
+   "delta_bytes": 45056,
+   "gain_per_mb": 0.013208600434965896
+  },
+  {
+   "name": "model.layers.11.self_attn.k_proj",
+   "layer": 11,
+   "kind": "k_proj",
+   "wiki": 12.415110699552944,
+   "c4": 21.733191876932242,
+   "gain": 0.0005189468791728657,
+   "delta_bytes": 45056,
+   "gain_per_mb": 0.011517819583914813
+  },
+  {
+   "name": "model.layers.14.self_attn.v_proj",
+   "layer": 14,
+   "kind": "v_proj",
+   "wiki": 12.412477713419639,
+   "c4": 21.739817226244746,
+   "gain": 0.0004725765517624714,
+   "delta_bytes": 45056,
+   "gain_per_mb": 0.010488648609784965
+  },
+  {
+   "name": "model.layers.9.self_attn.v_proj",
+   "layer": 9,
+   "kind": "v_proj",
+   "wiki": 12.419674198087847,
+   "c4": 21.72760169872192,
+   "gain": 0.0004638079153994612,
+   "delta_bytes": 45056,
+   "gain_per_mb": 0.010294032213233781
+  },
+  {
+   "name": "model.layers.3.self_attn.v_proj",
+   "layer": 3,
+   "kind": "v_proj",
+   "wiki": 12.421728310390305,
+   "c4": 21.72421302725212,
+   "gain": 0.000459050613577372,
+   "delta_bytes": 45056,
+   "gain_per_mb": 0.01018844579140119
+  },
+  {
+   "name": "model.layers.10.self_attn.k_proj",
+   "layer": 10,
+   "kind": "k_proj",
+   "wiki": 12.414369166763171,
+   "c4": 21.738210551621275,
+   "gain": 0.00043338913387513944,
+   "delta_bytes": 45056,
+   "gain_per_mb": 0.009618899455680474
+  },
+  {
+   "name": "model.layers.13.self_attn.k_proj",
+   "layer": 13,
+   "kind": "k_proj",
+   "wiki": 12.41880207889454,
+   "c4": 21.73082948087589,
+   "gain": 0.0004246883083161568,
+   "delta_bytes": 45056,
+   "gain_per_mb": 0.009425788092954475
+  },
+  {
+   "name": "model.layers.0.self_attn.v_proj",
+   "layer": 0,
+   "kind": "v_proj",
+   "wiki": 12.415895704110818,
+   "c4": 21.736313174803364,
+   "gain": 0.00041557475336551075,
+   "delta_bytes": 45056,
+   "gain_per_mb": 0.009223516365534241
+  },
+  {
+   "name": "model.layers.3.self_attn.k_proj",
+   "layer": 3,
+   "kind": "k_proj",
+   "wiki": 12.416416104859518,
+   "c4": 21.736377044842552,
+   "gain": 0.00039315932005085097,
+   "delta_bytes": 45056,
+   "gain_per_mb": 0.008726014738344527
+  },
+  {
+   "name": "model.layers.15.self_attn.k_proj",
+   "layer": 15,
+   "kind": "k_proj",
+   "wiki": 12.416410456264552,
+   "c4": 21.736726225988676,
+   "gain": 0.0003853572014371198,
+   "delta_bytes": 45056,
+   "gain_per_mb": 0.008552849818828121
+  },
+  {
+   "name": "model.layers.7.self_attn.k_proj",
+   "layer": 7,
+   "kind": "k_proj",
+   "wiki": 12.417465306490078,
+   "c4": 21.735002421487973,
+   "gain": 0.0003825374463474196,
+   "delta_bytes": 45056,
+   "gain_per_mb": 0.008490266476105726
+  },
+  {
+   "name": "model.layers.21.self_attn.k_proj",
+   "layer": 21,
+   "kind": "k_proj",
+   "wiki": 12.413751734935135,
+   "c4": 21.742323616337735,
+   "gain": 0.0003636608402058372,
+   "delta_bytes": 45056,
+   "gain_per_mb": 0.008071307710534385
+  },
+  {
+   "name": "model.layers.14.self_attn.k_proj",
+   "layer": 14,
+   "kind": "k_proj",
+   "wiki": 12.41832640332892,
+   "c4": 21.73501895535611,
+   "gain": 0.00034749710571502224,
+   "delta_bytes": 45056,
+   "gain_per_mb": 0.007712560052268782
+  },
+  {
+   "name": "model.layers.2.self_attn.v_proj",
+   "layer": 2,
+   "kind": "v_proj",
+   "wiki": 12.42013899520602,
+   "c4": 21.73192734073544,
+   "gain": 0.00034563040590629424,
+   "delta_bytes": 45056,
+   "gain_per_mb": 0.0076711293924514885
+  },
+  {
+   "name": "model.layers.5.self_attn.k_proj",
+   "layer": 5,
+   "kind": "k_proj",
+   "wiki": 12.41650388991158,
+   "c4": 21.739577271331353,
+   "gain": 0.0003160361066724682,
+   "delta_bytes": 45056,
+   "gain_per_mb": 0.007014295691416641
+  },
+  {
+   "name": "model.layers.9.self_attn.k_proj",
+   "layer": 9,
+   "kind": "k_proj",
+   "wiki": 12.421699592161065,
+   "c4": 21.731997680857354,
+   "gain": 0.00028119709423041206,
+   "delta_bytes": 45056,
+   "gain_per_mb": 0.0062410576666906085
+  },
+  {
+   "name": "model.layers.17.self_attn.v_proj",
+   "layer": 17,
+   "kind": "v_proj",
+   "wiki": 12.420036178880872,
+   "c4": 21.734973568297217,
+   "gain": 0.00027972034997747475,
+   "delta_bytes": 45056,
+   "gain_per_mb": 0.0062082819153381295
+  },
+  {
+   "name": "model.layers.8.self_attn.k_proj",
+   "layer": 8,
+   "kind": "k_proj",
+   "wiki": 12.418124135595523,
+   "c4": 21.73841287908495,
+   "gain": 0.00027759475000638245,
+   "delta_bytes": 45056,
+   "gain_per_mb": 0.006161105069388815
+  },
+  {
+   "name": "model.layers.12.self_attn.k_proj",
+   "layer": 12,
+   "kind": "k_proj",
+   "wiki": 12.415789867268233,
+   "c4": 21.742701432115165,
+   "gain": 0.000272935722408274,
+   "delta_bytes": 45056,
+   "gain_per_mb": 0.006057699804871139
+  },
+  {
+   "name": "model.layers.16.self_attn.k_proj",
+   "layer": 16,
+   "kind": "k_proj",
+   "wiki": 12.418054027997083,
+   "c4": 21.738762741434357,
+   "gain": 0.0002723715162800677,
+   "delta_bytes": 45056,
+   "gain_per_mb": 0.0060451774742557645
+  },
+  {
+   "name": "model.layers.20.self_attn.k_proj",
+   "layer": 20,
+   "kind": "k_proj",
+   "wiki": 12.421678377769844,
+   "c4": 21.732807743185568,
+   "gain": 0.00026342347407903866,
+   "delta_bytes": 45056,
+   "gain_per_mb": 0.005846579236484345
+  },
+  {
+   "name": "model.layers.1.self_attn.v_proj",
+   "layer": 1,
+   "kind": "v_proj",
+   "wiki": 12.420758597368232,
+   "c4": 21.734699626989812,
+   "gain": 0.00025694150011978945,
+   "delta_bytes": 45056,
+   "gain_per_mb": 0.005702714402516634
+  },
+  {
+   "name": "model.layers.20.self_attn.v_proj",
+   "layer": 20,
+   "kind": "v_proj",
+   "wiki": 12.419161626137985,
+   "c4": 21.737940460361838,
+   "gain": 0.0002466979089731369,
+   "delta_bytes": 45056,
+   "gain_per_mb": 0.005475361971172251
+  },
+  {
+   "name": "model.layers.4.self_attn.k_proj",
+   "layer": 4,
+   "kind": "k_proj",
+   "wiki": 12.42113654300126,
+   "c4": 21.73501733438809,
+   "gain": 0.00023442301546000577,
+   "delta_bytes": 45056,
+   "gain_per_mb": 0.005202925591708225
+  },
+  {
+   "name": "model.layers.5.self_attn.v_proj",
+   "layer": 5,
+   "kind": "v_proj",
+   "wiki": 12.417079138121746,
+   "c4": 21.74227724111958,
+   "gain": 0.00023079542833448485,
+   "delta_bytes": 45056,
+   "gain_per_mb": 0.005122412738247622
+  },
+  {
+   "name": "model.layers.18.self_attn.v_proj",
+   "layer": 18,
+   "kind": "v_proj",
+   "wiki": 12.420609182327903,
+   "c4": 21.736766753411647,
+   "gain": 0.00021542169695504265,
+   "delta_bytes": 45056,
+   "gain_per_mb": 0.004781198884833156
+  },
+  {
+   "name": "model.layers.12.self_attn.v_proj",
+   "layer": 12,
+   "kind": "v_proj",
+   "wiki": 12.421609361769606,
+   "c4": 21.735031598910822,
+   "gain": 0.00021506349922728596,
+   "delta_bytes": 45056,
+   "gain_per_mb": 0.004773248828730601
+  },
+  {
+   "name": "model.layers.19.self_attn.v_proj",
+   "layer": 19,
+   "kind": "v_proj",
+   "wiki": 12.422746924073422,
+   "c4": 21.73327745702087,
+   "gain": 0.0002096121010701224,
+   "delta_bytes": 45056,
+   "gain_per_mb": 0.004652257214802078
+  },
+  {
+   "name": "model.layers.6.self_attn.k_proj",
+   "layer": 6,
+   "kind": "k_proj",
+   "wiki": 12.413697020235501,
+   "c4": 21.74934882043496,
+   "gain": 0.00020431738208337435,
+   "delta_bytes": 45056,
+   "gain_per_mb": 0.004534743032745347
+  },
+  {
+   "name": "model.layers.4.self_attn.v_proj",
+   "layer": 4,
+   "kind": "v_proj",
+   "wiki": 12.427183939889948,
+   "c4": 21.72665636922721,
+   "gain": 0.00018327015752567233,
+   "delta_bytes": 45056,
+   "gain_per_mb": 0.0040676082547423725
+  },
+  {
+   "name": "model.layers.17.self_attn.k_proj",
+   "layer": 17,
+   "kind": "k_proj",
+   "wiki": 12.421658182444183,
+   "c4": 21.73664322606227,
+   "gain": 0.0001760387645804995,
+   "delta_bytes": 45056,
+   "gain_per_mb": 0.003907110364446456
+  },
+  {
+   "name": "model.layers.13.self_attn.v_proj",
+   "layer": 13,
+   "kind": "v_proj",
+   "wiki": 12.420509604176384,
+   "c4": 21.738812675908186,
+   "gain": 0.00017238348944770276,
+   "delta_bytes": 45056,
+   "gain_per_mb": 0.0038259829866766418
+  },
+  {
+   "name": "model.layers.22.self_attn.k_proj",
+   "layer": 22,
+   "kind": "k_proj",
+   "wiki": 12.421098470015865,
+   "c4": 21.73827345450922,
+   "gain": 0.0001610804495492113,
+   "delta_bytes": 45056,
+   "gain_per_mb": 0.003575116511656856
+  },
+  {
+   "name": "model.layers.2.self_attn.k_proj",
+   "layer": 2,
+   "kind": "k_proj",
+   "wiki": 12.422620831938211,
+   "c4": 21.737715440914748,
+   "gain": 0.00011263524486476717,
+   "delta_bytes": 45056,
+   "gain_per_mb": 0.0024998944616647545
+  },
+  {
+   "name": "model.layers.6.self_attn.v_proj",
+   "layer": 6,
+   "kind": "v_proj",
+   "wiki": 12.422768696173435,
+   "c4": 21.73748458764908,
+   "gain": 0.00011199204968703746,
+   "delta_bytes": 45056,
+   "gain_per_mb": 0.0024856190005113073
+  },
+  {
+   "name": "model.layers.18.self_attn.k_proj",
+   "layer": 18,
+   "kind": "k_proj",
+   "wiki": 12.420829276032736,
+   "c4": 21.74154951988204,
+   "gain": 9.65821259839017e-05,
+   "delta_bytes": 45056,
+   "gain_per_mb": 0.0021436018728671364
+  },
+  {
+   "name": "model.layers.22.self_attn.v_proj",
+   "layer": 22,
+   "kind": "v_proj",
+   "wiki": 12.420870034554213,
+   "c4": 21.741786253618724,
+   "gain": 8.94978150828285e-05,
+   "delta_bytes": 45056,
+   "gain_per_mb": 0.001986368410041471
+  },
+  {
+   "name": "model.layers.7.self_attn.v_proj",
+   "layer": 7,
+   "kind": "v_proj",
+   "wiki": 12.423979748258516,
+   "c4": 21.736488898916612,
+   "gain": 8.614184098909572e-05,
+   "delta_bytes": 45056,
+   "gain_per_mb": 0.0019118838997934952
+  },
+  {
+   "name": "model.layers.19.self_attn.k_proj",
+   "layer": 19,
+   "kind": "k_proj",
+   "wiki": 12.422679291835884,
+   "c4": 21.739438163547046,
+   "gain": 7.066786049431117e-05,
+   "delta_bytes": 45056,
+   "gain_per_mb": 0.0015684450571358127
+  },
+  {
+   "name": "model.layers.0.self_attn.k_proj",
+   "layer": 0,
+   "kind": "k_proj",
+   "wiki": 12.421081610482977,
+   "c4": 21.742859046474592,
+   "gain": 5.6312581815043394e-05,
+   "delta_bytes": 45056,
+   "gain_per_mb": 0.0012498353563353025
+  },
+  {
+   "name": "model.layers.15.self_attn.v_proj",
+   "layer": 15,
+   "kind": "v_proj",
+   "wiki": 12.422981972124015,
+   "c4": 21.739646339163347,
+   "gain": 5.369759516582473e-05,
+   "delta_bytes": 45056,
+   "gain_per_mb": 0.0011917967677074026
+  },
+  {
+   "name": "model.layers.12.self_attn.o_proj",
+   "layer": 12,
+   "kind": "o_proj",
+   "wiki": 12.416077286307312,
+   "c4": 21.741345541784526,
+   "gain": 0.00029254570796660717,
+   "delta_bytes": 336896,
+   "gain_per_mb": 0.000868356133544498
+  },
+  {
+   "name": "model.layers.0.mlp.up_proj",
+   "layer": 0,
+   "kind": "up_proj",
+   "wiki": 12.408137838423558,
+   "c4": 21.7034913208854,
+   "gain": 0.0014825820291423653,
+   "delta_bytes": 1844736,
+   "gain_per_mb": 0.0008036824939407944
+  },
+  {
+   "name": "model.layers.15.self_attn.o_proj",
+   "layer": 15,
+   "kind": "o_proj",
+   "wiki": 12.41970661661309,
+   "c4": 21.736050563924117,
+   "gain": 0.00026821991014142066,
+   "delta_bytes": 336896,
+   "gain_per_mb": 0.0007961504741564776
+  },
+  {
+   "name": "model.layers.0.self_attn.o_proj",
+   "layer": 0,
+   "kind": "o_proj",
+   "wiki": 12.419949850876023,
+   "c4": 21.736156580526814,
+   "gain": 0.000255991580181969,
+   "delta_bytes": 336896,
+   "gain_per_mb": 0.0007598534271168818
+  },
+  {
+   "name": "model.layers.4.self_attn.q_proj",
+   "layer": 4,
+   "kind": "q_proj",
+   "wiki": 12.421392774449412,
+   "c4": 21.735200180343163,
+   "gain": 0.0002199048294999617,
+   "delta_bytes": 336896,
+   "gain_per_mb": 0.0006527380244940923
+  },
+  {
+   "name": "model.layers.3.self_attn.o_proj",
+   "layer": 3,
+   "kind": "o_proj",
+   "wiki": 12.421905716407354,
+   "c4": 21.73437187453034,
+   "gain": 0.00021830535973627052,
+   "delta_bytes": 336896,
+   "gain_per_mb": 0.0006479903582597316
+  },
+  {
+   "name": "model.layers.5.self_attn.o_proj",
+   "layer": 5,
+   "kind": "o_proj",
+   "wiki": 12.421888114652754,
+   "c4": 21.734698654423273,
+   "gain": 0.00021149949029802828,
+   "delta_bytes": 336896,
+   "gain_per_mb": 0.0006277886656357698
+  },
+  {
+   "name": "model.layers.4.self_attn.o_proj",
+   "layer": 4,
+   "kind": "o_proj",
+   "wiki": 12.419426801215009,
+   "c4": 21.73912395833116,
+   "gain": 0.00020880956483043667,
+   "delta_bytes": 336896,
+   "gain_per_mb": 0.0006198042269140526
+  },
+  {
+   "name": "model.layers.2.self_attn.q_proj",
+   "layer": 2,
+   "kind": "q_proj",
+   "wiki": 12.418777813072252,
+   "c4": 21.740290658571297,
+   "gain": 0.00020810361192180604,
+   "delta_bytes": 336896,
+   "gain_per_mb": 0.0006177087644905433
+  },
+  {
+   "name": "model.layers.2.self_attn.o_proj",
+   "layer": 2,
+   "kind": "o_proj",
+   "wiki": 12.42215538608615,
+   "c4": 21.734406238057755,
+   "gain": 0.00020746567176832542,
+   "delta_bytes": 336896,
+   "gain_per_mb": 0.0006158151826329949
+  },
+  {
+   "name": "model.layers.22.self_attn.o_proj",
+   "layer": 22,
+   "kind": "o_proj",
+   "wiki": 12.418054398445705,
+   "c4": 21.741671453649158,
+   "gain": 0.0002054702629091243,
+   "delta_bytes": 336896,
+   "gain_per_mb": 0.0006098922602498228
+  },
+  {
+   "name": "model.layers.3.mlp.down_proj",
+   "layer": 3,
+   "kind": "down_proj",
+   "wiki": 12.412348670720649,
+   "c4": 21.713289400735587,
+   "gain": 0.0010877826226234344,
+   "delta_bytes": 1820928,
+   "gain_per_mb": 0.0005973781624662998
+  },
+  {
+   "name": "model.layers.13.self_attn.o_proj",
+   "layer": 13,
+   "kind": "o_proj",
+   "wiki": 12.420582782461123,
+   "c4": 21.738240381834103,
+   "gain": 0.00018259798063424704,
+   "delta_bytes": 336896,
+   "gain_per_mb": 0.0005420010348423462
+  },
+  {
+   "name": "model.layers.16.self_attn.o_proj",
+   "layer": 16,
+   "kind": "o_proj",
+   "wiki": 12.418399383521374,
+   "c4": 21.74225421569837,
+   "gain": 0.0001781835010026267,
+   "delta_bytes": 336896,
+   "gain_per_mb": 0.0005288976449783515
+  },
+  {
+   "name": "model.layers.20.self_attn.q_proj",
+   "layer": 20,
+   "kind": "q_proj",
+   "wiki": 12.419863986599461,
+   "c4": 21.740331516912892,
+   "gain": 0.00016344432935511133,
+   "delta_bytes": 336896,
+   "gain_per_mb": 0.000485147729136325
+  },
+  {
+   "name": "model.layers.10.self_attn.o_proj",
+   "layer": 10,
+   "kind": "o_proj",
+   "wiki": 12.419731810496861,
+   "c4": 21.740719674987883,
+   "gain": 0.00015983880768927206,
+   "delta_bytes": 336896,
+   "gain_per_mb": 0.0004744455490396801
+  },
+  {
+   "name": "model.layers.12.self_attn.q_proj",
+   "layer": 12,
+   "kind": "q_proj",
+   "wiki": 12.420013948435992,
+   "c4": 21.740336381006287,
+   "gain": 0.0001572963417075801,
+   "delta_bytes": 336896,
+   "gain_per_mb": 0.00046689881063467694
+  },
+  {
+   "name": "model.layers.9.self_attn.q_proj",
+   "layer": 9,
+   "kind": "q_proj",
+   "wiki": 12.417327784723037,
+   "c4": 21.745072254349207,
+   "gain": 0.00015651530121379986,
+   "delta_bytes": 336896,
+   "gain_per_mb": 0.0004645804676036518
+  },
+  {
+   "name": "model.layers.21.self_attn.o_proj",
+   "layer": 21,
+   "kind": "o_proj",
+   "wiki": 12.419881492860098,
+   "c4": 21.74060390781923,
+   "gain": 0.00015647600597890055,
+   "delta_bytes": 336896,
+   "gain_per_mb": 0.00046446382853729506
+  },
+  {
+   "name": "model.layers.19.mlp.up_proj",
+   "layer": 19,
+   "kind": "up_proj",
+   "wiki": 12.41239884354751,
+   "c4": 21.72493239117466,
+   "gain": 0.0008180305218546402,
+   "delta_bytes": 1844736,
+   "gain_per_mb": 0.00044344042825349546
+  },
+  {
+   "name": "model.layers.17.self_attn.o_proj",
+   "layer": 17,
+   "kind": "o_proj",
+   "wiki": 12.42100120379477,
+   "c4": 21.739298408137955,
+   "gain": 0.00014142654054888348,
+   "delta_bytes": 336896,
+   "gain_per_mb": 0.0004197928753944348
+  },
+  {
+   "name": "model.layers.8.self_attn.o_proj",
+   "layer": 8,
+   "kind": "o_proj",
+   "wiki": 12.4206755064513,
+   "c4": 21.73988175511253,
+   "gain": 0.0001411220695159976,
+   "delta_bytes": 336896,
+   "gain_per_mb": 0.0004188891216161593
+  },
+  {
+   "name": "model.layers.2.mlp.gate_proj",
+   "layer": 2,
+   "kind": "gate_proj",
+   "wiki": 12.418734190281947,
+   "c4": 21.716262078515356,
+   "gain": 0.0007624008497713608,
+   "delta_bytes": 1844736,
+   "gain_per_mb": 0.0004132845294781263
+  },
+  {
+   "name": "model.layers.6.self_attn.o_proj",
+   "layer": 6,
+   "kind": "o_proj",
+   "wiki": 12.420545544849697,
+   "c4": 21.7403341110959,
+   "gain": 0.0001359511695803728,
+   "delta_bytes": 336896,
+   "gain_per_mb": 0.00040354046821681707
+  },
+  {
+   "name": "model.layers.18.self_attn.q_proj",
+   "layer": 18,
+   "kind": "q_proj",
+   "wiki": 12.420080825144542,
+   "c4": 21.741312140148032,
+   "gain": 0.00013216672613863834,
+   "delta_bytes": 336896,
+   "gain_per_mb": 0.000392307199072231
+  },
+  {
+   "name": "model.layers.20.mlp.down_proj",
+   "layer": 20,
+   "kind": "down_proj",
+   "wiki": 12.417081916268554,
+   "c4": 21.7226250023178,
+   "gain": 0.0006825902479644652,
+   "delta_bytes": 1820928,
+   "gain_per_mb": 0.000374858450177308
+  },
+  {
+   "name": "model.layers.16.self_attn.q_proj",
+   "layer": 16,
+   "kind": "q_proj",
+   "wiki": 12.420704778104438,
+   "c4": 21.740581532723272,
+   "gain": 0.00012385234404432843,
+   "delta_bytes": 336896,
+   "gain_per_mb": 0.00036762782592945133
+  },
+  {
+   "name": "model.layers.7.self_attn.q_proj",
+   "layer": 7,
+   "kind": "q_proj",
+   "wiki": 12.423642298424998,
+   "c4": 21.735521785471335,
+   "gain": 0.0001219635277864839,
+   "delta_bytes": 336896,
+   "gain_per_mb": 0.0003620212997081708
+  },
+  {
+   "name": "model.layers.5.self_attn.q_proj",
+   "layer": 5,
+   "kind": "q_proj",
+   "wiki": 12.421028808797256,
+   "c4": 21.74012528035403,
+   "gain": 0.00012130133717369596,
+   "delta_bytes": 336896,
+   "gain_per_mb": 0.0003600557358166792
+  },
+  {
+   "name": "model.layers.11.self_attn.o_proj",
+   "layer": 11,
+   "kind": "o_proj",
+   "wiki": 12.420050072929126,
+   "c4": 21.74191467464197,
+   "gain": 0.00011954915299755564,
+   "delta_bytes": 336896,
+   "gain_per_mb": 0.0003548547711981016
+  },
+  {
+   "name": "model.layers.17.self_attn.q_proj",
+   "layer": 17,
+   "kind": "q_proj",
+   "wiki": 12.420919871291765,
+   "c4": 21.740838361296547,
+   "gain": 0.0001092887774054585,
+   "delta_bytes": 336896,
+   "gain_per_mb": 0.0003243991540578057
+  },
+  {
+   "name": "model.layers.21.self_attn.q_proj",
+   "layer": 21,
+   "kind": "q_proj",
+   "wiki": 12.420586765595324,
+   "c4": 21.741452232792373,
+   "gain": 0.0001085805844630583,
+   "delta_bytes": 336896,
+   "gain_per_mb": 0.0003222970425978887
+  },
+  {
+   "name": "model.layers.0.mlp.gate_proj",
+   "layer": 0,
+   "kind": "gate_proj",
+   "wiki": 12.414140762476638,
+   "c4": 21.732566893168737,
+   "gain": 0.0005723595759464795,
+   "delta_bytes": 1844736,
+   "gain_per_mb": 0.0003102663882238323
+  },
+  {
+   "name": "model.layers.4.mlp.gate_proj",
+   "layer": 4,
+   "kind": "gate_proj",
+   "wiki": 12.415854961912382,
+   "c4": 21.730462891663077,
+   "gain": 0.0005517429503988369,
+   "delta_bytes": 1844736,
+   "gain_per_mb": 0.0002990904662774711
+  },
+  {
+   "name": "model.layers.17.mlp.down_proj",
+   "layer": 17,
+   "kind": "down_proj",
+   "wiki": 12.415472639932256,
+   "c4": 21.73165829997361,
+   "gain": 0.0005396432296501108,
+   "delta_bytes": 1820928,
+   "gain_per_mb": 0.00029635615996355196
+  },
+  {
+   "name": "model.layers.16.mlp.down_proj",
+   "layer": 16,
+   "kind": "down_proj",
+   "wiki": 12.419109388334206,
+   "c4": 21.72586144280156,
+   "gain": 0.0005265596468004285,
+   "delta_bytes": 1820928,
+   "gain_per_mb": 0.0002891710417987029
+  },
+  {
+   "name": "model.layers.8.self_attn.q_proj",
+   "layer": 8,
+   "kind": "q_proj",
+   "wiki": 12.42102565923011,
+   "c4": 21.74122101555607,
+   "gain": 9.623148967469186e-05,
+   "delta_bytes": 336896,
+   "gain_per_mb": 0.0002856415323265692
+  },
+  {
+   "name": "model.layers.22.mlp.up_proj",
+   "layer": 22,
+   "kind": "up_proj",
+   "wiki": 12.420467086864665,
+   "c4": 21.723827432072948,
+   "gain": 0.000518683144020371,
+   "delta_bytes": 1844736,
+   "gain_per_mb": 0.0002811693077060192
+  },
+  {
+   "name": "model.layers.6.mlp.gate_proj",
+   "layer": 6,
+   "kind": "gate_proj",
+   "wiki": 12.420586024547005,
+   "c4": 21.724324494696784,
+   "gain": 0.000502465723718315,
+   "delta_bytes": 1844736,
+   "gain_per_mb": 0.0002723781200769731
+  },
+  {
+   "name": "model.layers.7.mlp.gate_proj",
+   "layer": 7,
+   "kind": "gate_proj",
+   "wiki": 12.413909955279696,
+   "c4": 21.736209751127756,
+   "gain": 0.0004978816807373332,
+   "delta_bytes": 1844736,
+   "gain_per_mb": 0.0002698931883680555
+  },
+  {
+   "name": "model.layers.18.mlp.up_proj",
+   "layer": 18,
+   "kind": "up_proj",
+   "wiki": 12.4148363578126,
+   "c4": 21.73487371710125,
+   "gain": 0.0004913152441250457,
+   "delta_bytes": 1844736,
+   "gain_per_mb": 0.0002663336347992589
+  },
+  {
+   "name": "model.layers.22.mlp.down_proj",
+   "layer": 22,
+   "kind": "down_proj",
+   "wiki": 12.417359734088652,
+   "c4": 21.73101293986834,
+   "gain": 0.00047852567982714644,
+   "delta_bytes": 1820928,
+   "gain_per_mb": 0.0002627922025621806
+  },
+  {
+   "name": "model.layers.14.mlp.gate_proj",
+   "layer": 14,
+   "kind": "gate_proj",
+   "wiki": 12.414982555373317,
+   "c4": 21.734910674957977,
+   "gain": 0.00048458077126312116,
+   "delta_bytes": 1844736,
+   "gain_per_mb": 0.0002626829916384356
+  },
+  {
+   "name": "model.layers.0.self_attn.q_proj",
+   "layer": 0,
+   "kind": "q_proj",
+   "wiki": 12.422888582377919,
+   "c4": 21.738379806197706,
+   "gain": 8.658078565620952e-05,
+   "delta_bytes": 336896,
+   "gain_per_mb": 0.0002569955881227724
+  },
+  {
+   "name": "model.layers.15.mlp.up_proj",
+   "layer": 15,
+   "kind": "up_proj",
+   "wiki": 12.419209974088346,
+   "c4": 21.728179870455243,
+   "gain": 0.0004691983077018125,
+   "delta_bytes": 1844736,
+   "gain_per_mb": 0.00025434441985292883
+  },
+  {
+   "name": "model.layers.1.mlp.down_proj",
+   "layer": 1,
+   "kind": "down_proj",
+   "wiki": 12.41866241213884,
+   "c4": 21.729833772865305,
+   "gain": 0.0004532065349847625,
+   "delta_bytes": 1820928,
+   "gain_per_mb": 0.0002488876742983591
+  },
+  {
+   "name": "model.layers.20.mlp.gate_proj",
+   "layer": 20,
+   "kind": "gate_proj",
+   "wiki": 12.416616029736376,
+   "c4": 21.73343986561564,
+   "gain": 0.0004526530593175204,
+   "delta_bytes": 1844736,
+   "gain_per_mb": 0.0002453755221980383
+  },
+  {
+   "name": "model.layers.11.mlp.up_proj",
+   "layer": 11,
+   "kind": "up_proj",
+   "wiki": 12.420718950796722,
+   "c4": 21.726735766248442,
+   "gain": 0.00044166768079867413,
+   "delta_bytes": 1844736,
+   "gain_per_mb": 0.00023942053540380528
+  },
+  {
+   "name": "model.layers.22.self_attn.q_proj",
+   "layer": 22,
+   "kind": "q_proj",
+   "wiki": 12.420718395004565,
+   "c4": 21.742507820978176,
+   "gain": 7.900891523909825e-05,
+   "delta_bytes": 336896,
+   "gain_per_mb": 0.00023452019388505135
+  },
+  {
+   "name": "model.layers.21.mlp.gate_proj",
+   "layer": 21,
+   "kind": "gate_proj",
+   "wiki": 12.418574056129756,
+   "c4": 21.731065773752345,
+   "gain": 0.00042843289201671686,
+   "delta_bytes": 1844736,
+   "gain_per_mb": 0.00023224618157650573
+  },
+  {
+   "name": "model.layers.20.self_attn.o_proj",
+   "layer": 20,
+   "kind": "o_proj",
+   "wiki": 12.420391500892084,
+   "c4": 21.74313795534245,
+   "gain": 7.767673139058573e-05,
+   "delta_bytes": 336896,
+   "gain_per_mb": 0.00023056590577087807
+  },
+  {
+   "name": "model.layers.2.mlp.down_proj",
+   "layer": 2,
+   "kind": "down_proj",
+   "wiki": 12.413730997017213,
+   "c4": 21.74004194318007,
+   "gain": 0.00041696303573546256,
+   "delta_bytes": 1820928,
+   "gain_per_mb": 0.0002289838125040982
+  },
+  {
+   "name": "model.layers.7.self_attn.o_proj",
+   "layer": 7,
+   "kind": "o_proj",
+   "wiki": 12.421371375308405,
+   "c4": 21.741475905944114,
+   "gain": 7.645476984224908e-05,
+   "delta_bytes": 336896,
+   "gain_per_mb": 0.00022693878776313488
+  },
+  {
+   "name": "model.layers.9.self_attn.o_proj",
+   "layer": 9,
+   "kind": "o_proj",
+   "wiki": 12.41986482023036,
+   "c4": 21.744167354621595,
+   "gain": 7.52050206642707e-05,
+   "delta_bytes": 336896,
+   "gain_per_mb": 0.00022322918842690537
+  },
+  {
+   "name": "model.layers.17.mlp.up_proj",
+   "layer": 17,
+   "kind": "up_proj",
+   "wiki": 12.418416795102738,
+   "c4": 21.732876141187074,
+   "gain": 0.0003931331163570251,
+   "delta_bytes": 1844736,
+   "gain_per_mb": 0.00021311077376764213
+  },
+  {
+   "name": "model.layers.2.mlp.up_proj",
+   "layer": 2,
+   "kind": "up_proj",
+   "wiki": 12.421492730232707,
+   "c4": 21.72749345527538,
+   "gain": 0.00039309897483996714,
+   "delta_bytes": 1844736,
+   "gain_per_mb": 0.00021309226623211514
+  },
+  {
+   "name": "model.layers.7.mlp.up_proj",
+   "layer": 7,
+   "kind": "up_proj",
+   "wiki": 12.41607265643759,
+   "c4": 21.73709713578245,
+   "gain": 0.00039042489918655887,
+   "delta_bytes": 1844736,
+   "gain_per_mb": 0.00021164269531605547
+  },
+  {
+   "name": "model.layers.16.mlp.gate_proj",
+   "layer": 16,
+   "kind": "gate_proj",
+   "wiki": 12.418992039317356,
+   "c4": 21.732001894788933,
+   "gain": 0.00039008232060117054,
+   "delta_bytes": 1844736,
+   "gain_per_mb": 0.00021145698929341138
+  },
+  {
+   "name": "model.layers.17.mlp.gate_proj",
+   "layer": 17,
+   "kind": "gate_proj",
+   "wiki": 12.418776423809048,
+   "c4": 21.732637883676883,
+   "gain": 0.0003841364187315288,
+   "delta_bytes": 1844736,
+   "gain_per_mb": 0.00020823381705107333
+  },
+  {
+   "name": "model.layers.15.mlp.gate_proj",
+   "layer": 15,
+   "kind": "gate_proj",
+   "wiki": 12.417515036958575,
+   "c4": 21.73501085051721,
+   "gain": 0.0003803419106110373,
+   "delta_bytes": 1844736,
+   "gain_per_mb": 0.0002061768787571974
+  },
+  {
+   "name": "model.layers.15.mlp.down_proj",
+   "layer": 15,
+   "kind": "down_proj",
+   "wiki": 12.41815275294563,
+   "c4": 21.734146892023322,
+   "gain": 0.0003745399817779993,
+   "delta_bytes": 1820928,
+   "gain_per_mb": 0.0002056863213581203
+  },
+  {
+   "name": "model.layers.0.mlp.down_proj",
+   "layer": 0,
+   "kind": "down_proj",
+   "wiki": 12.42094812454964,
+   "c4": 21.729499287443304,
+   "gain": 0.0003688955231035407,
+   "delta_bytes": 1820928,
+   "gain_per_mb": 0.00020258655098034665
+  },
+  {
+   "name": "model.layers.22.mlp.gate_proj",
+   "layer": 22,
+   "kind": "gate_proj",
+   "wiki": 12.417479382878083,
+   "c4": 21.735752293687376,
+   "gain": 0.0003647274140688994,
+   "delta_bytes": 1844736,
+   "gain_per_mb": 0.00019771252584049935
+  },
+  {
+   "name": "model.layers.21.mlp.down_proj",
+   "layer": 21,
+   "kind": "down_proj",
+   "wiki": 12.417222491308664,
+   "c4": 21.73680922623201,
+   "gain": 0.0003507632488222723,
+   "delta_bytes": 1820928,
+   "gain_per_mb": 0.00019262884025193322
+  },
+  {
+   "name": "model.layers.14.self_attn.o_proj",
+   "layer": 14,
+   "kind": "o_proj",
+   "wiki": 12.423623582365334,
+   "c4": 21.738087664545738,
+   "gain": 6.371403598548486e-05,
+   "delta_bytes": 336896,
+   "gain_per_mb": 0.0001891207850063072
+  },
+  {
+   "name": "model.layers.8.mlp.gate_proj",
+   "layer": 8,
+   "kind": "gate_proj",
+   "wiki": 12.416675757802093,
+   "c4": 21.73841806699339,
+   "gain": 0.00033577433075593355,
+   "delta_bytes": 1844736,
+   "gain_per_mb": 0.00018201755197271239
+  },
+  {
+   "name": "model.layers.14.mlp.down_proj",
+   "layer": 14,
+   "kind": "down_proj",
+   "wiki": 12.417448544496226,
+   "c4": 21.737401909056093,
+   "gain": 0.0003280355027181492,
+   "delta_bytes": 1820928,
+   "gain_per_mb": 0.0001801474318139702
+  },
+  {
+   "name": "model.layers.21.mlp.up_proj",
+   "layer": 21,
+   "kind": "up_proj",
+   "wiki": 12.420594639236453,
+   "c4": 21.731892656980328,
+   "gain": 0.0003280877668414006,
+   "delta_bytes": 1844736,
+   "gain_per_mb": 0.0001778507964507662
+  },
+  {
+   "name": "model.layers.4.mlp.down_proj",
+   "layer": 4,
+   "kind": "down_proj",
+   "wiki": 12.420576946708671,
+   "c4": 21.732463163162837,
+   "gain": 0.00031568102278434207,
+   "delta_bytes": 1820928,
+   "gain_per_mb": 0.0001733627154859182
+  },
+  {
+   "name": "model.layers.18.self_attn.o_proj",
+   "layer": 18,
+   "kind": "o_proj",
+   "wiki": 12.421904975280341,
+   "c4": 21.741439261213312,
+   "gain": 5.5819407147661426e-05,
+   "delta_bytes": 336896,
+   "gain_per_mb": 0.00016568735499282103
+  },
+  {
+   "name": "model.layers.3.mlp.gate_proj",
+   "layer": 3,
+   "kind": "gate_proj",
+   "wiki": 12.422268596031909,
+   "c4": 21.730341020756914,
+   "gain": 0.0002963892184388306,
+   "delta_bytes": 1844736,
+   "gain_per_mb": 0.00016066755266814904
+  },
+  {
+   "name": "model.layers.6.mlp.up_proj",
+   "layer": 6,
+   "kind": "up_proj",
+   "wiki": 12.420467086864665,
+   "c4": 21.733961461506073,
+   "gain": 0.0002856493777477209,
+   "delta_bytes": 1844736,
+   "gain_per_mb": 0.0001548456677528497
+  },
+  {
+   "name": "model.layers.7.mlp.down_proj",
+   "layer": 7,
+   "kind": "down_proj",
+   "wiki": 12.421144231720502,
+   "c4": 21.73312250544103,
+   "gain": 0.0002776854562533404,
+   "delta_bytes": 1820928,
+   "gain_per_mb": 0.000152496669969016
+  },
+  {
+   "name": "model.layers.19.mlp.down_proj",
+   "layer": 19,
+   "kind": "down_proj",
+   "wiki": 12.419262397557542,
+   "c4": 21.736578058373418,
+   "gain": 0.00027397041330867733,
+   "delta_bytes": 1820928,
+   "gain_per_mb": 0.0001504564778556194
+  },
+  {
+   "name": "model.layers.13.mlp.up_proj",
+   "layer": 13,
+   "kind": "up_proj",
+   "wiki": 12.417055246084827,
+   "c4": 21.74031530327608,
+   "gain": 0.00027687221173233745,
+   "delta_bytes": 1844736,
+   "gain_per_mb": 0.0001500877153871001
+  },
+  {
+   "name": "model.layers.9.mlp.down_proj",
+   "layer": 9,
+   "kind": "down_proj",
+   "wiki": 12.41864583376218,
+   "c4": 21.737918412243918,
+   "gain": 0.0002679661476201467,
+   "delta_bytes": 1820928,
+   "gain_per_mb": 0.00014715911206821284
+  },
+  {
+   "name": "model.layers.11.mlp.down_proj",
+   "layer": 11,
+   "kind": "down_proj",
+   "wiki": 12.418628977558324,
+   "c4": 21.738167427581615,
+   "gain": 0.0002629184783532468,
+   "delta_bytes": 1820928,
+   "gain_per_mb": 0.00014438708084737385
+  },
+  {
+   "name": "model.layers.10.mlp.gate_proj",
+   "layer": 10,
+   "kind": "gate_proj",
+   "wiki": 12.417721184376509,
+   "c4": 21.739725135126964,
+   "gain": 0.0002636384460565355,
+   "delta_bytes": 1844736,
+   "gain_per_mb": 0.00014291391616824063
+  },
+  {
+   "name": "model.layers.18.mlp.down_proj",
+   "layer": 18,
+   "kind": "down_proj",
+   "wiki": 12.419695038558643,
+   "c4": 21.73683743341811,
+   "gain": 0.00025059173956415437,
+   "delta_bytes": 1820928,
+   "gain_per_mb": 0.00013761759913854605
+  },
+  {
+   "name": "model.layers.14.mlp.up_proj",
+   "layer": 14,
+   "kind": "up_proj",
+   "wiki": 12.422977154381847,
+   "c4": 21.730990898776778,
+   "gain": 0.00025292486928391034,
+   "delta_bytes": 1844736,
+   "gain_per_mb": 0.0001371062684763079
+  },
+  {
+   "name": "model.layers.13.mlp.down_proj",
+   "layer": 13,
+   "kind": "down_proj",
+   "wiki": 12.420601864464475,
+   "c4": 21.73540215558859,
+   "gain": 0.0002470954132637315,
+   "delta_bytes": 1820928,
+   "gain_per_mb": 0.000135697519761205
+  },
+  {
+   "name": "model.layers.19.mlp.gate_proj",
+   "layer": 19,
+   "kind": "gate_proj",
+   "wiki": 12.419876768946066,
+   "c4": 21.73672719864594,
+   "gain": 0.00024581174947946316,
+   "delta_bytes": 1844736,
+   "gain_per_mb": 0.00013325036725009062
+  },
+  {
+   "name": "model.layers.12.mlp.gate_proj",
+   "layer": 12,
+   "kind": "gate_proj",
+   "wiki": 12.420761932132356,
+   "c4": 21.735966918162152,
+   "gain": 0.0002276656914819708,
+   "delta_bytes": 1844736,
+   "gain_per_mb": 0.00012341369793941831
+  },
+  {
+   "name": "model.layers.10.mlp.up_proj",
+   "layer": 10,
+   "kind": "up_proj",
+   "wiki": 12.421211485057967,
+   "c4": 21.736149447895112,
+   "gain": 0.00020537336454479194,
+   "delta_bytes": 1844736,
+   "gain_per_mb": 0.0001113294067795023
+  },
+  {
+   "name": "model.layers.12.mlp.up_proj",
+   "layer": 12,
+   "kind": "up_proj",
+   "wiki": 12.4214670695888,
+   "c4": 21.73584534059371,
+   "gain": 0.00020207879243017146,
+   "delta_bytes": 1844736,
+   "gain_per_mb": 0.00010954347528869793
+  },
+  {
+   "name": "model.layers.10.mlp.down_proj",
+   "layer": 10,
+   "kind": "down_proj",
+   "wiki": 12.417103400624887,
+   "c4": 21.744255896911344,
+   "gain": 0.00018431930112089434,
+   "delta_bytes": 1820928,
+   "gain_per_mb": 0.00010122272880690194
+  },
+  {
+   "name": "model.layers.1.self_attn.q_proj",
+   "layer": 1,
+   "kind": "q_proj",
+   "wiki": 12.421286057021788,
+   "c4": 21.743519028474406,
+   "gain": 3.2906972026847114e-05,
+   "delta_bytes": 336896,
+   "gain_per_mb": 9.767694489351942e-05
+  },
+  {
+   "name": "model.layers.18.mlp.gate_proj",
+   "layer": 18,
+   "kind": "gate_proj",
+   "wiki": 12.420388073597854,
+   "c4": 21.739624613577515,
+   "gain": 0.00015860458780525555,
+   "delta_bytes": 1844736,
+   "gain_per_mb": 8.597684861424916e-05
+  },
+  {
+   "name": "model.layers.5.mlp.down_proj",
+   "layer": 5,
+   "kind": "down_proj",
+   "wiki": 12.421771202578899,
+   "c4": 21.737359435077654,
+   "gain": 0.00015502022307756214,
+   "delta_bytes": 1820928,
+   "gain_per_mb": 8.513253850649895e-05
+  },
+  {
+   "name": "model.layers.20.mlp.up_proj",
+   "layer": 20,
+   "kind": "up_proj",
+   "wiki": 12.420049517166898,
+   "c4": 21.740323085820243,
+   "gain": 0.00015617038435389308,
+   "delta_bytes": 1844736,
+   "gain_per_mb": 8.465730833782887e-05
+  },
+  {
+   "name": "model.layers.9.mlp.gate_proj",
+   "layer": 9,
+   "kind": "gate_proj",
+   "wiki": 12.420571388851743,
+   "c4": 21.73954679076167,
+   "gain": 0.0001530154864534672,
+   "delta_bytes": 1844736,
+   "gain_per_mb": 8.294709186217821e-05
+  },
+  {
+   "name": "model.layers.19.self_attn.o_proj",
+   "layer": 19,
+   "kind": "o_proj",
+   "wiki": 12.42049950745955,
+   "c4": 21.745213344259273,
+   "gain": 2.5605413942308974e-05,
+   "delta_bytes": 336896,
+   "gain_per_mb": 7.600391201530732e-05
+  },
+  {
+   "name": "model.layers.13.mlp.gate_proj",
+   "layer": 13,
+   "kind": "gate_proj",
+   "wiki": 12.420596028703057,
+   "c4": 21.740161922870143,
+   "gain": 0.00013787863437092485,
+   "delta_bytes": 1844736,
+   "gain_per_mb": 7.474166188057524e-05
+  },
+  {
+   "name": "model.layers.5.mlp.gate_proj",
+   "layer": 5,
+   "kind": "gate_proj",
+   "wiki": 12.42168866072351,
+   "c4": 21.738581486743193,
+   "gain": 0.0001302413377895495,
+   "delta_bytes": 1844736,
+   "gain_per_mb": 7.060161334171909e-05
+  },
+  {
+   "name": "model.layers.16.mlp.up_proj",
+   "layer": 16,
+   "kind": "up_proj",
+   "wiki": 12.421803997138342,
+   "c4": 21.738739719735058,
+   "gain": 0.00012196031887484748,
+   "delta_bytes": 1844736,
+   "gain_per_mb": 6.61126138780007e-05
+  },
+  {
+   "name": "model.layers.15.self_attn.q_proj",
+   "layer": 15,
+   "kind": "q_proj",
+   "wiki": 12.421954630887937,
+   "c4": 21.742900558265518,
+   "gain": 2.0217932215516043e-05,
+   "delta_bytes": 336896,
+   "gain_per_mb": 6.0012384283327924e-05
+  },
+  {
+   "name": "model.layers.4.mlp.up_proj",
+   "layer": 4,
+   "kind": "up_proj",
+   "wiki": 12.418075699260019,
+   "c4": 21.745853612043746,
+   "gain": 0.0001084434221671482,
+   "delta_bytes": 1844736,
+   "gain_per_mb": 5.8785334143827733e-05
+  },
+  {
+   "name": "model.layers.8.mlp.up_proj",
+   "layer": 8,
+   "kind": "up_proj",
+   "wiki": 12.420398355483375,
+   "c4": 21.742740024825938,
+   "gain": 8.655130749640749e-05,
+   "delta_bytes": 1844736,
+   "gain_per_mb": 4.69179912444965e-05
+  },
+  {
+   "name": "model.layers.11.mlp.gate_proj",
+   "layer": 11,
+   "kind": "gate_proj",
+   "wiki": 12.421090225516155,
+   "c4": 21.742136170259904,
+   "gain": 7.258848084956693e-05,
+   "delta_bytes": 1844736,
+   "gain_per_mb": 3.9348980477188565e-05
+  },
+  {
+   "name": "model.layers.14.self_attn.q_proj",
+   "layer": 14,
+   "kind": "q_proj",
+   "wiki": 12.423377403947628,
+   "c4": 21.74071643220166,
+   "gain": 1.317403273526363e-05,
+   "delta_bytes": 336896,
+   "gain_per_mb": 3.9104153018330974e-05
+  },
+  {
+   "name": "model.layers.13.self_attn.q_proj",
+   "layer": 13,
+   "kind": "q_proj",
+   "wiki": 12.424506788739716,
+   "c4": 21.738761768686008,
+   "gain": 1.2662818459019398e-05,
+   "delta_bytes": 336896,
+   "gain_per_mb": 3.758672842366605e-05
+  },
+  {
+   "name": "model.layers.5.mlp.up_proj",
+   "layer": 5,
+   "kind": "up_proj",
+   "wiki": 12.418922667768124,
+   "c4": 21.746467300785163,
+   "gain": 6.024008316257712e-05,
+   "delta_bytes": 1844736,
+   "gain_per_mb": 3.2655124181767535e-05
+  },
+  {
+   "name": "model.layers.12.mlp.down_proj",
+   "layer": 12,
+   "kind": "down_proj",
+   "wiki": 12.417626352434851,
+   "c4": 21.749025713107752,
+   "gain": 5.358713572051199e-05,
+   "delta_bytes": 1820928,
+   "gain_per_mb": 2.9428475876318003e-05
+  },
+  {
+   "name": "model.layers.9.mlp.up_proj",
+   "layer": 9,
+   "kind": "up_proj",
+   "wiki": 12.423593006684953,
+   "c4": 21.739802958581244,
+   "gain": 2.5501258251181547e-05,
+   "delta_bytes": 1844736,
+   "gain_per_mb": 1.3823798229763797e-05
+  },
+  {
+   "name": "model.layers.8.mlp.down_proj",
+   "layer": 8,
+   "kind": "down_proj",
+   "wiki": 12.419575646290735,
+   "c4": 21.748316256330202,
+   "gain": -8.56010967748011e-06,
+   "delta_bytes": 1820928,
+   "gain_per_mb": -4.700959992641175e-06
+  },
+  {
+   "name": "model.layers.1.mlp.gate_proj",
+   "layer": 1,
+   "kind": "gate_proj",
+   "wiki": 12.424179794922567,
+   "c4": 21.74282434527268,
+   "gain": -6.75949570019263e-05,
+   "delta_bytes": 1844736,
+   "gain_per_mb": -3.664207615719881e-05
+  },
+  {
+   "name": "model.layers.1.mlp.up_proj",
+   "layer": 1,
+   "kind": "up_proj",
+   "wiki": 12.421211762965076,
+   "c4": 21.750074531799036,
+   "gain": -0.00011484754356405613,
+   "delta_bytes": 1844736,
+   "gain_per_mb": -6.225689939593314e-05
+  },
+  {
+   "name": "model.layers.6.mlp.down_proj",
+   "layer": 6,
+   "kind": "down_proj",
+   "wiki": 12.422193832883291,
+   "c4": 21.748505377662397,
+   "gain": -0.00011829401926832794,
+   "delta_bytes": 1820928,
+   "gain_per_mb": -6.496358959186082e-05
+  },
+  {
+   "name": "model.layers.10.self_attn.q_proj",
+   "layer": 10,
+   "kind": "q_proj",
+   "wiki": 12.421576104531901,
+   "c4": 21.745511419975745,
+   "gain": -2.4583163458269386e-05,
+   "delta_bytes": 336896,
+   "gain_per_mb": -7.29695913821161e-05
+  },
+  {
+   "name": "model.layers.6.self_attn.q_proj",
+   "layer": 6,
+   "kind": "q_proj",
+   "wiki": 12.423630994662817,
+   "c4": 21.742461445367127,
+   "gain": -3.7160166900307434e-05,
+   "delta_bytes": 336896,
+   "gain_per_mb": -0.00011030159722973095
+  },
+  {
+   "name": "model.layers.3.mlp.up_proj",
+   "layer": 3,
+   "kind": "up_proj",
+   "wiki": 12.423412889658758,
+   "c4": 21.752646995673363,
+   "gain": -0.000262599686490006,
+   "delta_bytes": 1844736,
+   "gain_per_mb": -0.00014235082228026449
+  },
+  {
+   "name": "model.layers.19.self_attn.q_proj",
+   "layer": 19,
+   "kind": "q_proj",
+   "wiki": 12.422727282892524,
+   "c4": 21.74504046870272,
+   "gain": -6.0089814636898886e-05,
+   "delta_bytes": 336896,
+   "gain_per_mb": -0.00017836309910743638
+  },
+  {
+   "name": "model.layers.3.self_attn.q_proj",
+   "layer": 3,
+   "kind": "q_proj",
+   "wiki": 12.421712469036287,
+   "c4": 21.74770283979377,
+   "gain": -8.04640713106819e-05,
+   "delta_bytes": 336896,
+   "gain_per_mb": -0.00023883949738400545
+  },
+  {
+   "name": "model.layers.11.self_attn.q_proj",
+   "layer": 11,
+   "kind": "q_proj",
+   "wiki": 12.421076886112479,
+   "c4": 21.751169795154826,
+   "gain": -0.0001346043656245688,
+   "delta_bytes": 336896,
+   "gain_per_mb": -0.0003995427836025622
+  },
+  {
+   "name": "model.layers.1.self_attn.o_proj",
+   "layer": 1,
+   "kind": "o_proj",
+   "wiki": 12.421599449435961,
+   "c4": 21.757340766025365,
+   "gain": -0.0002975406889942356,
+   "delta_bytes": 336896,
+   "gain_per_mb": -0.0008831826112338395
+  },
+  {
+   "name": "model.layers.1.self_attn.k_proj",
+   "layer": 1,
+   "kind": "k_proj",
+   "wiki": 12.421253819645848,
+   "c4": 21.746928876191728,
+   "gain": -4.420547666328378e-05,
+   "delta_bytes": 45056,
+   "gain_per_mb": -0.0009811229728179107
+  }
+ ]
+}

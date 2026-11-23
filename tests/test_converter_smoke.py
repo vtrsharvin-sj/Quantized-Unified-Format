@@ -47,7 +47,7 @@ def test_convert_roundtrip(tmp_path):
     out = tmp_path / "o.quf"
     msgs = []
     res = C.convert_checkpoint(str(_model_dir(tmp_path)), out, n_samples=2, seq_len=8,
-                               texts=TEXTS, quantizer=_fake_gptq, echo=msgs.append)
+                               texts=TEXTS, quantizer=_fake_gptq, echo=msgs.append, embed_precision="fp16")
     assert res.size_bytes == out.stat().st_size and msgs and "bytes" in msgs[0]
     assert not (tmp_path / "o.quf.partial").exists()
     r = QUFReader(out)

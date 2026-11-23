@@ -9,6 +9,9 @@ import torch
 from quf.runtime.model import QUFModel
 
 
+GREEDY_CHECK_EVERY = 8  # host EOS check and streaming interval of the on-device greedy loop
+
+
 class ContextLengthError(ValueError):
     """Prompt length plus maximum new tokens exceeds the model context length."""
 
@@ -109,11 +112,43 @@ def generate(
     emitted = ""
     inputs = torch.tensor([prompt_ids], dtype=torch.long)
     decoder = None
+    def emit(next_id: int) -> bool:
+        """Record one token and stream it. Returns True when generation must stop (EOS)."""
+        nonlocal emitted
+        out.append(next_id)
+        if eos is not None and next_id == int(eos):
+            return True
+        if stream is not None:
+            text = tok.decode(out)
+            # Hold back an incomplete multi-byte character until it completes.
+            if not text.endswith("\ufffd") and len(text) > len(emitted):
+                stream(text[len(emitted):])
+                emitted = text
+        return False
+
     for step in range(max_new_tokens):
         if use_static and step == 1 and max_new_tokens > 1:
             from quf.runtime.cuda_graph import make_decoder  # noqa: PLC0415
 
             decoder = make_decoder(model, cache, cuda_graph)
+            if (
+                decoder is not None
+                and temperature <= 0
+                and getattr(decoder, "supports_greedy_device", False)
+            ):
+                # Greedy: argmax and the next-token feed run inside the graph. Tokens are copied
+                # to pinned host memory and checked for EOS every GREEDY_CHECK_EVERY tokens, so
+                # extra tokens after EOS may be computed but are never returned or streamed, and
+                # streaming lags by at most GREEDY_CHECK_EVERY tokens.
+                remaining = max_new_tokens - len(out)
+                decoder.begin_greedy(out[-1])
+                for issued in range(1, remaining + 1):
+                    decoder.step_greedy()
+                    if issued % GREEDY_CHECK_EVERY == 0 or issued == remaining:
+                        for t in decoder.drain_greedy():
+                            if emit(t):
+                                return out
+                return out
         if use_static and step > 0:
             stepper = decoder if decoder is not None else model
             logits = stepper.decode_token(out[-1], cache)[0, -1]
@@ -122,14 +157,7 @@ def generate(
         next_id = sample_next(
             logits, temperature=temperature, top_k=top_k, top_p=top_p, generator=generator
         )
-        out.append(next_id)
-        if eos is not None and next_id == int(eos):
+        if emit(next_id):
             break
-        if stream is not None:
-            text = tok.decode(out)
-            # Hold back an incomplete multi-byte character until it completes.
-            if not text.endswith("\ufffd") and len(text) > len(emitted):
-                stream(text[len(emitted):])
-                emitted = text
         inputs = torch.tensor([[next_id]], dtype=torch.long)
     return out

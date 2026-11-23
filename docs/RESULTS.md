@@ -268,3 +268,109 @@ First-run stall of the v020 row. The killed run's log (`eval_cache/qwen2_5-1_5b_
 Q4_K_M fallback quant types. Qwen2.5-0.5B has hidden size 896, which is not a multiple of 256, so llama-quantize cannot use K-quant blocks for tensors with 896 input columns and falls back to a legacy type. In the 0.5B Q4_K_M file, `attn_q`, `attn_k`, `attn_output`, `ffn_gate` and `ffn_up` (24 layers each) fall back from Q4_K to Q5_0. `attn_v` falls back to Q8_0 in 12 layers (where Q6_K was requested) and to Q5_0 in the other 12 (where Q4_K was requested). The 0.5B Q4_K_M row is therefore not a pure 4-bit K-quant file. Qwen2.5-1.5B (hidden size 1536) logs no fallbacks.
 
 
+
+## lm-evaluation-harness accuracy guard for the 0.4.0 defaults (task 35.1)
+
+Harness lm_eval 0.4.13, hellaswag and arc_easy, 0-shot, limit 500, seed 1234, cuda, `scripts/run_lmeval.py`. QUF files were converted with plain `quf convert` defaults (preset size_f, int8 g64 embedding, g32 act-order body; confirmed with `quf info`) into `eval_cache/lm040/`. fp16 and size_b (0.3.0 default) rows are reused from the earlier runs. Stderr is about 0.02 on every metric (n = 500).
+
+| Model | Metric | fp16 | size_b (0.3.0) | QUF 0.4.0 | vs fp16 |
+|---|---|---|---|---|---|
+| 0.5B | hellaswag acc | 0.410 | 0.410 | 0.416 | +0.006 |
+| 0.5B | hellaswag acc_norm | 0.502 | 0.500 | 0.504 | +0.002 |
+| 0.5B | arc_easy acc | 0.636 | 0.612 | 0.636 | 0.000 |
+| 0.5B | arc_easy acc_norm | 0.586 | 0.588 | 0.578 | -0.008 |
+| 1.5B | hellaswag acc | 0.486 | 0.480 | 0.470 | -0.016 |
+| 1.5B | hellaswag acc_norm | 0.602 | 0.590 | 0.588 | -0.014 |
+| 1.5B | arc_easy acc | 0.750 | 0.744 | 0.740 | -0.010 |
+| 1.5B | arc_easy acc_norm | 0.710 | 0.704 | 0.730 | +0.020 |
+
+File sizes: 0.5B 367.9 MB (0.372 of fp16), 1.5B 1040.0 MB (0.337 of fp16).
+
+- Accuracy rule: all 8 QUF metrics are within one stderr (about 0.022) of fp16. Nothing to report as a failure.
+- Worse than size_b: 0.5B arc_easy acc_norm (0.578 vs 0.588, -0.010); 1.5B hellaswag acc (0.470 vs 0.480), hellaswag acc_norm (0.588 vs 0.590), arc_easy acc (0.740 vs 0.744). All differences are 0.002 to 0.010, under half a stderr, so they are not distinguishable from sampling noise at n = 500. 0.4.0 is better than size_b on 0.5B hellaswag and arc_easy acc (+0.006, +0.024) and on 1.5B arc_easy acc_norm (+0.026).
+- Q4_K_M: not run. The lm_eval `gguf` backend needs the legacy OpenAI completions format (`echo`, `logprobs.text_offset`). The local llama-server (b12567) ignores `echo` and returns the new `logprobs.content` format, so prompt log-likelihoods are unavailable. llama-cpp-python is not installed. Probe script: `eval_cache/lm040/probe.py`.
+- Raw data: `docs/bench_accuracy.json`, key `lm_eval.results.<model>.quf_0_4_0`.
+
+## QUF 0.4.0 vs GGUF (task 36.2)
+
+### Qwen2.5-0.5B (llama protocol, full WikiText-2 test and the C4 slice)
+
+| Format | Size MB | WikiText-2 PPL | C4 PPL | Decode tok/s (median, min-max) | Δ WikiText-2 vs fp16 | Δ C4 vs fp16 | Pareto front |
+|---|---:|---:|---:|---:|---:|---:|:---:|
+| fp16 (reference) | 988.1 | 11.740 | 18.239 | not measured | 0 | 0 | n/a |
+| QUF 0.4.0 default | 367.9 | 11.987 | 18.777 | 662 (658-666) | +2.10% | +2.94% | yes |
+| GGUF Q4_K_M (no imatrix) | 397.8 | 12.043 | 18.724 | 494 (459-510) | +2.58% | +2.66% | yes |
+| GGUF Q4_K_M-imat | 397.8 | 11.959 | 18.593 | 494 (459-510) † | +1.87% | +1.94% | yes |
+| GGUF Q4_K_S (no imatrix) | 385.5 | 12.207 | 19.002 | 496 (486-538) | +3.98% | +4.18% | no |
+| GGUF IQ4_XS-imat | 349.4 | 12.286 | 19.046 | 496 (489-523) | +4.65% | +4.42% | yes |
+| GGUF Q5_K_M (no imatrix) | 420.1 | 11.961 | 18.505 | 506 (483-534) | +1.88% | +1.46% | yes |
+
+QUF against each GGUF variant, Qwen2.5-0.5B (size: smaller wins; perplexity: difference under 0.1% is a tie, otherwise lower wins; speed: overlapping min-max ranges are a tie):
+
+| vs | Size | WikiText-2 | C4 | Speed |
+|---|---|---|---|---|
+| GGUF Q4_K_M (no imatrix) | QUF wins (-7.5%) | QUF wins (-0.46%) | QUF loses (+0.28%) | QUF wins, median ratio 1.340 |
+| GGUF Q4_K_M-imat | QUF wins (-7.5%) | QUF loses (+0.23%) | QUF loses (+0.99%) | QUF wins, median ratio 1.340 † |
+| GGUF Q4_K_S (no imatrix) | QUF wins (-4.6%) | QUF wins (-1.80%) | QUF wins (-1.18%) | QUF wins, median ratio 1.334 |
+| GGUF IQ4_XS-imat | QUF loses (+5.3%) | QUF wins (-2.43%) | QUF wins (-1.41%) | QUF wins, median ratio 1.334 |
+| GGUF Q5_K_M (no imatrix) | QUF wins (-12.4%) | QUF loses (+0.22%) | QUF loses (+1.47%) | QUF wins, median ratio 1.308 |
+
+Beat_Target (size ≤ Q4_K_M, WikiText-2 ≤ Q4_K_M, decode tok/s ≥ Q4_K_M): **reached** on 0.5B (size ok, WikiText-2 ok, speed ok).
+
+Pareto front (size, WikiText-2, C4, lower is better on all): QUF 0.4.0 default, GGUF Q4_K_M (no imatrix), GGUF Q4_K_M-imat, GGUF IQ4_XS-imat, GGUF Q5_K_M (no imatrix). Dominated: GGUF Q4_K_S (no imatrix) (by QUF 0.4.0 default).
+
+### Qwen2.5-1.5B (llama protocol, full WikiText-2 test and the C4 slice)
+
+| Format | Size MB | WikiText-2 PPL | C4 PPL | Decode tok/s (median, min-max) | Δ WikiText-2 vs fp16 | Δ C4 vs fp16 | Pareto front |
+|---|---:|---:|---:|---:|---:|---:|:---:|
+| fp16 (reference) | 3087.4 | 8.296 | 13.476 | not measured | 0 | 0 | n/a |
+| QUF 0.4.0 default | 1040.0 | 8.420 | 13.763 | 283 (263-285) | +1.49% | +2.13% | yes |
+| GGUF Q4_K_M (no imatrix) | 986.0 | 8.600 | 13.954 | 274 (268-279) | +3.66% | +3.55% | no |
+| GGUF Q4_K_M-imat | 986.0 | 8.497 | 13.757 | 274 (268-279) † | +2.42% | +2.09% | yes |
+| GGUF Q4_K_S (no imatrix) | 940.3 | 8.679 | 14.075 | 282 (270-287) | +4.61% | +4.45% | no |
+| GGUF IQ4_XS-imat | 895.7 | 8.577 | 13.879 | 274 (270-278) | +3.38% | +3.00% | yes |
+| GGUF Q5_K_M (no imatrix) | 1125.1 | 8.389 | 13.633 | 248 (242-251) | +1.12% | +1.17% | yes |
+
+QUF against each GGUF variant, Qwen2.5-1.5B (size: smaller wins; perplexity: difference under 0.1% is a tie, otherwise lower wins; speed: overlapping min-max ranges are a tie):
+
+| vs | Size | WikiText-2 | C4 | Speed |
+|---|---|---|---|---|
+| GGUF Q4_K_M (no imatrix) | QUF loses (+5.5%) | QUF wins (-2.09%) | QUF wins (-1.37%) | tie (ranges overlap), median ratio 1.033 |
+| GGUF Q4_K_M-imat | QUF loses (+5.5%) | QUF wins (-0.91%) | tie (+0.04%) | tie (ranges overlap), median ratio 1.033 † |
+| GGUF Q4_K_S (no imatrix) | QUF loses (+10.6%) | QUF wins (-2.99%) | QUF wins (-2.22%) | tie (ranges overlap), median ratio 1.003 |
+| GGUF IQ4_XS-imat | QUF loses (+16.1%) | QUF wins (-1.84%) | QUF wins (-0.84%) | tie (ranges overlap), median ratio 1.034 |
+| GGUF Q5_K_M (no imatrix) | QUF wins (-7.6%) | QUF loses (+0.37%) | QUF loses (+0.96%) | QUF wins, median ratio 1.142 |
+
+Beat_Target (size ≤ Q4_K_M, WikiText-2 ≤ Q4_K_M, decode tok/s ≥ Q4_K_M): **not reached** on 1.5B (size FAILS, WikiText-2 ok, speed ok).
+
+Pareto front (size, WikiText-2, C4, lower is better on all): QUF 0.4.0 default, GGUF Q4_K_M-imat, GGUF IQ4_XS-imat, GGUF Q5_K_M (no imatrix). Dominated: GGUF Q4_K_M (no imatrix) (by GGUF IQ4_XS-imat), GGUF Q4_K_S (no imatrix) (by GGUF IQ4_XS-imat).
+
+
+**Where QUF wins and loses (Qwen2.5-0.5B).** Size: smaller than every GGUF variant except IQ4_XS (349.4 MB, 5.3% smaller than QUF). WikiText-2: better than Q4_K_M, Q4_K_S and IQ4_XS, worse than Q4_K_M-imat (+0.23%) and Q5_K_M (+0.22%). C4: better than Q4_K_S and IQ4_XS, worse than Q4_K_M (+0.28%), Q4_K_M-imat (+0.99%) and Q5_K_M (+1.47%). Speed: faster than every variant (ranges do not overlap, median 1.31 to 1.34x). Beat_Target is reached on 0.5B, but only on the WikiText-2 definition: QUF's C4 perplexity is 0.28% worse than Q4_K_M's.
+
+**Where QUF wins and loses (Qwen2.5-1.5B).** Size: larger than Q4_K_M, Q4_K_M-imat, Q4_K_S and IQ4_XS (5.5% to 16.1%), smaller than Q5_K_M. WikiText-2: better than every variant except Q5_K_M (+0.37%). C4: better than Q4_K_M, Q4_K_S, IQ4_XS, tie with Q4_K_M-imat (+0.04%), worse than Q5_K_M (+0.96%). Speed: tie with every variant except Q5_K_M, which QUF beats (1.14x). Beat_Target is not reached on 1.5B because the QUF file is 5.5% larger than Q4_K_M.
+
+**Other caveats.** On 0.5B the only variant QUF beats on size, both perplexities and speed at once is Q4_K_S. On 1.5B no GGUF variant is beaten on all four axes: IQ4_XS and Q4_K_M are smaller and tie on speed. Every tie and win above rests on one speed session and one perplexity run per row (no seeds are involved, but the speed was measured on battery). The QUF file stores the last layer at int8 and uses group size 32, which accounts for part of its size against Q4_K_M and IQ4_XS.
+
+Method. Perplexity: `llama` protocol (positions 1024 to 2046 of each 2048-token window), full WikiText-2 test split and the held-out C4 slice. GGUF rows: `llama-perplexity.exe` on the GPU (`-ngl 99`, b12567 CUDA build), the same way as task 20.3. QUF rows: `scripts/bench_accuracy.py --ppl-quf <file> --protocol llama` with the default `torch_gpu` backend, on the 0.4.0 default files re-converted after the clip-search fix (`eval_cache/lm040/q05.quf`, `q15.quf`). The Q4_K_M (no imatrix) perplexities are the task 20.3 numbers from `models_llama`. Size is the file size in decimal MB (bytes / 1e6). Raw results: `docs/bench_accuracy.json`, key `pareto_040`; logs: `eval_cache/pareto040/`; driver: `scripts/pareto040.py`.
+
+Speed is reused from one interleaved session (`speed_040_final`, task 39.5): QUF `triton_int4` with CUDA graph against `llama-bench -p 0 -n 128 -ngl 99`, 128 new tokens, 2 warm-up and 7 measured rounds, rows rotated each round. **The laptop was on battery (not on AC, 71% charge) with GPU clocks power-throttled**, so absolute tok/s is below plugged-in numbers and QUF and llama.cpp ran at different SM clocks. Speed is not re-measured here. Speed rule: two rows tie when their min-max ranges overlap; otherwise the one whose whole range is higher wins.
+
+† The Q4_K_M-imat speed was not measured. It is given Q4_K_M's speed because the tensor types are identical (the files differ by 224 bytes). The IQ4_XS row is the imatrix IQ4_XS, which is the file whose speed was measured.
+
+Calibration. QUF was calibrated on 128 x 1024 WikiText-2 train tokens. The imatrix variants (IQ4_XS, Q4_K_M-imat) use the same tokens; the other GGUF variants use no imatrix. Q4_K_S, Q4_K_M and Q5_K_M are therefore not calibration-matched to QUF, while IQ4_XS and Q4_K_M-imat are. The WikiText-2 test split is disjoint from the train split, but both are the same domain, so WikiText-2 favours every calibrated row slightly more than C4 does.
+
+Pareto front. A row is on the front when no other row is at least as good on size, WikiText-2 PPL and C4 PPL and strictly better on one (exact values, no tie band; fp16 is not a candidate). Speed is not part of the front test. The 0.5B Q4_K_M (no imatrix) row is on the front only because it is 224 bytes smaller than Q4_K_M-imat; that is not a meaningful size advantage.
+
+## Scaling check on Qwen2.5-3B (task 36.3)
+
+Qwen2.5-3B (base) fits: the fp16 checkpoint is 6.17 GB, the 16 GB GPU was empty (about 4.9 GB in use during layer-by-layer conversion), and 1.2 TB of disk was free. Nothing was skipped except where noted. The laptop was on **AC power** for every step.
+
+| Row | Size (MB) | WikiText-2 PPL | C4 PPL | tok/s (decode, 128 tokens) |
+|---|---|---|---|---|
+| GGUF Q4_K_M (no imatrix) | 1929.9 | 7.4648 ± 0.047 | 12.3108 ± 0.087 | 236.0 (llama-bench, median of 5) |
+| QUF 0.4.0 defaults | 1987.4 | 7.2912 | 12.1544 | 190.7 end-to-end, 229.1 steady-state (triton_int4, graph, median of 5) |
+
+Per axis for QUF against Q4_K_M: size **loses** (+3.0%); WikiText-2 **beats** (-2.3%, a gap about 3.7 times the Q4_K_M standard error); C4 **beats** (-1.3%); speed **loses** (the ranges do not overlap: QUF 180.5 to 198.5, llama-bench 225.2 to 244.4; the end-to-end median is 19% lower, the steady-state median 3% lower). Beat_Target (size, WikiText-2 and speed all at least as good as Q4_K_M) is **not reached** on 3B, because the file is larger and decode is slower.
+
+Method. QUF: `quf convert Qwen/Qwen2.5-3B eval_cache/scale3b/q3b.quf` with plain defaults (about 15 minutes). GGUF: pinned `convert_hf_to_gguf.py` to f16, then `llama-quantize ... Q4_K_M` with no imatrix (30 s). Perplexity: llama protocol, full WikiText-2 test split and the held-out C4 slice; the GGUF row used `llama-perplexity.exe -c 2048 -ngl 99`, the QUF row `scripts/bench_accuracy.py --ppl-quf` with the `torch_gpu` backend. Speed: one interleaved session, 1 warm-up round and 5 measured rounds, QUF `triton_int4` with CUDA graph against `llama-bench -p 0 -n 128 -ngl 99`. Both rows drifted down over the session (QUF 198 to 181, llama-bench 244 to 225 tok/s), most likely thermal, so absolute numbers are indicative; it is one session and one run per row. Raw results: `docs/bench_accuracy.json`, key `scaling_3b`; logs and files: `eval_cache/scale3b/`.

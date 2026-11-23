@@ -1,4 +1,4 @@
-﻿# QUF file format (versions 1 and 2)
+# QUF file format (versions 1, 2 and 3)
 
 QUF (Quantized Unified Format) is a single-file container for a 4-bit quantized decoder-only LLM. One file holds the model configuration, tokenizer information, the quantization scheme, and every tensor.
 
@@ -9,7 +9,7 @@ This document matches the reference writer and reader in `quf/format/`. All mult
 ```
 offset  size   field
 0       4      magic: the ASCII bytes "QUF1"
-4       4      version: uint32 (1 or 2, see section 8)
+4       4      version: uint32 (1, 2 or 3, see sections 8 and 9)
 8       8      header_len: uint64, byte length of the JSON header
 16      N      header: UTF-8 JSON, N = header_len
 16+N    pad    zero bytes up to the next multiple of 64
@@ -159,7 +159,7 @@ The writer requires every `.qweight` to have an `fp16` `.scales` tensor, and a `
 A reader opens the file read-only and validates in this order, stopping at the first failure:
 
 1. **Magic.** The first 4 bytes must be `QUF1`. Otherwise: invalid magic error, reporting the bytes found.
-2. **Version.** A version greater than the highest supported version (2) is an unsupported version error that reports the file's version and the supported version. A file too short to hold the version field is a truncated header error.
+2. **Version.** A version greater than the highest supported version (3) is an unsupported version error that reports the file's version and the supported version. A file too short to hold the version field is a truncated header error.
 3. **Header length.** The file must hold the 16-byte prefix, and `16 + header_len` must not exceed the file size. Otherwise: truncated header error.
 4. **JSON parse.** The header bytes must be valid UTF-8 JSON. Otherwise: header schema error.
 5. **Required fields.** All top-level and per-tensor required fields must be present and well typed. Otherwise: header schema error naming the field.
@@ -217,3 +217,28 @@ Dequantization is `w[o, i] = qweight_int8[o, i] * scales[o]`, returned as fp16 w
 ### 8.4 fp16 modules
 
 A module marked `"fp16"` stores its weight as `<name>.weight`, dtype `fp16`, shape `[out, in]`.
+
+## 9. Version 3 additions: Quantized_Embedding
+
+A file is version 3 exactly when it holds a Quantized_Embedding: `quantization.embedding` or `quantization.lm_head` is present, or any tensor ends in `.embed_q4`, `.embed_q8`, or `.embed_scales`. This rule takes precedence over section 8. Every other file keeps version 1 or 2 with unchanged bytes. A 0.3.0 reader (highest version 2) rejects a version 3 file with the unsupported version error. The current reader loads versions 1, 2, and 3, and rejects a version 1 or 2 file that declares a quantized embedding.
+
+Header fields, each an object with the same keys:
+
+| Field | Meaning |
+|---|---|
+| `quantization.embedding` | The embedding table. `name` is the tensor prefix (such as `model.embed_tokens`), `bits` is 4 or 8, `group_size` is 32 or 64, `method` is `rtn` or `gptq` (default `rtn`). |
+| `quantization.lm_head` | Optional. Same keys, for an untied lm_head with its own tensors (`name` such as `lm_head`). When absent and the model ties its weights, the lm_head reuses the `embedding` tensors. |
+
+The embedding `group_size` is independent of `quantization.group_size`.
+
+Tensors for a table named `<name>` with `rows` vocabulary entries and `cols` hidden size:
+
+| Tensor | dtype | shape | Notes |
+|---|---|---|---|
+| `<name>.embed_q4` (bits 4) | `int8` | `[rows, cols/2]` | Raw bytes. Column `2j` is the low nibble and column `2j+1` the high nibble of byte `j`. Nibbles are unsigned 0 to 15 with zero point 8. |
+| `<name>.embed_q8` (bits 8) | `int8` | `[rows, cols]` | Signed values -127 to 127, zero point 0. |
+| `<name>.embed_scales` | `fp16` | `[rows, cols/group_size]` | One scale per row and group. |
+
+Dequantization: `w[r, c] = (q[r, c] - zero) * scales[r, c // group_size]`, returned as fp16 `[rows, cols]`. Storage is row-major with one row per token, so a row gather reads `cols/2` (or `cols`) contiguous bytes plus `cols/group_size` scales per requested token, and the tied lm_head GEMV `logits = x @ W.T` walks the same tensors in the same `[out, in]` orientation. `cols` must be a multiple of `group_size`. The reference implementation is `quf.quant.embedding.dequantize_embedding_rows`.
+
+The reader checks the bits, group size, method, tensor presence, dtypes, and shapes, and rejects tensors with an embedding suffix that no header field declares. An fp16 embedding (`<name>.weight`) is unchanged and does not make a file version 3.

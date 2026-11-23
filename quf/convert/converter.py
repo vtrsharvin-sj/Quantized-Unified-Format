@@ -228,6 +228,7 @@ def _fp16_size(result: _gptq.GPTQResult) -> int:
     n = sum(q.in_features * q.out_features for q in result.linears.values())
     n += sum(int(a[0].size) for a in result.int8.values())
     n += sum(int(a.size) for a in result.others.values())
+    n += sum(qe.rows * qe.cols for qe in result.embeddings.values())
     return 2 * n
 
 
@@ -246,7 +247,11 @@ def convert_checkpoint(
     group_size: int = _gptq.GROUP_SIZE,
     act_order: bool = False,
     clip_search: bool = False,
+    damp: float = 0.01,
     precision_plan: PrecisionPlan | None = None,
+    embed_precision: str = "int8",
+    embed_group_size: int = 64,
+    embed_method: str = "clip",
     texts: Iterable[str] | None = None,
     quantizer: Callable[..., _gptq.GPTQResult] | None = None,
     echo: Callable[[str], None] | None = print,
@@ -256,6 +261,11 @@ def convert_checkpoint(
     ``group_size`` (32, 64 or 128), ``act_order`` and ``clip_search`` go to the
     quantizer. ``precision_plan`` keeps selected modules at int8 or fp16 and the
     header records the module precision map. With the defaults the file is version 1.
+
+    ``embed_precision`` (``fp16``, ``int8`` or ``int4``) stores the embedding table, and an
+    untied lm_head, as a Quantized_Embedding (format version 3) with ``embed_group_size``
+    (32 or 64) and ``embed_method`` (``clip`` for MSE-optimal clipping, ``rtn`` for plain
+    round-to-nearest). The default is ``int8`` (size study, docs/ACCURACY.md); ``fp16`` leaves the file as before.
 
     ``texts`` overrides dataset loading, and ``quantizer`` overrides the
     native GPTQ run (both exist for testing). The same ``symmetric`` value is
@@ -272,6 +282,12 @@ def convert_checkpoint(
         seq_len = (LEGACY_SEQ_LEN if legacy_calibration
                    else MULTI_SOURCE_SEQ_LEN if multi_source_calibration and dataset is None
                    else DEFAULT_SEQ_LEN)
+    if embed_precision not in _gptq.EMBED_PRECISIONS:
+        raise ConvertError(f"unsupported embed precision {embed_precision!r}: use fp16, int8 or int4")
+    if embed_group_size not in (32, 64):
+        raise ConvertError(f"unsupported embed group size {embed_group_size}: use 32 or 64")
+    if embed_method not in ("rtn", "clip"):
+        raise ConvertError(f"unsupported embed method {embed_method!r}: use rtn or clip")
     output = Path(output)
     if output.exists() and not overwrite:
         raise OutputExistsError(output)
@@ -301,12 +317,15 @@ def convert_checkpoint(
         extra["act_order"] = True
     if clip_search:
         extra["clip_search"] = True
+    if damp != 0.01:
+        extra["damp"] = damp
     if precision_plan:
         extra["precision_plan"] = precision_plan
     result = runner(source, calib, group_size=group_size, symmetric=symmetric, **extra)
 
+    _gptq.quantize_embeddings(result, embed_precision, embed_group_size, embed_method)
     tensors = _gptq.to_tensor_dict(result)
-    tensors = {k: (v if k.endswith((".qweight", ".scales", ".qzeros", ".g_idx", ".qweight_int8")) else _coerce_other(k, v))
+    tensors = {k: (v if k.endswith((".qweight", ".scales", ".qzeros", ".g_idx", ".qweight_int8", ".embed_q4", ".embed_q8", ".embed_scales")) else _coerce_other(k, v))
                for k, v in tensors.items()}
     quantization: dict[str, Any] = {
         "method": "gptq",
@@ -320,6 +339,7 @@ def convert_checkpoint(
         quantization["act_order"] = True
     if result.modules and any(p != "int4" for p in result.modules.values()):
         quantization["modules"] = dict(result.modules)
+    quantization.update(_gptq.embedding_header_specs(result))
     header = QUFHeader(
         model_config=model_config, tokenizer=tokenizer_info, quantization=quantization
     )

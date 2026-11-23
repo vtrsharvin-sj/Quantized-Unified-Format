@@ -156,7 +156,7 @@ def test_convert_tiny_qwen_then_info(tmp_path, monkeypatch):
         cg, "run_native_gptq", lambda *a, **k: orig(*a, **{**k, "device": "cpu"})
     )
     res = C.convert_checkpoint(
-        str(d), out, n_samples=2, seq_len=8, texts=TEXTS, echo=None
+        str(d), out, n_samples=2, seq_len=8, texts=TEXTS, echo=None, embed_precision="fp16"
     )
     assert out.exists() and not (tmp_path / "tiny.quf.partial").exists()
     assert 0 < res.ratio < 2

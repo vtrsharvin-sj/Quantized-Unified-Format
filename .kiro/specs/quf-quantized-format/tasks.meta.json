@@ -103,6 +103,14 @@
     "30.2 Write property test for greedy token equality": {
       "status": "passed",
       "lastRunTimestamp": 1795268197116
+    },
+    "33.4 Write property tests for the fused kernels": {
+      "status": "passed",
+      "lastRunTimestamp": 1795320405629
+    },
+    "39.4 Write the equivalence property tests": {
+      "status": "passed",
+      "lastRunTimestamp": 1795336273152
     }
   },
   "executionHistory": {
@@ -2477,6 +2485,11 @@
         "executionId": "6c20c8bb-3f07-4a4e-9e0c-8abecbe52b12",
         "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
         "timestamp": 1795271253370
+      },
+      {
+        "executionId": "6c20c8bb-3f07-4a4e-9e0c-8abecbe52b12",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795272058704
       }
     ],
     "28. Triton int4 kernels": [
@@ -2505,6 +2518,428 @@
         "executionId": "6c20c8bb-3f07-4a4e-9e0c-8abecbe52b12",
         "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
         "timestamp": 1795271253299
+      }
+    ],
+    "33.1 Profile graph-mode decode per kernel": [
+      {
+        "executionId": "a4431eef-2a76-4648-96e8-24053054a8cf",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795281313713
+      },
+      {
+        "executionId": "a4431eef-2a76-4648-96e8-24053054a8cf",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795281319665
+      },
+      {
+        "executionId": "a4431eef-2a76-4648-96e8-24053054a8cf",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795281725811
+      }
+    ],
+    "33.2 Add the fused Triton kernels in the order the profile justifies": [
+      {
+        "executionId": "a4431eef-2a76-4648-96e8-24053054a8cf",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795281313786
+      },
+      {
+        "executionId": "a4431eef-2a76-4648-96e8-24053054a8cf",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795281725897
+      },
+      {
+        "executionId": "a4431eef-2a76-4648-96e8-24053054a8cf",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795285628935
+      }
+    ],
+    "33.3 Gate, capture, and fall back": [
+      {
+        "executionId": "a4431eef-2a76-4648-96e8-24053054a8cf",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795281313848
+      },
+      {
+        "executionId": "a4431eef-2a76-4648-96e8-24053054a8cf",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795285630435
+      },
+      {
+        "executionId": "b19456f6-ffbe-417e-9186-e4be99ac046c",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795318612390
+      },
+      {
+        "executionId": "b19456f6-ffbe-417e-9186-e4be99ac046c",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795318634500
+      }
+    ],
+    "33.4 Write property tests for the fused kernels": [
+      {
+        "executionId": "a4431eef-2a76-4648-96e8-24053054a8cf",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795281313891
+      },
+      {
+        "executionId": "b19456f6-ffbe-417e-9186-e4be99ac046c",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795320023065
+      },
+      {
+        "executionId": "b19456f6-ffbe-417e-9186-e4be99ac046c",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795320452278
+      }
+    ],
+    "33.5 Measure speed against the targets": [
+      {
+        "executionId": "a4431eef-2a76-4648-96e8-24053054a8cf",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795281313937
+      },
+      {
+        "executionId": "39b39475-d99e-4888-88c4-81a175af2185",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795332677927
+      },
+      {
+        "executionId": "39b39475-d99e-4888-88c4-81a175af2185",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795333133058
+      }
+    ],
+    "34.1 Add the Quantized_Embedding to the format": [
+      {
+        "executionId": "a4431eef-2a76-4648-96e8-24053054a8cf",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795281313983
+      },
+      {
+        "executionId": "a4431eef-2a76-4648-96e8-24053054a8cf",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795281725954
+      },
+      {
+        "executionId": "a4431eef-2a76-4648-96e8-24053054a8cf",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795282515580
+      }
+    ],
+    "34.2 Add the quantizer and converter options": [
+      {
+        "executionId": "a4431eef-2a76-4648-96e8-24053054a8cf",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795281314032
+      },
+      {
+        "executionId": "a4431eef-2a76-4648-96e8-24053054a8cf",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795282515669
+      },
+      {
+        "executionId": "a4431eef-2a76-4648-96e8-24053054a8cf",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795284427047
+      }
+    ],
+    "34.3 Support all Backends and test the format": [
+      {
+        "executionId": "a4431eef-2a76-4648-96e8-24053054a8cf",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795281314101
+      },
+      {
+        "executionId": "a4431eef-2a76-4648-96e8-24053054a8cf",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795284427128
+      },
+      {
+        "executionId": "a4431eef-2a76-4648-96e8-24053054a8cf",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795285628738
+      }
+    ],
+    "34.4 Run the size study and choose the defaults": [
+      {
+        "executionId": "a4431eef-2a76-4648-96e8-24053054a8cf",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795281314146
+      },
+      {
+        "executionId": "a4431eef-2a76-4648-96e8-24053054a8cf",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795285630660
+      },
+      {
+        "executionId": "b19456f6-ffbe-417e-9186-e4be99ac046c",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795318634931
+      },
+      {
+        "executionId": "39b39475-d99e-4888-88c4-81a175af2185",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795330013875
+      },
+      {
+        "executionId": "39b39475-d99e-4888-88c4-81a175af2185",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795331741470
+      }
+    ],
+    "35.1 Run the lm-eval accuracy guard": [
+      {
+        "executionId": "a4431eef-2a76-4648-96e8-24053054a8cf",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795281314195
+      },
+      {
+        "executionId": "39b39475-d99e-4888-88c4-81a175af2185",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795331773910
+      },
+      {
+        "executionId": "39b39475-d99e-4888-88c4-81a175af2185",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795332677176
+      }
+    ],
+    "35.2 Evaluate cheap quantizer improvements": [
+      {
+        "executionId": "a4431eef-2a76-4648-96e8-24053054a8cf",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795281314239
+      },
+      {
+        "executionId": "b19456f6-ffbe-417e-9186-e4be99ac046c",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795320463543
+      },
+      {
+        "executionId": "b19456f6-ffbe-417e-9186-e4be99ac046c",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795323468696
+      }
+    ],
+    "36.1 Produce the GGUF variants": [
+      {
+        "executionId": "a4431eef-2a76-4648-96e8-24053054a8cf",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795281314284
+      },
+      {
+        "executionId": "39b39475-d99e-4888-88c4-81a175af2185",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795331773968
+      },
+      {
+        "executionId": "39b39475-d99e-4888-88c4-81a175af2185",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795332676187
+      }
+    ],
+    "36.2 Measure and write the Pareto table": [
+      {
+        "executionId": "a4431eef-2a76-4648-96e8-24053054a8cf",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795281314327
+      },
+      {
+        "executionId": "39b39475-d99e-4888-88c4-81a175af2185",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795333246705
+      },
+      {
+        "executionId": "ff7e027c-95b3-4ad9-abc0-8bb766d48864",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795445751783
+      },
+      {
+        "executionId": "ff7e027c-95b3-4ad9-abc0-8bb766d48864",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795447207366
+      }
+    ],
+    "36.3 Check scaling on Qwen2.5-3B": [
+      {
+        "executionId": "a4431eef-2a76-4648-96e8-24053054a8cf",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795281314387
+      },
+      {
+        "executionId": "39b39475-d99e-4888-88c4-81a175af2185",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795333246758
+      },
+      {
+        "executionId": "ff7e027c-95b3-4ad9-abc0-8bb766d48864",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795447207462
+      },
+      {
+        "executionId": "ff7e027c-95b3-4ad9-abc0-8bb766d48864",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795449109245
+      }
+    ],
+    "37. Release 0.4.0": [
+      {
+        "executionId": "a4431eef-2a76-4648-96e8-24053054a8cf",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795281314430
+      },
+      {
+        "executionId": "39b39475-d99e-4888-88c4-81a175af2185",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795333246822
+      },
+      {
+        "executionId": "ff7e027c-95b3-4ad9-abc0-8bb766d48864",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795449109395
+      },
+      {
+        "executionId": "ff7e027c-95b3-4ad9-abc0-8bb766d48864",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795451974312
+      }
+    ],
+    "38. Final checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "a4431eef-2a76-4648-96e8-24053054a8cf",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795281314477
+      },
+      {
+        "executionId": "39b39475-d99e-4888-88c4-81a175af2185",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795333246877
+      },
+      {
+        "executionId": "ff7e027c-95b3-4ad9-abc0-8bb766d48864",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795451974532
+      }
+    ],
+    "34. Embedding and lm_head quantization (size)": [
+      {
+        "executionId": "39b39475-d99e-4888-88c4-81a175af2185",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795331741520
+      }
+    ],
+    "35. Accuracy guard and improvements": [
+      {
+        "executionId": "39b39475-d99e-4888-88c4-81a175af2185",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795332677224
+      }
+    ],
+    "33. Decode profiling and fused kernels (speed)": [
+      {
+        "executionId": "39b39475-d99e-4888-88c4-81a175af2185",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795333133117
+      }
+    ],
+    "39.1 Implement the Triton int8 per-output-channel GEMV for M equal to 1": [
+      {
+        "executionId": "39b39475-d99e-4888-88c4-81a175af2185",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795333246938
+      },
+      {
+        "executionId": "39b39475-d99e-4888-88c4-81a175af2185",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795333279981
+      },
+      {
+        "executionId": "39b39475-d99e-4888-88c4-81a175af2185",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795333648427
+      }
+    ],
+    "39.2 Add fast-path support for mixed int4 and int8 groups": [
+      {
+        "executionId": "39b39475-d99e-4888-88c4-81a175af2185",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795333246983
+      },
+      {
+        "executionId": "39b39475-d99e-4888-88c4-81a175af2185",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795333649175
+      },
+      {
+        "executionId": "39b39475-d99e-4888-88c4-81a175af2185",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795335405334
+      }
+    ],
+    "39.3 Fix scripts/profile_decode_graph.py for quantized-embedding files and re-profile": [
+      {
+        "executionId": "39b39475-d99e-4888-88c4-81a175af2185",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795333247034
+      },
+      {
+        "executionId": "39b39475-d99e-4888-88c4-81a175af2185",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795335405397
+      },
+      {
+        "executionId": "39b39475-d99e-4888-88c4-81a175af2185",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795337086691
+      }
+    ],
+    "39.4 Write the equivalence property tests": [
+      {
+        "executionId": "39b39475-d99e-4888-88c4-81a175af2185",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795333247080
+      },
+      {
+        "executionId": "39b39475-d99e-4888-88c4-81a175af2185",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795335405555
+      },
+      {
+        "executionId": "39b39475-d99e-4888-88c4-81a175af2185",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795337086580
+      }
+    ],
+    "39.5 Re-measure 0.4.0 decode speed and report the result": [
+      {
+        "executionId": "39b39475-d99e-4888-88c4-81a175af2185",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795333247128
+      },
+      {
+        "executionId": "39b39475-d99e-4888-88c4-81a175af2185",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795337086786
+      },
+      {
+        "executionId": "ff7e027c-95b3-4ad9-abc0-8bb766d48864",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795445745441
+      }
+    ],
+    "39. Fast decode path for int8 modules": [
+      {
+        "executionId": "ff7e027c-95b3-4ad9-abc0-8bb766d48864",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795445745589
+      }
+    ],
+    "36. Broader comparison": [
+      {
+        "executionId": "ff7e027c-95b3-4ad9-abc0-8bb766d48864",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795449109323
       }
     ]
   }

@@ -654,8 +654,95 @@ The implementation language is Python (as used in the design). Property-based te
   - [x] 31.3 Release 0.3.0
     - Update the CHANGELOG, bump the version to 0.3.0, build, run `twine check`, smoke test in a fresh virtual environment with and without the fast extra, commit, push, and confirm CI passes; do not upload to PyPI
     - _Requirements: 36.5, 36.6, 36.7_
-- [-] 32. Final checkpoint - Ensure all tests pass
+- [x] 32. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
+- [x] 33. Decode profiling and fused kernels (speed)
+  - Demo: graph-mode decode on both models runs through the fused kernels and the per-kernel profile and measured speedup are in docs/BACKENDS.md.
+  - [x] 33.1 Profile graph-mode decode per kernel
+    - Add `scripts/profile_decode.py` that runs torch.profiler on graph-mode decode for Qwen2.5-0.5B and Qwen2.5-1.5B and write the per-kernel breakdown to docs/BACKENDS.md
+    - _Requirements: 37.1_
+  - [x] 33.2 Add the fused Triton kernels in the order the profile justifies
+    - Add under `quf/runtime/kernels/`: fused residual-add plus RMSNorm, fused RoPE plus KV-cache write, a flash-decode GQA attention kernel for M equal to 1 over the static cache with split-K over sequence length, an int4 and int8 lm_head GEMV so the output layer is no longer fp16, and greedy argmax on the GPU inside the graph with no host sync per token
+    - Sampling with temperature above 0 may stay on the host or use the Gumbel-max trick with a seeded Philox generator if it stays deterministic
+    - _Requirements: 37.2, 37.3, 37.4, 37.5_
+  - [x] 33.3 Gate, capture, and fall back
+    - Make every fused kernel capturable in a CUDA graph, fall back to the 0.3.0 path with one INFO line when unavailable, gate it by the same Triton_Gate, and never import it when QUF_NO_TRITON equals 1
+    - _Requirements: 37.6, 37.7, 37.8_
+  - [x] 33.4 Write property tests for the fused kernels
+    - **Property 38: Fused kernel equals unfused reference**
+    - **Property 39: Quantized lm_head GEMV equals the dequantized reference**
+    - **Property 40: Fused decode greedy tokens equal the 0.3.0 path**
+    - **Property 42: Seeded sampling is deterministic**
+    - Mark `triton`, and handle near ties as in tests/test_int4_greedy.py
+    - **Validates: Requirements 37.2, 37.3, 37.4, 37.5, 37.6, 37.7, 38.6**
+  - [x] 33.5 Measure speed against the targets
+    - Measure median graph-mode decode on both models and compare with 2 times the 0.3.0 rate (required) and the Q4_K_M rate (stretch); report the measured speedup honestly in docs/BACKENDS.md
+    - _Requirements: 37.9_
+- [x] 34. Embedding and lm_head quantization (size)
+  - Demo: `quf convert --embed-precision int8` writes a smaller QUF_V3 file that runs on all Backends, and fp16 files are unchanged.
+  - [x] 34.1 Add the Quantized_Embedding to the format
+    - Support per-row group-wise int4 (g32 or g64) and int8 tables with fp16 scales, row gather that dequantizes on the fly, and a tied lm_head through the int4 or int8 GEMV; write format version 3 only when needed, reject it cleanly in v1 and v2 readers, and keep v1 and v2 files loading
+    - _Requirements: 38.1, 38.2, 38.3, 38.4, 38.5, 38.6_
+  - [x] 34.2 Add the quantizer and converter options
+    - Add `--embed-precision fp16|int8|int4` to `quf convert` with the default set in 34.4, and RTN or GPTQ-like error compensation for the embedding and lm_head where cheap, recording the method in the file metadata
+    - _Requirements: 38.7, 38.8_
+  - [x] 34.3 Support all Backends and test the format
+    - Support the Quantized_Embedding in the cpu, torch_gpu, and triton_int4 Backends, and write property and unit tests for the round trip, dequantization equivalence, v1 and v2 loading, and unchanged fp16 files
+    - **Property 41: Quantized embedding round trip and row dequantization**
+    - **Validates: Requirements 38.1, 38.2, 38.5, 38.9, 38.10, 38.11**
+  - [x] 34.4 Run the size study and choose the defaults
+    - Under the llama protocol on both models, search Embed_Precision, mixed presets, and the int8 last-layer rule of size_b, choose the default so size and WikiText-2 Perplexity are at most Q4_K_M and C4 rises by at most 1 percent against 0.3.0, and record the best Pareto points honestly if no combination meets the target
+    - _Requirements: 39.1, 39.2, 39.3, 39.4_
+- [x] 35. Accuracy guard and improvements
+  - Demo: docs/RESULTS.md holds the lm-eval table and the effect of each quantizer improvement.
+  - [x] 35.1 Run the lm-eval accuracy guard
+    - With the new defaults, run hellaswag and arc_easy (limit 500, 0-shot, seed 1234) on both models for fp16 and QUF 0.4.0 and for Q4_K_M through the lm_eval gguf or llama-cpp backend if feasible on Windows, otherwise record "not run" with the reason
+    - _Requirements: 39.5, 39.6_
+  - [x] 35.2 Evaluate cheap quantizer improvements
+    - Evaluate 256 samples of 2048 tokens, a GPTQ damping sweep of 0.005, 0.01, and 0.05, per-layer group size selection by sensitivity, and true-sequential quantization within attention; keep only those that lower WikiText-2 Perplexity and record every result
+    - _Requirements: 39.7, 39.8_
+- [x] 36. Broader comparison
+  - Demo: docs/RESULTS.md and the README hold a Pareto_Table with a per-axis beats, ties, or loses statement.
+  - [x] 36.1 Produce the GGUF variants
+    - With eval_cache/llama_cpp tools, produce Q4_K_S, IQ4_XS with an imatrix from llama-imatrix on the WikiText-2 train calibration text, and Q5_K_M for both models
+    - _Requirements: 40.1, 40.2_
+  - [x] 36.2 Measure and write the Pareto table
+    - Measure WikiText-2 and C4 Perplexity under the llama protocol, file size, and GPU tok/s with llama-bench for every GGUF variant and QUF 0.4.0 on both models; write the Pareto_Table in docs/RESULTS.md and the README, state per axis whether QUF beats, ties, or loses, and state whether the Beat_Target was reached with no blanket claims
+    - _Requirements: 40.3, 40.4, 40.5, 40.8_
+  - [x] 36.3 Check scaling on Qwen2.5-3B
+    - If 16 GB of GPU memory allows, run QUF and Q4_K_M on Qwen2.5-3B; skip with a recorded reason if conversion or evaluation is too slow
+    - _Requirements: 40.6, 40.7_
+- [x] 37. Release 0.4.0
+  - Update the CHANGELOG, bump the version to 0.4.0, build, run `twine check`, smoke test in a fresh virtual environment with and without the fast extra, commit, push, and confirm CI passes; do not upload to PyPI
+  - _Requirements: 41.1, 41.2, 41.3, 41.4, 41.5_
+- [-] 38. Final checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+- [x] 39. Fast decode path for int8 modules
+  - Demo: the 0.4.0 default file decodes with no cuBLAS fp16 GEMV and no neg/cat/index_copy kernels in steady decode, and docs/BACKENDS.md holds the before and after tokens per second.
+  - Evidence (task 33.5, docs/BACKENDS.md "Decode speed against the Requirement 37 targets"): the 0.4.0 default preset size_f stores k_proj, v_proj, and the last layer as int8, and the fused fast path in quf/runtime/model.py (_build_fast_layers, _decode_layers_fused) handles only int4. Measured steady decode is 502 tok/s (0.5B) and 265 tok/s (1.5B) for the 0.4.0 file, against 806 and 354 for the 0.3.0 all-int4 file and 773 and 449 for Q4_K_M.
+  - [x] 39.1 Implement the Triton int8 per-output-channel GEMV for M equal to 1
+    - Add the Int8_Kernel in quf/runtime with the same epilogues as decode_gemv (bias add and scatter output index), fp32 accumulation, and CUDA graph capture support
+    - _Requirements: 42.1, 42.2_
+  - [x] 39.2 Add fast-path support for mixed int4 and int8 groups
+    - A qkv group that mixes int4 and int8 members runs as separate kernel calls into one scattered output buffer, or as one launch where that is simple, and the layer keeps the fused RoPE plus KV-cache write, add+RMSNorm, and Flash_Decode_Kernel
+    - Treat all-int8 layers (the last layer) and int8 gate_up and down modules as fast-path
+    - Log each remaining fallback once at DEBUG with the reason
+    - _Requirements: 42.3, 42.4, 42.5_
+  - [x] 39.3 Fix scripts/profile_decode_graph.py for quantized-embedding files and re-profile
+    - Handle m.embed equal to None for quantized-embedding files, re-profile the 1.5B 0.4.0 file, and record that no cuBLAS fp16 GEMV and no neg, cat, or index_copy kernel remains in steady decode
+    - _Requirements: 42.6_
+  - [x] 39.4 Write the equivalence property tests
+    - **Property 43: Fused fast path equals the unfused path on mixed-precision modules**
+    - On tiny models with mixed int4, int8, and fp16 modules, compare fused fast-path logits and greedy tokens with the unfused path using the near-tie helper tests/_greedy_compare.py
+    - Add a kernel-level property that compares the int8 GEMV with the fp32 reference
+    - **Validates: Requirements 42.1, 42.3, 42.4**
+  - [x] 39.5 Re-measure 0.4.0 decode speed and report the result
+    - Repeat the 33.5 method: alternating runs, median of 7, same session as the llama.cpp rows, power state recorded
+    - Targets: 0.5B at or above 773 tok/s (Q4_K_M), and 1.5B at or above 398 tok/s (1.5 times the pre-fix 265)
+    - If the int4 GEMV then dominates, tune _int4_gemv1_kernel for the in-model shapes and record before and after
+    - Record the measured numbers in docs/BACKENDS.md whether or not the targets are reached
+    - _Requirements: 42.7, 42.8_
+
 ## Notes
 
 - Tasks 26 and 27 add the speed and size work. They run before task 24.1, so release 0.2.1 includes them, and all of their sub-tasks are required
@@ -724,7 +811,21 @@ The implementation language is Python (as used in the design). Property-based te
     { "id": 48, "tasks": ["31.1"] },
     { "id": 49, "tasks": ["31.2"] },
     { "id": 50, "tasks": ["31.3"] },
-    { "id": 51, "tasks": ["32"] }
+    { "id": 51, "tasks": ["32"] },
+    { "id": 52, "tasks": ["33.1"] },
+    { "id": 53, "tasks": ["33.2", "34.1"] },
+    { "id": 54, "tasks": ["33.3", "34.2"] },
+    { "id": 55, "tasks": ["33.4", "34.3"] },
+    { "id": 56, "tasks": ["34.4", "35.2"] },
+    { "id": 57, "tasks": ["33.5", "35.1", "36.1"] },
+    { "id": 58, "tasks": ["39.1"] },
+    { "id": 59, "tasks": ["39.2"] },
+    { "id": 60, "tasks": ["39.3", "39.4"] },
+    { "id": 61, "tasks": ["39.5"] },
+    { "id": 62, "tasks": ["36.2"] },
+    { "id": 63, "tasks": ["36.3"] },
+    { "id": 64, "tasks": ["37"] },
+    { "id": 65, "tasks": ["38"] }
   ]
 }
 ```

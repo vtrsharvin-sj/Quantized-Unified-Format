@@ -77,7 +77,7 @@ def test_perm_mismatch_refuses_and_logs_once(caplog):
     reset_fusion_log()
     a = prepare_for_kernel(_qw(32, 256, 64, True, _shuffled_g_idx(256, 64, 1)))
     b = prepare_for_kernel(_qw(32, 256, 64, True, _shuffled_g_idx(256, 64, 2)))
-    with caplog.at_level(logging.INFO, logger="quf.runtime.kernels.fusion"):
+    with caplog.at_level(logging.DEBUG, logger="quf.runtime.kernels.fusion"):
         fw1 = fuse_projections([a, b], name="layer0.qkv")
         fw2 = fuse_projections([a, b], name="layer1.qkv")
     assert not fw1.is_fused and fw1.parts == (a, b) and not fw2.is_fused

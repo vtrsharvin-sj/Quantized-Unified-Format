@@ -108,10 +108,22 @@ class FusedProjection:
                 m.bias = self.bias[start : start + w]
             start += w
 
+    @staticmethod
+    def _group_name(modules: list[QUFLinear]) -> str | None:
+        """Group name such as `model.layers.3.self_attn.qkv` from member names `...q_proj` etc."""
+        names = [m.name for m in modules if getattr(m, "name", None)]
+        if len(names) != len(modules):
+            return None
+        parent = names[0].rpartition(".")[0]
+        leaves = [n.rpartition(".")[2] for n in names]
+        stems = [l[:-5] if l.endswith("_proj") else l for l in leaves]
+        sep = "" if all(len(s) == 1 for s in stems) else "_"
+        return (parent + "." if parent else "") + sep.join(stems)
+
     def _init_kernel(self, modules: list[QUFLinear]) -> None:
         from quf.runtime.kernels.fusion import fuse_projections  # noqa: PLC0415
 
-        self._kernel = fuse_projections([m.prepared for m in modules])
+        self._kernel = fuse_projections([m.prepared for m in modules], name=self._group_name(modules))
         self.prepared = self._kernel.fused
         self.bias = None
         self._part_modules = modules

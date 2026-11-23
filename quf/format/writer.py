@@ -1,4 +1,4 @@
-"""Writer for QUF v1 files.
+"""Writer for QUF files (versions 1, 2 and 3).
 
 Layout (little-endian): magic ``QUF1``, uint32 version, uint64 header length,
 UTF-8 JSON header, zero padding, then tensors at absolute offsets that are
@@ -16,7 +16,11 @@ import numpy as np
 from .constants import ALIGN, DTYPES, INT8_SUFFIX, MAGIC, PREFIX_SIZE, align_up
 from .errors import HeaderSchemaError
 from .schema import QUFHeader, TensorEntry
-from .validate import check_tensor_group_layout, required_version
+from .validate import (
+    check_quantized_embeddings,
+    check_tensor_group_layout,
+    required_version,
+)
 
 _FP16_ONLY_SUFFIXES = ("embed_tokens.weight", "lm_head.weight")
 
@@ -38,6 +42,13 @@ def _validate(header: QUFHeader, tensors: Mapping[str, np.ndarray]) -> None:
             header.quantization,
             {n: tuple(a.shape) for n, a in tensors.items()},
             lambda n: tensors[n],
+        )
+    except HeaderSchemaError as e:
+        raise ValueError(str(e)) from e
+    codes = {n: _dtype_code(n, a) for n, a in tensors.items()}
+    try:
+        check_quantized_embeddings(
+            header.quantization, {n: tuple(a.shape) for n, a in tensors.items()}, codes
         )
     except HeaderSchemaError as e:
         raise ValueError(str(e)) from e
@@ -100,7 +111,7 @@ def _layout(header: QUFHeader, entries: list[TensorEntry]) -> tuple[bytes, list[
 
 
 def write_quf(path, header: QUFHeader, tensors: Mapping[str, np.ndarray]) -> QUFHeader:
-    """Write a QUF file as version 1 or 2, whichever the features used require
+    """Write a QUF file as version 1, 2 or 3, whichever the features used require
     (see ``required_version``). The Tensor_Table is built from ``tensors`` (in mapping order);
     any entries already in ``header.tensors`` are ignored. Returns the header as written.
     """

@@ -78,13 +78,88 @@ def format_table(d: dict) -> str:
     return "\n".join(lines)
 
 
+# ----------------------------------------------------------------------------- v040 search (task 34.4)
+# name: (body preset, body group size, embed precision, embed group size, int8 lm_head stored separately)
+V040 = {
+    "b_e16": ("size_b", 32, "fp16", 64, False),  # = size_b, the 0.3.0 default
+    "b_e8g64": ("size_b", 32, "int8", 64, False),
+    "b_e8g32": ("size_b", 32, "int8", 32, False),
+    "b_e4g32": ("size_b", 32, "int4", 32, False),
+    "b_e4g64": ("size_b", 32, "int4", 64, False),
+    "b_e4g32_h8": ("size_b", 32, "int4", 32, True),
+    "b_e4g64_h8": ("size_b", 32, "int4", 64, True),
+    "c_e8g64": ("size_c", 32, "int8", 64, False),
+    "c_e4g32": ("size_c", 32, "int4", 32, False),
+    "c_e4g32_h8": ("size_c", 32, "int4", 32, True),
+    "b_bg64_e8g64": ("size_b", 64, "int8", 64, False),
+    "b_bg64_e4g32": ("size_b", 64, "int4", 32, False),
+    "b_bg64_e4g32_h8": ("size_b", 64, "int4", 32, True),
+    # task 34.4 step 1: budget-constrained mixed precision (all attention int8, plus tail down_proj)
+    "d_e8g64": ("size_d", 32, "int8", 64, False),
+    "e_e8g64": ("size_e", 32, "int8", 64, False),
+    "d_e4g32": ("size_d", 32, "int4", 32, False),
+    "d_e4g64": ("size_d", 32, "int4", 64, False),
+    "f_e8g64": ("size_f", 32, "int8", 64, False),
+    "g_e8g64": ("size_g", 32, "int8", 64, False),
+    "f_bg64_e8g64": ("size_f", 64, "int8", 64, False),
+    # task 35.2 quantizer improvements on the b_e8g64 base; 6th field = convert_checkpoint overrides
+    "q_cal256x1024": ("size_b", 32, "int8", 64, False, {"n_samples": 256, "seq_len": 1024}),
+    "q_cal128x2048": ("size_b", 32, "int8", 64, False, {"n_samples": 128, "seq_len": 2048}),
+    "q_cal256x2048": ("size_b", 32, "int8", 64, False, {"n_samples": 256, "seq_len": 2048}),
+    "q_damp005": ("size_b", 32, "int8", 64, False, {"damp": 0.005}),
+    "q_damp05": ("size_b", 32, "int8", 64, False, {"damp": 0.05}),
+    "q_cal256x2048_damp05": ("size_b", 32, "int8", 64, False, {"n_samples": 256, "seq_len": 2048, "damp": 0.05}),
+}
+
+
+def run_v040(model: str, name: str, windows: int, protocol: str, result_path: Path) -> int:
+    """Convert one v040 candidate, score it, write the row to ``result_path`` (runs in a subprocess)."""
+    import gc
+    import time
+
+    ba = _load_bench()
+    import quf.convert.converter as conv
+    from quf.bench.suite import _tokenizer_from_header
+    from quf.convert.precision import PrecisionPlan
+    from quf.runtime.model import QUFModel
+
+    preset, gs, eprec, egs, head8, *_x = V040[name]
+    extra = _x[0] if _x else {}
+    nl = conv.read_source_config(model).get("num_hidden_layers")
+    mixed = ["lm_head=int8"] if head8 else []
+    plan = PrecisionPlan.from_options(mixed, presets=[preset], num_layers=nl)
+    path = ba.CACHE / f"{ba.slug(model)}_v040_{name}.quf"
+    ba.CACHE.mkdir(exist_ok=True)
+    t = time.perf_counter()
+    conv.convert_checkpoint(model, path, group_size=gs, act_order=True, clip_search=True, overwrite=True,
+                            precision_plan=plan, embed_precision=eprec, embed_group_size=egs,
+                            embed_method="clip", **extra)
+    print(f"converted in {time.perf_counter() - t:.0f}s", flush=True)
+    gc.collect()
+    m = QUFModel.load(str(path), device_option="cuda", backend="torch_gpu")
+    ppls = ba._domain_ppls(m, _tokenizer_from_header(m.header), protocol, windows)
+    rec = {"run": name, "status": "done", "model": model, "body_preset": preset, "body_group_size": gs,
+           "embed_precision": eprec, "embed_group_size": egs if eprec != "fp16" else None,
+           "lm_head_int8": head8, "overrides": extra, "protocol": protocol, "windows": windows or "all",
+           "file_size_bytes": path.stat().st_size, **ppls}
+    result_path.write_text(json.dumps(rec, indent=2), encoding="utf-8")
+    print("RESULT", json.dumps(rec), flush=True)
+    path.unlink(missing_ok=True)
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--models", nargs="+", default=["Qwen/Qwen2.5-0.5B"])
     ap.add_argument("--only", nargs="+", choices=RUNS, help="run only these rows (default: all four)")
     ap.add_argument("--windows", type=int, default=0, help="score only the first N 2048-token windows (0 = all)")
     ap.add_argument("--table", action="store_true", help="print the table from the saved JSON and exit")
+    ap.add_argument("--v040-run", choices=list(V040), help="(internal) convert and score one v040 candidate")
+    ap.add_argument("--model", default="Qwen/Qwen2.5-0.5B")
+    ap.add_argument("--result", help="(internal) result JSON path for --v040-run")
     a = ap.parse_args(argv)
+    if a.v040_run:
+        return run_v040(a.model, a.v040_run, a.windows, PROTOCOL, Path(a.result))
     if a.table:
         print(format_table(load()))
         return 0

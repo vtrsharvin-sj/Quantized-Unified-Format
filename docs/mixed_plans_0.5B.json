@@ -1,0 +1,92 @@
+{
+ "model": "Qwen/Qwen2.5-0.5B",
+ "base_wiki": 12.422004101410801,
+ "base_c4": 21.74369318922729,
+ "plans": {
+  "vk": {
+   "globs": [
+    "*.v_proj",
+    "*.k_proj"
+   ],
+   "n_modules": 46,
+   "extra_mb": 2.072576,
+   "wiki": 12.287706025484372,
+   "c4": 21.408158502418374,
+   "wiki_vs_base_pct": -1.0811305070425492,
+   "c4_vs_base_pct": -1.5431356756595238
+  },
+  "vko": {
+   "globs": [
+    "*.v_proj",
+    "*.k_proj",
+    "*.o_proj"
+   ],
+   "n_modules": 69,
+   "extra_mb": 9.821184,
+   "wiki": 12.256592909976163,
+   "c4": 21.36801158769177,
+   "wiki_vs_base_pct": -1.3315982677533644,
+   "c4_vs_base_pct": -1.7277727305389456
+  },
+  "attn": {
+   "globs": [
+    "*.self_attn.*"
+   ],
+   "n_modules": 92,
+   "extra_mb": 17.569792,
+   "wiki": 12.251618399538378,
+   "c4": 21.356471006073946,
+   "wiki_vs_base_pct": -1.3716442248885685,
+   "c4_vs_base_pct": -1.7808482661316738
+  },
+  "attn_down0_5": {
+   "globs": [
+    "*.self_attn.*",
+    "*.layers.[0-5].mlp.down_proj"
+   ],
+   "n_modules": 98,
+   "extra_mb": 28.49536,
+   "wiki": 12.233388313887332,
+   "c4": 21.30259945184015,
+   "wiki_vs_base_pct": -1.5184006218613932,
+   "c4_vs_base_pct": -2.0286054146757215
+  },
+  "attn_down17_22": {
+   "globs": [
+    "*.self_attn.*",
+    "*.layers.1[7-9].mlp.down_proj",
+    "*.layers.2[0-2].mlp.down_proj"
+   ],
+   "n_modules": 98,
+   "extra_mb": 28.49536,
+   "wiki": 12.228994407231099,
+   "c4": 21.296534269213964,
+   "wiki_vs_base_pct": -1.5537725845524486,
+   "c4_vs_base_pct": -2.056499400179479
+  },
+  "attn_down0_9": {
+   "globs": [
+    "*.self_attn.*",
+    "*.layers.[0-9].mlp.down_proj"
+   ],
+   "n_modules": 102,
+   "extra_mb": 35.779072,
+   "wiki": 12.229344537385742,
+   "c4": 21.300150105978464,
+   "wiki_vs_base_pct": -1.5509539559979468,
+   "c4_vs_base_pct": -2.039870041344105
+  },
+  "attn_down_all": {
+   "globs": [
+    "*.self_attn.*",
+    "*.down_proj"
+   ],
+   "n_modules": 115,
+   "extra_mb": 59.451136,
+   "wiki": 12.182291173185163,
+   "c4": 21.2084857242387,
+   "wiki_vs_base_pct": -1.929744397672617,
+   "c4_vs_base_pct": -2.461437715897108
+  }
+ }
+}

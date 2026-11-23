@@ -36,13 +36,7 @@ def test_group_size_error(group_size):
     assert "100" in str(exc.value) and str(group_size) in str(exc.value)
 
 
-@given(
-    seed=st.integers(0, 10_000),
-    group_size=st.sampled_from([32, 64, 128]),
-    symmetric=st.booleans(),
-)
-def test_clipping_no_worse_than_rtn(seed, group_size, symmetric):
-    """Feature: quf-quantized-format, Property 26: MSE clipping is no worse than RTN, same layout."""
+def _assert_clipping_no_worse(seed, group_size, symmetric):
     gen = torch.Generator().manual_seed(seed)
     w = torch.randn(8, 256, generator=gen) * torch.rand(8, 256, generator=gen) ** 3
     rtn = quantize_groupwise(w, group_size, symmetric)
@@ -55,10 +49,27 @@ def test_clipping_no_worse_than_rtn(seed, group_size, symmetric):
         d = reference_dequantize(qw).to(torch.float32) - w
         return (d**2).reshape(8, 256 // group_size, group_size).sum(-1)
 
-    # The reference output is rounded to fp16 (relative step 2**-11), so allow that slack.
-    slack = group_size * (w.abs().max().item() * 2**-10) ** 2
-    assert bool((err(clipped) <= err(rtn) + slack).all())
+    # Strict: the clip search ranks candidates by the error of the fp16 weights that
+    # reference_dequantize returns, so the result is never worse than RTN (only float32 sum noise).
+    e_rtn = err(rtn)
+    assert bool((err(clipped) <= e_rtn * (1 + 1e-5) + 1e-9).all())
 
+
+@given(
+    seed=st.integers(0, 10_000),
+    group_size=st.sampled_from([32, 64, 128]),
+    symmetric=st.booleans(),
+)
+def test_clipping_no_worse_than_rtn(seed, group_size, symmetric):
+    """Feature: quf-quantized-format, Property 26: MSE clipping is no worse than RTN, same layout."""
+    _assert_clipping_no_worse(seed, group_size, symmetric)
+
+
+@pytest.mark.parametrize("seed,group_size,symmetric", [(9601, 32, True)])
+def test_clipping_no_worse_than_rtn_regression(seed, group_size, symmetric):
+    """Hypothesis-found case: the search used to rank ratios by fp32 error, but the weights that
+    reference_dequantize returns are rounded to fp16, which flipped a near-tie to a worse ratio."""
+    _assert_clipping_no_worse(seed, group_size, symmetric)
 
 def test_g_idx_selects_group_params():
     w = torch.randn(8, 128)

@@ -1,4 +1,42 @@
 # Changelog
+## 0.4.0
+Fused decode, quantized embedding and new defaults release. The default `quf convert` output is now QUF format version 3, so 0.3.0 and older readers reject it. Versions 1 and 2 still open.
+### Format and conversion
+- **Quantized embedding and `lm_head` (format version 3).** The embedding table, and an untied `lm_head`, are stored per row as int8 (default) or int4 with fp16 group scales. New `quf convert` options: `--embed-precision {fp16,int8,int4}` (default `int8`), `--embed-group-size {32,64}` (default 64) and `--embed-method {clip,rtn}` (default `clip`). `clip` is a conversion option only: the header records `"method": "rtn"` plus `"clip_search": true` (the format allows only `rtn` and `gptq`, unchanged), and `quf info` shows "rtn + clip search". `--embed-precision fp16` writes a version 1 or 2 file as before. The int4 embedding was not chosen: on 1.5B it raised WikiText-2 perplexity to 8.93 against 8.45 for int8. Every backend keeps the table packed (no fp16 copy); `quf info` prints the embedding precision.
+- **New default preset `size_f`.** `k_proj`, `v_proj` and the whole last layer at int8, everything else int4 (g32, act-order, clip search). It replaces `size_b`. Presets `size_d`, `size_e`, `size_f` and `size_g` are new; `--preset size_b` still reproduces the 0.3.0 body. Chosen in the size study in `docs/ACCURACY.md`: `k_proj` and `v_proj` are small under GQA, so int8 costs about 2 MB on 0.5B and removes about 1% of perplexity.
+- **Clip-search fix (changes conversion output).** The clip search now ranks candidate clipping ratios by the error of the fp16-rounded dequantized weights, the same rounding `reference_dequantize` applies, instead of the unrounded values. Files converted with 0.4.0 differ from files converted with 0.3.0 using identical options. Existing files are not affected.
+### Runtime speed
+- **Fused decode kernels on `triton_int4`:** add+RMSNorm, RoPE plus KV-cache write, flash-decode attention, and on-device greedy argmax with a lazy EOS check (the end-of-sequence test runs every few tokens, not every token, and surplus tokens are trimmed). They run inside the CUDA graph. `QUF_NO_FUSED=1` disables them and keeps the 0.3.0 decode path.
+- **Int8 GEMV and mixed int4/int8 fast path.** A Triton int8 per-output-channel GEMV for M = 1 (fp32 accumulation, bias and scatter epilogues, graph capturable). A fused qkv or gate/up group that mixes int4 and int8 members runs as separate kernel calls into one scattered output buffer, so the 0.4.0 default file keeps the fused RoPE+KV write and flash-decode on every layer instead of falling back to cuBLAS fp16 GEMV.
+- **j-major int4 GEMV tuning.** Per-shape `(BLOCK_N, NGB, num_warps, num_stages, SPLIT)` configs, including split-K for the `down` projections, chosen by whole-graph decode time. In the interleaved lab run this is about 14% faster steady decode on 1.5B and about 2% on 0.5B (within noise).
+- **Fused-path fallback fixes.** If any fused kernel raises on its first call or at graph capture, the whole decode step returns to the 0.3.0 path with one INFO line and the same greedy tokens. The quantized `lm_head` GEMV falls back on its own to chunked dequantization. Gate and fallback tests are in `tests/test_fused_fallback.py`.
+### Tests
+- Shared near-tie helper `tests/_greedy_compare.py`: loads a real file with and without the fused path, compares 4 prompts x 64 greedy tokens and the logits, and accepts a token difference only where the top-2 reference logits are closer than the near-tie gap. New tests cover the fused kernels, the int8 GEMV, mixed groups, format v3 and the quantized embedding.
+### Measured results (RTX 5080 Laptop, native Windows, Qwen2.5, `llama` perplexity protocol)
+Details: `docs/RESULTS.md` and `docs/bench_accuracy.json`. Steady-state decode tok/s, `triton_int4` with CUDA graph, 128 new tokens, median of 7 runs (min-max), all rows in one interleaved session **on battery power**, llama.cpp `llama-bench tg128`.
+
+| Model | QUF 0.4.0 | Q4_K_M | Q4_K_S | IQ4_XS-imat | Q5_K_M |
+|---|---|---|---|---|---|
+| 0.5B | 662 (658-666) | 494 (459-510) | 496 (486-538) | 496 (489-523) | 506 (483-534) |
+| 1.5B | 283 (263-285) | 274 (268-279) | 282 (270-287) | 274 (270-278) | 248 (242-251) |
+
+| Model | Format | Size MB | WikiText-2 | C4 |
+|---|---|---:|---:|---:|
+| 0.5B | fp16 | 988.1 | 11.740 | 18.239 |
+| 0.5B | QUF 0.4.0 | 367.9 | 11.987 (+2.10%) | 18.777 (+2.94%) |
+| 0.5B | Q4_K_M | 397.8 | 12.043 | 18.724 |
+| 1.5B | fp16 | 3087.4 | 8.296 | 13.476 |
+| 1.5B | QUF 0.4.0 | 1040.0 | 8.420 (+1.49%) | 13.763 (+2.13%) |
+| 1.5B | Q4_K_M | 986.0 | 8.600 | 13.954 |
+| 3B | QUF 0.4.0 | 1987.4 | 7.291 | 12.154 |
+| 3B | Q4_K_M | 1929.9 | 7.465 | 12.311 |
+
+- Compared with the 0.3.0 `size_b` default in its own session: 0.5B 284 and 1.5B 146 tok/s (different session and clock state, so not a like-for-like ratio).
+- **0.5B:** the file is 7.5% smaller than Q4_K_M, WikiText-2 is 0.46% better and decode is 1.34x faster (ranges do not overlap). **C4 is a loss:** 18.777 against 18.724 (+0.28%) for Q4_K_M, and +0.99% against the imatrix Q4_K_M. Beat_Target is reached only by the WikiText-2 definition.
+- **1.5B is larger than Q4_K_M:** 1040.0 against 986.0 MB (+5.5%), also larger than Q4_K_S (+10.6%) and IQ4_XS (+16.1%). Perplexity is better than plain Q4_K_M on both sets (-2.09% and -1.37%) and speed ties with every variant except Q5_K_M (1.14x). Beat_Target is **not reached**. The 1.5B 398 tok/s speed target in the spec was also not reached (283).
+- **3B is larger and slower** (one run, on AC power): +3.0% size and 190.7 against 236.0 tok/s end to end (229.1 steady-state, 3% lower), with better perplexity (-2.3% WikiText-2, -1.3% C4). Beat_Target is **not reached**.
+- lm-evaluation-harness (hellaswag, arc_easy, 500 examples each): within one standard error of fp16 on every score for 0.5B and 1.5B.
+- **Caveats.** The 0.5B and 1.5B speed numbers come from one battery-powered session and the 3B speed from one AC session. Different engines, so speed is not like for like. The same-session ranges overlap for most 1.5B comparisons, which is why they are called ties.
 ## 0.3.0
 Int4 GPU backend release. The file format is unchanged (versions 1 and 2).
 ### Runtime speed and memory

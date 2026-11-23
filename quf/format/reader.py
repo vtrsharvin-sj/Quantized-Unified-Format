@@ -1,4 +1,4 @@
-"""QUF reader (versions 1 and 2): validates a file and exposes zero-copy memory-mapped tensors."""
+"""QUF reader (versions 1, 2 and 3): validates a file and exposes zero-copy memory-mapped tensors."""
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ from .errors import (  # noqa: F401  (re-exported for convenience)
     UnsupportedVersionError,
 )
 from .schema import QUFHeader, TensorEntry
-from .validate import check_tensor_group_layout
+from .validate import check_quantized_embeddings, check_tensor_group_layout, has_quantized_embedding
 
 
 class QUFReader:
@@ -104,6 +104,18 @@ class QUFReader:
             {t.name: tuple(t.shape) for t in header.tensors},
             self.tensor,
         )
+        # 8. version 3 field: Quantized_Embedding
+        check_quantized_embeddings(
+            header.quantization,
+            {t.name: tuple(t.shape) for t in header.tensors},
+            {t.name: t.dtype for t in header.tensors},
+        )
+        if version < 3 and has_quantized_embedding(
+            header.quantization, (t.name for t in header.tensors)
+        ):
+            raise HeaderSchemaError(
+                f"a quantized embedding requires format version 3, file version is {version}"
+            )
         return header
 
     # -- access -----------------------------------------------------------

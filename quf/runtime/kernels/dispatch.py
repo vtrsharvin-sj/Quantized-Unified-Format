@@ -26,14 +26,18 @@ log = logging.getLogger(__name__)
 
 def route_summary(prepared_weights) -> str:
     """One line such as ``int4 kernel: 161 modules; cached fp16: 7 (int8)`` for a model load."""
-    n4 = 0
+    n4 = n8 = 0
     reasons: dict[str, int] = {}
     for p in prepared_weights:
         if isinstance(p, Int4Layout):
             n4 += 1
+        elif isinstance(p, Int8KernelWeight):
+            n8 += 1
         elif isinstance(p, CachedFp16Weight):
             reasons[p.reason] = reasons.get(p.reason, 0) + 1
     out = f"int4 kernel: {n4} modules"
+    if n8:
+        out += f"; int8 kernel: {n8} modules"
     if reasons:
         detail = ", ".join(f"{k} x{v}" if len(reasons) > 1 else k for k, v in sorted(reasons.items()))
         out += f"; cached fp16: {sum(reasons.values())} ({detail})"
@@ -54,6 +58,25 @@ class CachedFp16Weight:
     @property
     def in_features(self) -> int:
         return int(self.weight.shape[1])
+
+
+@dataclass
+class Int8KernelWeight:
+    """int8 ``q`` ``[out, in]`` and fp16 per-output-channel ``scales`` ``[out]``, kept resident as
+    int8 (half the bytes of a cached fp16 weight). M = 1 decode on the fast path reads it through
+    ``gemv_int8``; every other call dequantizes it on the fly."""
+
+    q: torch.Tensor
+    scales: torch.Tensor
+    reason: str = "int8"
+
+    @property
+    def out_features(self) -> int:
+        return int(self.q.shape[0])
+
+    @property
+    def in_features(self) -> int:
+        return int(self.q.shape[1])
 
 
 def _fallback(weight: torch.Tensor, name: str | None, reason: str) -> CachedFp16Weight:
@@ -86,17 +109,33 @@ def prepare_for_kernel(weight, name: str | None = None, device=None) -> Int4Layo
             )
         return layout
     if isinstance(weight, Int8Weight):
-        return _fallback(dequantize_int8_weight(weight, device), name, "int8")
+        q, s = weight.q, weight.scales
+        if device is not None:
+            q, s = q.to(device), s.to(device)
+        return Int8KernelWeight(q.contiguous(), s.to(torch.float16).contiguous())
     if isinstance(weight, torch.Tensor):
         w = weight if device is None else weight.to(device)
         return _fallback(w, name, "fp16")
     raise TypeError(f"cannot prepare weight of type {type(weight).__name__}")
 
 
-def kernel_linear(x: torch.Tensor, prepared: Int4Layout | CachedFp16Weight) -> torch.Tensor:
+def _dequantize_int8_kernel_weight(w: Int8KernelWeight, dtype: torch.dtype, m: int) -> torch.Tensor:
+    """fp16 ``q * scale`` (the value ``dequantize_int8`` gives). Prefill (M > 16) reuses the shared
+    buffer; decode-sized calls use a transient tensor, which is safe inside a CUDA graph capture."""
+    s = w.scales.unsqueeze(1)
+    if m > MAX_GEMV_M:
+        n = w.q.numel()
+        buf = _prefill_buffer(n, w.q.device)[:n].view(w.q.shape)
+        return torch.mul(w.q, s, out=buf).to(dtype)
+    return (w.q * s).to(dtype)
+
+
+def kernel_linear(x: torch.Tensor, prepared: Int4Layout | CachedFp16Weight | Int8KernelWeight) -> torch.Tensor:
     """``x @ W.T`` for a prepared weight. ``x`` is ``[..., K]``."""
     if isinstance(prepared, CachedFp16Weight):
         return F.linear(x, prepared.weight.to(x.dtype) if prepared.weight.dtype != x.dtype else prepared.weight)
+    if isinstance(prepared, Int8KernelWeight):
+        return F.linear(x, _dequantize_int8_kernel_weight(prepared, x.dtype, x.shape[:-1].numel()))
     if isinstance(prepared, Int4Layout):
         lead = x.shape[:-1]
         x2 = x.reshape(-1, x.shape[-1])

@@ -1,4 +1,4 @@
-"""Header schema for QUF (versions 1 and 2) and its JSON (de)serialization."""
+"""Header schema for QUF (versions 1, 2 and 3) and its JSON (de)serialization."""
 
 from __future__ import annotations
 
@@ -86,6 +86,16 @@ class QUFHeader:
     def modules(self) -> dict[str, str]:
         """Per-module precision map (``int4``, ``int8``, ``fp16``); empty when absent."""
         return self.quantization.get("modules") or {}
+
+    @property
+    def embedding(self) -> dict | None:
+        """Quantized_Embedding declaration (``name``, ``bits``, ``group_size``, ``method``), or None."""
+        return self.quantization.get("embedding")
+
+    @property
+    def lm_head_embedding(self) -> dict | None:
+        """Separate quantized lm_head declaration; None when tied or stored as fp16."""
+        return self.quantization.get("lm_head")
 
     def to_dict(self) -> dict[str, Any]:
         return {

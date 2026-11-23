@@ -1,7 +1,7 @@
 """Default precision preset of `quf convert` (Requirement 32, task 27.4).
 
-The default is size_b: last-layer modules int8, everything else (including down_proj) int4,
-with group size 32 and act-order. No new bit width was added, so there is no new dtype test.
+The default is size_f (task 34.4): k_proj, v_proj and the last layer int8, the other MLP
+modules (including down_proj) int4, with group size 32, act-order and an int8 embedding (group 64). No new bit width was added, so there is no new dtype test.
 """
 import contextlib
 import io
@@ -26,6 +26,7 @@ DOWN0 = "model.layers.0.mlp.down_proj"
 DOWN1 = "model.layers.1.mlp.down_proj"
 Q0 = "model.layers.0.self_attn.q_proj"
 Q1 = "model.layers.1.self_attn.q_proj"
+K0 = "model.layers.0.self_attn.k_proj"
 
 
 def _tiny_dir(tmp_path):
@@ -65,35 +66,41 @@ def _convert(tmp_path, name, *extra):
 
 
 def test_default_preset_constant_and_plan():
-    assert cli.DEFAULT_PRESET == "size_b"
+    assert cli.DEFAULT_PRESET == "size_f" and cli.DEFAULT_EMBED_PRECISION == "int8"
     plan = PrecisionPlan.from_options(presets=[cli.DEFAULT_PRESET], num_layers=4)
     assert plan.precision("model.layers.3.mlp.down_proj") == "int8"  # last layer
-    assert plan.precision("model.layers.3.self_attn.q_proj") == "int8"
+    assert plan.precision("model.layers.3.self_attn.q_proj") == "int8"  # last layer
     assert plan.precision("model.layers.0.mlp.down_proj") == "int4"
+    assert plan.precision("model.layers.0.mlp.up_proj") == "int4"
     assert plan.precision("model.layers.0.self_attn.q_proj") == "int4"
+    assert plan.precision("model.layers.0.self_attn.o_proj") == "int4"
+    assert plan.precision("model.layers.0.self_attn.k_proj") == "int8"  # k and v are int8 in every layer
+    assert plan.precision("model.layers.0.self_attn.v_proj") == "int8"
 
 
-def test_help_names_size_b_default(capsys):
+def test_help_names_size_f_default(capsys):
     try:
         main(["convert", "--help"])
     except SystemExit:
         pass
     out = " ".join(capsys.readouterr().out.split())
-    assert "Default when no --preset, --mixed or --int8-modules is given: size_b" in out
+    assert "Default when no --preset, --mixed or --int8-modules is given: size_f" in out
+    assert "default: int8" in out
     assert "sensitive (down_proj and the last layer at int8; the v020 plan)" in out
 
 
-def test_default_convert_applies_size_b(tmp_path, cpu_run):
+def test_default_convert_applies_size_f(tmp_path, cpu_run):
     out = _convert(tmp_path, "default.quf")
     with QUFReader(out) as r:
         q = r.header.quantization
         names = {t.name for t in r.header.tensors}
         assert q["group_size"] == 32 and q["act_order"] is True
         mods = q["modules"]
-        # last layer (index 1) is int8, other layers and every down_proj outside it are int4
-        assert mods[Q1] == "int8" and mods[DOWN1] == "int8"
-        assert mods.get(DOWN0, "int4") == "int4" and mods.get(Q0, "int4") == "int4"
-        assert f"{Q1}.qweight_int8" in names
+        # k_proj and v_proj are int8 in every layer, last layer (index 1) is int8, the rest is int4
+        assert mods[Q1] == "int8" and mods[DOWN1] == "int8" and mods[K0] == "int8" and mods.get(Q0, "int4") == "int4"
+        assert mods.get(DOWN0, "int4") == "int4" and mods.get("model.layers.0.mlp.up_proj", "int4") == "int4"
+        assert f"{Q1}.qweight_int8" in names and f"{K0}.qweight_int8" in names
+        assert q["embedding"]["bits"] == 8 and q["embedding"]["group_size"] == 64  # int8 g64 embedding
         # down_proj in layer 0 is int4 group 32 with act-order (g_idx present)
         assert f"{DOWN0}.qweight" in names and f"{DOWN0}.g_idx" in names
         d0 = next(t for t in r.header.tensors if t.name == f"{DOWN0}.scales")

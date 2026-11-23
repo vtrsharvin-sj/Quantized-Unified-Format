@@ -20,13 +20,15 @@ def _int8(n=32, k=256):
     return Int8Weight(q, s)
 
 
-def test_int8_routes_to_cached_fp16_and_logs(caplog):
+def test_int8_stays_int8_and_linear_matches_dequantized():
+    from quf.runtime.kernels import Int8KernelWeight
+
     w8 = _int8()
-    with caplog.at_level(logging.DEBUG, logger="quf.runtime.kernels.dispatch"):
-        p = prepare_for_kernel(w8, name="model.layers.23.mlp.down_proj")
-    assert isinstance(p, CachedFp16Weight) and p.weight.dtype == torch.float16
-    assert "model.layers.23.mlp.down_proj" in caplog.text
-    torch.testing.assert_close(p.weight, dequantize_int8(w8.q, w8.scales))
+    p = prepare_for_kernel(w8, name="model.layers.23.mlp.down_proj")
+    assert isinstance(p, Int8KernelWeight) and p.q.dtype == torch.int8 and p.scales.dtype == torch.float16
+    assert torch.equal(p.q, w8.q)
+    x = torch.randn(3, p.in_features).half()
+    torch.testing.assert_close(kernel_linear(x, p), F.linear(x, dequantize_int8(w8.q, w8.scales)))
 
 
 def test_fp16_routes_to_cached_fp16():
@@ -116,7 +118,9 @@ def test_gpu_mixed_routing_matches_reference():
     x = torch.randn(3, 256, device="cuda").half()
     p8 = prepare_for_kernel(w8, device="cuda")
     p4 = prepare_for_kernel(qw, device="cuda")
-    assert isinstance(p8, CachedFp16Weight) and isinstance(p4, Int4Layout)
+    from quf.runtime.kernels import Int8KernelWeight
+
+    assert isinstance(p8, Int8KernelWeight) and isinstance(p4, Int4Layout)
     ref8 = F.linear(x.float(), dequantize_int8(w8.q, w8.scales).float().cuda())
     torch.testing.assert_close(kernel_linear(x, p8).float(), ref8, atol=2e-2, rtol=2e-2)
     ref4 = F.linear(x.float(), reference_dequantize(qw).float().cuda())
@@ -137,4 +141,4 @@ def test_route_summary_counts():
 
     p4 = prepare_for_kernel(quantize_groupwise(torch.randn(64, 256), group_size=128, symmetric=True))
     p8 = prepare_for_kernel(_int8())
-    assert route_summary([p4, p4, p8]) == "int4 kernel: 2 modules; cached fp16: 1 (int8)"
+    assert route_summary([p4, p4, p8]) == "int4 kernel: 2 modules; int8 kernel: 1 modules"

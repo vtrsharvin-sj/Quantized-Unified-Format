@@ -937,3 +937,147 @@ For any prompt, prompt length, and generation length on a tiny model with random
 Property-based testing applies because the kernel, the repack, and the selector are functions of structured inputs. Use Hypothesis, with at least 100 iterations per property, and tag each test `Feature: quf-quantized-format, Property N: <text>`. Property 35 and Property 37 need a GPU and Triton, so they carry the `triton` marker and CI skips them. Property 36 is a pure function and runs in CPU CI.
 
 Unit and integration tests cover: the Triton_Gate with a mocked missing import, the Self_Test failure path, int8 fallback routing, the Prefill_Path boundary at M equal to 16 and 17, CUDA graph capture and replay of the kernel, fused weight shapes, the whole-model logits check on the real 0.5B file, and the `quf[fast]` extra metadata. Speed, memory, and perplexity are measured with scripts and recorded in docs/BACKENDS.md and docs/RESULTS.md, not asserted in tests.
+
+## Beat Q4_K_M Extension Design (release 0.4.0)
+
+### Overview
+
+With CUDA graphs on Qwen2.5-1.5B, the int4 GEMVs take 1.5 to 2 ms of the 6 ms per token. The rest is attention, RMSNorm, RoPE, residual adds, the fp16 lm_head, sampling, and launch gaps. The 0.5B file also holds a 272 MB fp16 tied embedding. This extension fuses the small decode operations, quantizes the embedding and lm_head, and measures the result against GGUF Q4_K_M, Q4_K_S, IQ4_XS, and Q5_K_M.
+
+Decisions and rationale:
+
+| Decision | Rationale |
+|---|---|
+| Profile first, then write kernels in the order the profile justifies | Avoids writing kernels for operations that cost little. |
+| Flash-decode with split-K over sequence length | M equal to 1 leaves the GPU under-occupied unless the sequence is split across blocks. |
+| Quantized lm_head through the existing int4 and int8 GEMV | Reuses a tested kernel and cuts the largest tensor read per token. |
+| GPU argmax inside the graph | Removes the per-token host sync. |
+| Gumbel-max sampling with a seeded Philox generator is optional | Host sampling is acceptable when it stays deterministic and simpler. |
+| Format version 3 only when a Quantized_Embedding is present | fp16 files stay readable by old readers and byte-identical in tensor data. |
+| Default Embed_Precision chosen by measurement | The choice must satisfy the Beat_Target size and Perplexity limits or the best Pareto points are reported. |
+| Every kernel sits behind the Gate with a fallback to the 0.3.0 path | Matches the 0.3.0 safety rules. |
+
+### Architecture
+
+```mermaid
+flowchart TD
+    Tok[Token id] --> Emb[Embedding row gather and dequant]
+    Emb --> RN[Fused residual-add and RMSNorm]
+    RN --> QKV[Int4 GEMV for QKV]
+    QKV --> RK[Fused RoPE and KV-cache write]
+    RK --> FD[Flash_Decode_Kernel split-K and merge]
+    FD --> OP[Int4 GEMV for output projection]
+    OP --> RN2[Fused residual-add and RMSNorm]
+    RN2 --> MLP[Int4 GEMV MLP]
+    MLP --> RN3[Fused residual-add and final RMSNorm]
+    RN3 --> LM[Quantized lm_head GEMV]
+    LM --> AM[GPU argmax or seeded sampling]
+    AM --> Tok
+    Gate[Triton_Gate] -.->|fails| Old[0.3.0 path]
+```
+
+### Components and Interfaces
+
+- `quf/runtime/kernels/` holds the new Triton kernels: `add_rmsnorm(x, residual, weight, eps, out, residual_out)`, `rope_kv_write(q, k, v, cos, sin, cache_k, cache_v, pos)`, `flash_decode(q, cache_k, cache_v, seq_len, out)` with a split stage and a merge stage, `lm_head_gemv` reusing the int4 and int8 GEMV, `argmax_token(logits, out_token)`, and `gumbel_sample(logits, temperature, seed, step, out_token)`. All launchers write into buffers allocated at prepare time so graph capture performs no allocation.
+- `quf/backends/triton_int4.py` routes each operation to its fused kernel when the Gate passes and to the 0.3.0 operation otherwise, logging the reason once at INFO level.
+- `scripts/profile_decode.py` runs torch.profiler on graph-mode decode and writes the per-kernel table into docs/BACKENDS.md.
+- `quf/format` gains the Quantized_Embedding tensor kind and a version 3 header rule. `quf/quant/embedding.py` quantizes the table per row in groups of 32 or 64, with RTN or GPTQ-like error compensation. `quf convert --embed-precision fp16|int8|int4` selects the precision.
+- The cpu and torch_gpu Backends dequantize embedding rows and apply the tied lm_head through a dequantized matmul. The triton_int4 Backend applies the lm_head through the int4 or int8 GEMV.
+- `scripts/size_study.py`, `scripts/quality_eval.py`, and `scripts/compare_gguf.py` run the size search, the lm-eval guard, and the GGUF comparison, and write docs/RESULTS.md and the README table.
+
+### Data Models
+
+- Quantized embedding tensor: `packed` (two int4 values per byte or one int8 value per element), `scales` (fp16, shape `[vocab, hidden / group_size]`), `group_size` (32 or 64), `bits` (4 or 8), and `method` (`rtn` or `gptq`) in the file metadata.
+- Header version field: 3 when a Quantized_Embedding is present, otherwise unchanged from 0.3.0.
+- Pareto_Table row: `{model, variant, size_mb, wikitext2_ppl, c4_ppl, tok_per_s, notes}`, stored in docs/bench_pareto.json and rendered into docs/RESULTS.md.
+
+### Error Handling
+
+| Condition | Behavior |
+|---|---|
+| Reader of version 1 or 2 opens a QUF_V3 file | Clear error naming the unsupported version |
+| Fused kernel unavailable or Gate fails | 0.3.0 path for that operation, one INFO line |
+| Graph capture fails | Existing eager fallback |
+| lm_eval cannot run the Q4_K_M row on Windows | Row recorded as "not run" with the reason |
+| Qwen2.5-3B conversion or evaluation too slow | 3B run skipped, reason recorded |
+| No size combination meets the targets | Best Pareto points recorded with the missed target |
+
+## Beat Q4_K_M Correctness Properties
+
+*A property is a characteristic or behavior that should hold true across all valid executions of a system-essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
+
+### Property 38: Fused kernel equals unfused reference
+
+For any hidden size, head count, KV head count, head dimension, sequence length, position, and fp16 inputs, the fused residual-add plus RMSNorm, the fused RoPE plus KV-cache write, and the Flash_Decode_Kernel each equal their unfused fp32 reference within an absolute tolerance of 1e-2 plus a relative tolerance of 2e-3, and the Flash_Decode_Kernel result does not depend on the split-K chunk count.
+
+**Validates: Requirements 37.2, 37.6**
+
+### Property 39: Quantized lm_head GEMV equals the dequantized reference
+
+For any vocabulary size, hidden size, Embed_Precision of int4 or int8, group size of 32 or 64, and hidden state, the quantized lm_head GEMV equals the dequantized weight times the hidden state computed in fp32 within an absolute tolerance of 1e-2 plus a relative tolerance of 2e-3, and the GPU argmax token equals the argmax of that reference except where the top two reference logits differ by less than the tolerance.
+
+**Validates: Requirements 37.3, 37.4, 38.6**
+
+### Property 40: Fused decode greedy tokens equal the 0.3.0 path
+
+For any prompt, prompt length, and generation length on a tiny model with random quantized weights, greedy decoding with the Fused_Decode_Kernels selects the same tokens as the 0.3.0 path, with and without the CUDA_Graph_Decoder, where a position whose top two reference logits differ by less than the tolerance is accepted as a near tie as in tests/test_int4_greedy.py.
+
+**Validates: Requirements 37.2, 37.4, 37.6, 37.7**
+
+### Property 41: Quantized embedding round trip and row dequantization
+
+For any vocabulary size, hidden size, Embed_Precision of int4 or int8, and group size of 32 or 64, writing a Quantized_Embedding to a QUF_V3 file and reading it back returns the same quantized values, scales, and shape, and the on-the-fly row gather equals the corresponding row of the full dequantized table on every Backend.
+
+**Validates: Requirements 38.1, 38.2, 38.5, 38.9, 38.11**
+
+### Property 42: Seeded sampling is deterministic
+
+For any logits vector, temperature above 0, seed, and step, sampling twice with the same seed returns the same token, and the GPU Gumbel-max sampler equals the host reference that uses the same Philox noise.
+
+**Validates: Requirements 37.5**
+
+## Beat Q4_K_M Testing Strategy
+
+Property-based testing applies to the kernels, the quantized embedding, and the sampler because they are functions of structured inputs. Use Hypothesis, with at least 100 iterations per property, and tag each test `Feature: quf-quantized-format, Property N: <text>`. Properties 38, 39, 40, and 42 need a GPU and Triton, so they carry the `triton` marker and CI skips them. The format part of Property 41 runs on CPU in CI.
+
+Unit and integration tests cover: reading a QUF_V3 file with a version 1 or 2 reader stub, loading v1 and v2 files with the current reader, byte-identical tensor data for `--embed-precision fp16`, the `--embed-precision` option parsing, graph capture and replay of each fused kernel, the fallback to the 0.3.0 path when the Gate fails, and the QUF_NO_TRITON import guard. Profiling, size study, lm-eval, GGUF comparison, and speed are measured by scripts and recorded in docs/BACKENDS.md and docs/RESULTS.md, not asserted in tests.
+
+## Int8 Fast Decode Extension Design (release 0.4.0)
+
+### Overview
+
+This section extends the Beat Q4_K_M design for Requirement 42. The fused fast path in `quf/runtime/model.py` (`_build_fast_layers`, `_decode_layers_fused`) accepts only int4 modules. A layer with any int8 module falls back to cuBLAS fp16 GEMV and the unfused neg/cat/index_copy RoPE and KV write. The 0.4.0 default stores k_proj, v_proj, and the last layer as int8, so most layers hit the fallback.
+
+### Int8_Kernel
+
+A Triton kernel for M equal to 1. Each program computes a block of output channels, reads the int8 weight rows, multiplies by the fp16 activation, accumulates in fp32, multiplies by the per-output-channel scale, and applies the same epilogues as `decode_gemv`: optional bias add and an optional scatter index that places each output channel in a destination buffer. It uses no data-dependent host control flow, so CUDA graph capture works.
+
+### Mixed groups
+
+`_build_fast_layers` classifies each module as int4, int8, or other. For a Mixed_Group it keeps one output buffer sized for the whole group and one kernel call per precision subset, each with a scatter index into that buffer. A single launch is used only if it is simple. A layer stays on the Fast_Path when every module is int4 or int8, which keeps fused RoPE plus KV write, add+RMSNorm, and flash-decode. A module of any other precision, or an unsupported shape, falls back, and the reason is logged once at DEBUG through a per-reason guard set.
+
+### Profiling and speed
+
+`scripts/profile_decode_graph.py` currently assumes `m.embed` exists. It handles `m.embed is None` for quantized-embedding files. Speed is measured by the 33.5 method and recorded in docs/BACKENDS.md. If the int4 GEMV dominates afterwards, `_int4_gemv1_kernel` is tuned for the in-model shapes, with before and after numbers recorded.
+
+## Int8 Fast Decode Correctness Properties
+
+*A property is a characteristic or behavior that should hold true across all valid executions of a system-essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
+
+### Property 43: Fused fast path equals the unfused path on mixed-precision modules
+
+For any tiny model whose modules are a random mix of int4, int8, and fp16, any prompt, and any generation length, the fused fast-path logits equal the unfused-path logits within an absolute tolerance of 1e-2 plus a relative tolerance of 2e-3, and the greedy tokens are equal except at positions where the top two reference logits differ by less than the tolerance, as decided by tests/_greedy_compare.py. For any output size, input size, int8 weight, scale, bias, and fp16 activation, the Int8_Kernel result equals the fp32 reference within the same tolerance.
+
+**Validates: Requirements 42.1, 42.3, 42.4**
+
+## Int8 Fast Decode Error Handling
+
+| Condition | Behavior |
+|---|---|
+| Module precision or shape unsupported by the Fast_Path | Unfused path for that module, one DEBUG log line per reason |
+| Triton_Gate fails | Existing 0.3.0 fallback to Torch_GPU, unchanged |
+| Targets in 42.8 not reached | Measured numbers recorded with the missed target |
+
+## Int8 Fast Decode Testing Strategy
+
+Property 43 uses Hypothesis with at least 100 iterations and the tag `Feature: quf-quantized-format, Property 43: <text>`. The kernel-level part and the whole-model part need a GPU and Triton, so they carry the `triton` marker and CI skips them. Unit tests cover mixed-group routing, the once-only DEBUG log, and CUDA graph capture of the Int8_Kernel. Profiling and speed are measured by scripts and recorded in docs/BACKENDS.md, not asserted in tests.
