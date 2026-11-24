@@ -384,7 +384,7 @@ def _cmd_run(args: argparse.Namespace) -> int:
     from quf.runtime.generate import ContextLengthError, generate  # noqa: PLC0415
     from quf.runtime.model import QUFModel  # noqa: PLC0415
     from quf.runtime.selector import NoGPUError  # noqa: PLC0415
-    from quf.tokenization.wrapper import TokenizerWrapper  # noqa: PLC0415
+    from quf.tokenization.wrapper import tokenizer_from_header  # noqa: PLC0415
 
     _check_generation_args(args)
     if args.device == "cuda":
@@ -406,12 +406,7 @@ def _cmd_run(args: argparse.Namespace) -> int:
             args.path, device_option=args.device, backend_option=args.backend, prefer_fused=args.prefer_fused,
             cuda_graph=None if args.cuda_graph else False,
         )
-        tok_json = ((model.header.tokenizer or {}).get("files") or {}).get("tokenizer.json")
-        if tok_json is None:
-            raise CLIError("the .quf file does not contain tokenizer.json")
-        from tokenizers import Tokenizer  # noqa: PLC0415
-
-        tok = TokenizerWrapper(hf_tokenizer=Tokenizer.from_str(tok_json))
+        tok = tokenizer_from_header(model.header)  # shared with quf.load (quf/api.py)
 
         def _write(text: str) -> None:
             sys.stdout.write(text)

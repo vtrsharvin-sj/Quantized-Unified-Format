@@ -1081,3 +1081,171 @@ For any tiny model whose modules are a random mix of int4, int8, and fp16, any p
 ## Int8 Fast Decode Testing Strategy
 
 Property 43 uses Hypothesis with at least 100 iterations and the tag `Feature: quf-quantized-format, Property 43: <text>`. The kernel-level part and the whole-model part need a GPU and Triton, so they carry the `triton` marker and CI skips them. Unit tests cover mixed-group routing, the once-only DEBUG log, and CUDA graph capture of the Int8_Kernel. Profiling and speed are measured by scripts and recorded in docs/BACKENDS.md, not asserted in tests.
+
+## Deployment README Design (release 0.4.1)
+
+### Overview
+
+This section covers Requirement 43. Release 0.4.1 changes no file format and no kernel. It adds a thin Python API over the existing runtime, removes Qwen3ForCausalLM from the converter allow-list, adds a chart script, updates the package metadata and the CI matrix, and replaces README.md, which is both the GitHub README and the PyPI description.
+
+Decisions and rationale:
+
+| Decision | Rationale |
+|---|---|
+| New module `quf/api.py` with `load` and `Model`, reached lazily from `quf/__init__.py` | `import quf` still imports nothing heavy, and the public API lives in one module. |
+| The handle calls the Run_Path pieces itself, and `quf run` stays unchanged | The CLI keeps its behavior and its tests. Property 44 detects drift between the two paths. |
+| `Model.generate` always streams into an internal collector and returns the joined pieces | The returned text then equals what `quf run` prints by default: the end-of-sequence token is left out, and an incomplete trailing multi-byte character is held back as in `quf run`. The cost is one incremental decode per token, which `quf run` already pays by default. |
+| `backend` takes the `quf run --backend` values, and `Model.backend` reports the selected Backend | Callers use the CLI vocabulary, and the attribute shows what runs. For example, `backend="int4"` gives `Model.backend == "triton_int4"`. |
+| Qwen3ForCausalLM leaves SUPPORTED_ARCHITECTURES | The runtime has no q_norm or k_norm, so a converted Qwen3 file gives wrong text with no error. `check_architecture` already runs right after config.json is read, before the tokenizer, the calibration data, and the weights. |
+| The chart script splits a pure `collect_points(bench)` from the plotting | CI tests the data rules without matplotlib, which stays a development tool. |
+| The fp16 reference comes from `models_llama` | pareto_040 has no fp16 row. Bench_JSON has no fp16 measurement for 3B, so that panel says "fp16 not measured". |
+| "Operating System :: OS Independent" is removed | The classifiers must match the CI_Matrix, which tests only Windows and Linux. |
+| The static README rules become a CPU test, tests/test_readme.py | The PyPI rendering rules and the absolute links stay true after later edits. |
+| No in-page `#anchor` links | PyPI does not support internal links in Markdown descriptions ([readme_renderer issue 169](https://github.com/pypa/readme_renderer/issues/169)), so they count as relative links. |
+| README numbers use fixed formats and fixed Bench_JSON keys | Each README cell can be checked against one JSON value. |
+
+### Architecture
+
+```mermaid
+flowchart LR
+    CLI["quf run (_cmd_run)"] --> L["QUFModel.load"]
+    API["quf.load and Model.generate"] --> L
+    CLI --> T["Header tokenizer.json to TokenizerWrapper"]
+    API --> T
+    CLI --> G["quf.runtime.generate.generate"]
+    API --> G
+    J["docs/bench_accuracy.json"] --> C["scripts/make_readme_chart.py"]
+    C --> P["docs/assets/quf_vs_gguf.png"]
+    J --> R["README.md"]
+    P --> R
+    H["quf command --help"] --> R
+    V["Copy_Paste_Test output"] --> R
+    R --> Y["PyPI page after the 0.4.1 upload"]
+```
+
+### Components and Interfaces
+
+**`quf/api.py`** (new). It imports torch, tokenizers, and quf.runtime inside functions only.
+
+```python
+DEVICES = ("auto", "cpu", "cuda")                         # quf run --device
+BACKENDS = ("auto", "cached", "fused", "marlin", "int4")  # quf run --backend
+
+def load(path, device="auto", backend="auto", cuda_graph=None) -> "Model": ...
+
+class Model:
+    tokenizer: TokenizerWrapper
+    backend: str      # QUFModel.backend_name: cpu, torch_gpu, torch_fused, marlin, or triton_int4
+    header: QUFHeader
+    def generate(self, prompt: str, max_new_tokens: int = 64, temperature: float = 0.0,
+                 top_k: int | None = None, top_p: float | None = None, seed: int = 0,
+                 stream: Callable[[str], None] | None = None) -> str: ...
+    def close(self) -> None: ...             # safe to call twice
+    def __enter__(self) -> "Model": ...
+    def __exit__(self, *exc) -> None: ...    # calls close()
+```
+
+- `load` checks `device` and `backend` against the tuples, calls `QUFModel.load(path, device_option=device, backend_option=backend, cuda_graph=cuda_graph)`, reads `header.tokenizer["files"]["tokenizer.json"]`, and builds `TokenizerWrapper(hf_tokenizer=tokenizers.Tokenizer.from_str(...))`, as `_cmd_run` does.
+- `generate` applies the limits of `_check_generation_args` and calls `generate(model, tokenizer, prompt, max_new_tokens=..., temperature=..., top_k=..., top_p=..., seed=..., stream=collect, cuda_graph=cuda_graph)`. `collect` appends each piece to a list and forwards it to the user callback when one is given. The method returns `"".join(pieces)`.
+- `close` sets the model and tokenizer references to None and calls `torch.cuda.empty_cache()` when the model was on CUDA.
+
+**`quf/__init__.py`**. A map `_LAZY_ATTRS = {"load": "api", "Model": "api"}` sits next to `_LAZY_SUBMODULES`, and `api` joins `_LAZY_SUBMODULES`. `__getattr__` imports `quf.api` on the first access of either name, and `__all__` and `__dir__` list both names.
+
+**`quf/convert/converter.py`**. `SUPPORTED_ARCHITECTURES = ("Qwen2ForCausalLM",)`. The comment says that an architecture is added only after the runtime supports it, and that Qwen3 needs q_norm and k_norm in quf/runtime/model.py first. The existing message then reads "Unsupported model architecture 'Qwen3ForCausalLM'. Supported: Qwen2ForCausalLM." Today `_describe_error` in quf/cli.py prints a ConvertError with its class name and a "rerun with --verbose" hint, because ConvertError is not a ValueError. UnsupportedArchitectureError therefore also derives from ValueError, so `quf convert` prints the message alone: `quf: error: Unsupported model architecture 'Qwen3ForCausalLM'. Supported: Qwen2ForCausalLM.`
+
+**`scripts/make_readme_chart.py`** (new). `collect_points(bench: dict) -> list[Panel]` is pure. `main(argv)` imports matplotlib with the Agg backend, draws one subplot per Panel in one row, labels each point, and writes docs/assets/quf_vs_gguf.png at a fixed size and DPI. A missing matplotlib ends the script with status 1 and the message `matplotlib is required: pip install matplotlib`.
+
+**pyproject.toml and .github/workflows/ci.yml**. The matrix `python-version` becomes `["3.10", "3.11", "3.12", "3.13"]` on both operating systems. The wheel artifact upload stays on the single job ubuntu-latest with Python 3.12. The description, keywords, classifiers, and URLs change as 43.23 to 43.30 state. The Documentation URL is `https://github.com/vtrsharvin-sj/Quantized-Unified-Format/tree/main/docs`, and the Changelog URL is `https://github.com/vtrsharvin-sj/Quantized-Unified-Format/blob/main/CHANGELOG.md`.
+
+**README.md**. Rewritten in the section order of 43.31. The Install, Quickstart, and Python API blocks are the exact text that the Copy_Paste_Test runs. Links to GitHub pages that are not files or folders, such as the Actions page behind the CI badge, are absolute URLs too.
+
+**tests/test_readme.py** (new, CPU, runs in CI). It reads README.md and checks: the section order of 43.31, no raw HTML tag outside code, no mermaid fence, no alert syntax, a language tag on every fenced block, the Repo_Link_Prefix or Repo_Image_Prefix on every repository link and image with an existing target (`blob` to a file, `tree` to a folder), no relative or `#anchor` link, the four shields.io badges, 4 or 5 bullets under "Why QUF", at most 40 lines under "How it works", a line count from 300 to 450, no "fastest", "best", or "state of the art", no `task N` or `Requirement N` text and no glossary term with an underscore (read case-sensitively from the requirements glossary, so the backend name `torch_gpu` stays allowed) outside code, and that every `--option` the README names exists in `quf.cli._build_parser()`.
+
+### Data Models
+
+Chart data:
+
+```python
+@dataclass(frozen=True)
+class Point:
+    label: str             # "QUF 0.4.0", "Q4_K_M", "Q4_K_M imatrix", "Q4_K_S", "IQ4_XS imatrix", "Q5_K_M"
+    size_mb: float         # file_size_bytes / 1e6
+    ppl_wikitext2: float   # llama protocol
+    is_quf: bool
+
+@dataclass(frozen=True)
+class Panel:
+    model: str             # "Qwen2.5-0.5B", "Qwen2.5-1.5B", "Qwen2.5-3B"
+    points: tuple[Point, ...]
+    fp16_ppl: float | None # None draws "fp16 not measured"
+```
+
+Row labels: `QUF` becomes `QUF 0.4.0`, `Q4_K_M-imat` becomes `Q4_K_M imatrix`, and `IQ4_XS` (pareto_040) and `IQ4_XS-imat` (speed_040_final) become `IQ4_XS imatrix`. Other row names stay as they are.
+
+README sources:
+
+| README content | Source |
+|---|---|
+| 0.5B and 1.5B size, WikiText-2, C4 | `pareto_040.<model>.<row>.{file_size_bytes, ppl_wikitext2, ppl_c4_heldout}` |
+| 0.5B and 1.5B decode | `speed_040_final.results.<model>.<row>.steady_tok_s.median` |
+| 3B size, WikiText-2, C4 | `scaling_3b.{QUF, Q4_K_M}.{file_size_bytes, ppl_wikitext2, ppl_c4_heldout}` |
+| 3B decode | `scaling_3b.speed.{quf_steady_tok_s_median, llama_bench_tg128_tok_s_median}` |
+| fp16 rows | `models_llama["Qwen/Qwen2.5-<size>"].fp16` |
+| lm-eval table | `lm_eval.results["qwen2.5-<size>"].{hf_fp16, quf_0_4_0}` and `lm_eval.gguf_q4_k_m` |
+| GPU and power state | `environment.device`, `speed_040_final.label`, `scaling_3b.env.power_source` |
+| GGUF build and imatrix | docs/gguf_variants.json `llama_cpp` and `calibration` |
+
+Formats: size in MB of 10^6 bytes to one decimal, Perplexity to three decimals, tokens per second as whole numbers, and lm-eval accuracy in percent to one decimal with its standard error. A cell without a measurement says "not measured". A value is bold when it is the best in its column for that model, unless speed_040_final marks the comparison "equal within noise". speed_040_final and scaling_3b also hold end-to-end medians (`e2e_tok_s.median`, `quf_e2e_tok_s_median`). The methodology quotes them next to the steady-state definition, so that a reader who times `quf run` or `quf bench` can see why those numbers are lower.
+
+Glance verdicts from the current Bench_JSON. The README sentence names every loss in this table:
+
+| Model | Size vs Q4_K_M | WikiText-2 | C4 | Decode vs Q4_K_M |
+|---|---|---|---|---|
+| 0.5B | smaller: 367.9 vs 397.8 | lower than Q4_K_M (11.987 vs 12.043), higher than Q4_K_M imatrix (11.959) | higher than Q4_K_M (18.777 vs 18.724) and Q4_K_M imatrix (18.593) | faster: 662 vs 494, battery |
+| 1.5B | larger: 1040.0 vs 986.0 | lower than both (8.420 vs 8.600 and 8.497) | lower than Q4_K_M (13.763 vs 13.954), higher than Q4_K_M imatrix (13.757) | equal within noise: 283 vs 274, battery |
+| 3B | larger: 1987.4 vs 1929.9 | lower: 7.291 vs 7.465 | lower: 12.154 vs 12.311 | equal within noise, with a lower median: 229 vs 236, AC |
+
+Outside the Glance_Table, Q5_K_M has a lower WikiText-2 and C4 Perplexity than QUF on 0.5B and 1.5B with larger files, IQ4_XS imatrix is smaller than QUF on both models with a higher Perplexity, and Q4_K_S is smaller than QUF on 1.5B.
+
+## Deployment README Correctness Properties
+
+*A property is a characteristic or behavior that should hold true across all valid executions of a system-essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
+
+Criteria 43.3, 43.5, 43.6, and 43.7 all describe the text that the Model_Handle returns, so they collapse into one property. The other criteria of Requirement 43 read fixed inputs (README.md, pyproject.toml, ci.yml, Bench_JSON) and are covered by example, smoke, and integration checks.
+
+### Property 44: The Python API returns the same text as `quf run`
+
+For any tiny model file with random weights and an embedded tokenizer, any non-empty prompt of vocabulary words, and any `max_new_tokens` from 1 to 16, `quf.load(path, device="cpu").generate(prompt, max_new_tokens=n, temperature=0)` returns exactly the text that `quf run <path> --device cpu --prompt <prompt> --max-new-tokens n --temperature 0` writes to stdout before its final newline, including runs that stop at the end-of-sequence token, and the pieces that a `stream` callback receives concatenate to the returned text.
+
+**Validates: Requirements 43.3, 43.5, 43.6, 43.7**
+
+## Deployment README Error Handling
+
+| Condition | Behavior |
+|---|---|
+| config.json names an architecture other than Qwen2ForCausalLM | UnsupportedArchitectureError naming the found and the supported architecture, raised before the tokenizer, the calibration data, and the weights; `quf convert` prints one `quf: error:` line and exits with status 1 |
+| `quf.load` gets a `device` or `backend` outside the `quf run` choices | ValueError that lists the accepted values |
+| The QUF_File has no embedded tokenizer.json | ValueError "the .quf file does not contain tokenizer.json" |
+| Missing path, `device="cuda"` without a GPU, GPU out of memory at load, or an unsupported format version | The existing FileNotFoundError, NoGPUError, GPUMemoryError, or QUFFormatError from QUFModel.load and the reader, unchanged |
+| `generate` gets an argument outside the `quf run` limits | ValueError that names the argument |
+| Prompt length plus `max_new_tokens` exceeds the context length | ContextLengthError from quf.runtime.generate, unchanged |
+| `generate` after `close()` | ValueError "the model is closed" |
+| matplotlib is not installed | The Chart_Script exits with status 1 and names `pip install matplotlib` |
+| Bench_JSON has no fp16 value for a model | The panel shows "fp16 not measured" |
+| tests/test_readme.py, the PyPI rendering checks, the Copy_Paste_Test, `--help`, or Bench_JSON disagrees with the README | The README_Verification edits the README, and the release waits until every check passes |
+| The archive scan finds a .quf file, eval_cache content, a log, or a secret | The Release_Procedure stops and reports the file |
+| A CI job on Python 3.13 fails for a reason outside QUF | Python 3.13 leaves both the CI_Matrix and the classifiers, and the CHANGELOG states why |
+
+## Deployment README Testing Strategy
+
+Property-based testing applies to the Python API only, because it is the one new part whose output varies with generated input. Property 44 uses Hypothesis with at least 100 examples and the tag `Feature: quf-quantized-format, Property 44: The Python API returns the same text as quf run`. It runs on CPU in CI. The tiny files are built once per module with `make_quf` from tests/test_runtime_unit.py, and one of them uses an EOS id that greedy decoding emits, so some examples stop at EOS. The test captures the stdout of `quf.cli.main` with `contextlib.redirect_stdout`, because Hypothesis rejects function-scoped fixtures such as capsys.
+
+Example-based tests that run on CPU in CI:
+
+- tests/test_api.py: the handle attributes, streaming, the argument errors and their boundary values, `close` twice, the context manager, a file without tokenizer.json, the device and backend checks, and a subprocess check that `import quf` loads no torch, tokenizers, or quf.runtime module and that `quf.load` and `quf.Model` then resolve.
+- tests/test_converter_unit.py: Qwen3ForCausalLM, LlamaForCausalLM, and a config without `architectures` are rejected with a message that names Qwen2ForCausalLM, before a tokenizer stub that fails when called is reached, and Qwen2ForCausalLM is accepted. A CLI test with `_check_convert_extras` patched out checks the single `quf: error:` line. These replace `test_qwen3_accepted_and_non_qwen_rejected`.
+- tests/test_readme_chart.py: `collect_points` on the real Bench_JSON returns every pareto_040 and scaling_3b row that has a size and a WikiText-2 value, marks QUF, and returns an fp16 value for 0.5B and 1.5B and none for 3B. The missing-matplotlib path runs with `sys.modules["matplotlib"] = None`. A PNG smoke test uses `pytest.importorskip("matplotlib")`, so CI skips it.
+- tests/test_pyproject_metadata.py: the description length, the keywords, the URLs, the CUDA and operating system classifiers, the absence of matplotlib, and the Python classifiers against the versions in ci.yml, skipped when the workflow file is absent as in an sdist.
+- tests/test_readme.py: the static README rules listed under Components and Interfaces.
+
+Checks outside CI, run by the tasks: `twine check --strict`, the readme_renderer render, the trove-classifiers check, the Copy_Paste_Test, the options and defaults against `--help`, the README numbers against Bench_JSON, the full `python -m pytest -q` on the GPU machine, the CI command with QUF_NO_TRITON=1, the archive scan, and the CI status after the push. The README, the metadata, and the CI file read fixed inputs, and the chart reads only the real Bench_JSON, so example tests on those inputs cover them better than generated inputs would.

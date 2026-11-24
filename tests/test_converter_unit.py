@@ -105,12 +105,65 @@ def test_embedding_and_lm_head_stored_fp16(tmp_path):
     r.close()
 
 
-def test_qwen3_accepted_and_non_qwen_rejected():
-    assert C.check_architecture({"architectures": ["Qwen3ForCausalLM"]}) == "Qwen3ForCausalLM"
-    for cfg in ({"architectures": ["LlamaForCausalLM"]}, {}):
-        with pytest.raises(C.UnsupportedArchitectureError) as ei:
-            C.check_architecture(cfg)
-        assert ei.value.architecture in str(ei.value)
+class _Reached(Exception):
+    """Raised by the stubs for the tokenizer, the calibration data, and the weights."""
+
+
+def _fail_heavy_steps(monkeypatch):
+    """Make every conversion step after the architecture check raise _Reached."""
+    def reached(*a, **k):
+        raise _Reached("a conversion step ran before the architecture check")
+
+    monkeypatch.setattr(C, "build_tokenizer_info", reached)
+    monkeypatch.setattr(C, "load_calibration_texts", reached)
+    return reached
+
+
+def _convert_stubbed(tmp_path, model_dir, reached):
+    return C.convert_checkpoint(str(model_dir), tmp_path / "x.quf", dataset="unused",
+                                quantizer=reached, echo=None)
+
+
+@pytest.mark.parametrize("arch", ["Qwen3ForCausalLM", "LlamaForCausalLM", None])
+def test_only_qwen2_supported_and_rejected_before_heavy_work(tmp_path, monkeypatch, arch):
+    # Qwen3 is rejected: the runtime has no q_norm and k_norm, so its output would be wrong.
+    reached = _fail_heavy_steps(monkeypatch)
+    d = _model_dir(tmp_path, arch or "Qwen2ForCausalLM")
+    if arch is None:  # a config.json without "architectures"
+        cfg = json.loads((d / "config.json").read_text())
+        del cfg["architectures"]
+        (d / "config.json").write_text(json.dumps(cfg))
+    found = arch or "<unknown>"
+    with pytest.raises(C.UnsupportedArchitectureError) as ei:
+        _convert_stubbed(tmp_path, d, reached)
+    assert str(ei.value) == f"Unsupported model architecture '{found}'. Supported: Qwen2ForCausalLM."
+    assert ei.value.architecture == found and isinstance(ei.value, ValueError)
+    assert not (tmp_path / "x.quf").exists()
+
+
+def test_qwen2_accepted(tmp_path, monkeypatch):
+    assert C.SUPPORTED_ARCHITECTURES == ("Qwen2ForCausalLM",)
+    assert C.check_architecture({"architectures": ["Qwen2ForCausalLM"]}) == "Qwen2ForCausalLM"
+    # The check passes, so the conversion goes on to the stubbed tokenizer step.
+    reached = _fail_heavy_steps(monkeypatch)
+    with pytest.raises(_Reached):
+        _convert_stubbed(tmp_path, _model_dir(tmp_path), reached)
+
+
+def test_cli_convert_qwen3_prints_one_error_line(tmp_path, monkeypatch, capsys):
+    from quf import cli
+
+    _fail_heavy_steps(monkeypatch)
+    monkeypatch.setattr(cli, "_check_convert_extras", lambda: None)
+    d = _model_dir(tmp_path, "Qwen3ForCausalLM")
+    code = cli.main(["convert", str(d), str(tmp_path / "o.quf")])
+    captured = capsys.readouterr()
+    assert code == 1
+    assert "Traceback" not in captured.err and captured.out == ""
+    errors = [ln for ln in captured.err.splitlines() if ln.startswith("quf: error:")]
+    assert errors == ["quf: error: Unsupported model architecture 'Qwen3ForCausalLM'. "
+                      "Supported: Qwen2ForCausalLM."], captured.err
+    assert not (tmp_path / "o.quf").exists()
 
 
 def test_non_qwen_creates_no_output(tmp_path):

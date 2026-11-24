@@ -111,6 +111,10 @@
     "39.4 Write the equivalence property tests": {
       "status": "passed",
       "lastRunTimestamp": 1795336273152
+    },
+    "40.1 Reject non-Qwen2 architectures and add the `quf.load` Python API": {
+      "status": "passed",
+      "lastRunTimestamp": 1795526578714
     }
   },
   "executionHistory": {
@@ -2820,6 +2824,11 @@
         "executionId": "ff7e027c-95b3-4ad9-abc0-8bb766d48864",
         "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
         "timestamp": 1795451974532
+      },
+      {
+        "executionId": "ff7e027c-95b3-4ad9-abc0-8bb766d48864",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795453384229
       }
     ],
     "34. Embedding and lm_head quantization (size)": [
@@ -2940,6 +2949,125 @@
         "executionId": "ff7e027c-95b3-4ad9-abc0-8bb766d48864",
         "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
         "timestamp": 1795449109323
+      }
+    ],
+    "40.1 Reject non-Qwen2 architectures and add the `quf.load` Python API": [
+      {
+        "executionId": "d9a435f0-efbc-4134-9307-ee8090e8a768",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795456703177
+      },
+      {
+        "executionId": "d9a435f0-efbc-4134-9307-ee8090e8a768",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795456711826
+      },
+      {
+        "executionId": "56bc0512-8047-4cb8-b3d6-e349dfd93d47",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795526809922
+      }
+    ],
+    "40.2 Add scripts/make_readme_chart.py and generate the chart": [
+      {
+        "executionId": "d9a435f0-efbc-4134-9307-ee8090e8a768",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795456703261
+      },
+      {
+        "executionId": "d9a435f0-efbc-4134-9307-ee8090e8a768",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795456712412
+      },
+      {
+        "executionId": "56bc0512-8047-4cb8-b3d6-e349dfd93d47",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795525717879
+      },
+      {
+        "executionId": "56bc0512-8047-4cb8-b3d6-e349dfd93d47",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795525717984
+      },
+      {
+        "executionId": "56bc0512-8047-4cb8-b3d6-e349dfd93d47",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795526810022
+      }
+    ],
+    "40.3 Polish the package metadata and the CI matrix": [
+      {
+        "executionId": "d9a435f0-efbc-4134-9307-ee8090e8a768",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795456703361
+      },
+      {
+        "executionId": "d9a435f0-efbc-4134-9307-ee8090e8a768",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795456712910
+      },
+      {
+        "executionId": "56bc0512-8047-4cb8-b3d6-e349dfd93d47",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795525718080
+      },
+      {
+        "executionId": "56bc0512-8047-4cb8-b3d6-e349dfd93d47",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795526810161
+      }
+    ],
+    "40.4 Rewrite README.md as the public landing page for GitHub and PyPI": [
+      {
+        "executionId": "d9a435f0-efbc-4134-9307-ee8090e8a768",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795456703425
+      },
+      {
+        "executionId": "56bc0512-8047-4cb8-b3d6-e349dfd93d47",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795526868174
+      },
+      {
+        "executionId": "56bc0512-8047-4cb8-b3d6-e349dfd93d47",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795529288935
+      }
+    ],
+    "40.5 Verify the README end to end and fix every mismatch": [
+      {
+        "executionId": "d9a435f0-efbc-4134-9307-ee8090e8a768",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795456703490
+      },
+      {
+        "executionId": "56bc0512-8047-4cb8-b3d6-e349dfd93d47",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795529289029
+      },
+      {
+        "executionId": "56bc0512-8047-4cb8-b3d6-e349dfd93d47",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795536145665
+      }
+    ],
+    "40.6 Release 0.4.1": [
+      {
+        "executionId": "d9a435f0-efbc-4134-9307-ee8090e8a768",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795456703546
+      },
+      {
+        "executionId": "56bc0512-8047-4cb8-b3d6-e349dfd93d47",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795536145787
+      }
+    ],
+    "41. Final checkpoint - Ensure all tests pass (GitHub Actions green on every job)": [
+      {
+        "executionId": "d9a435f0-efbc-4134-9307-ee8090e8a768",
+        "chatSessionId": "sess_5905887d-4fcf-468c-82cd-efbdaa1dc1ae",
+        "timestamp": 1795456703611
       }
     ]
   }

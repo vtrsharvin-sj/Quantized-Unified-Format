@@ -2653,13 +2653,22 @@
         231.0,
         225.2
       ],
-      "note": "interleaved, 1 warm-up round, both drift down over the run (thermal); AC power; raw in eval_cache/scale3b/speed.json"
+      "quf_steady_samples": [
+        241.3,
+        239.2,
+        229.1,
+        225.3,
+        218.8
+      ],
+      "note": "interleaved, 1 warm-up round, both drift down over the run (thermal); AC power; raw in eval_cache/scale3b/speed.json",
+      "samples_note": "quf_samples are end-to-end tok/s; quf_steady_samples are 1000 / steady-state ms per token of the same 5 measured rounds, from the per-round lines of eval_cache/scale3b/speed.log; llama_samples are llama-bench tg128"
     },
     "verdict": {
       "size": "QUF loses (1987.4 MB vs 1929.9 MB, +3.0%)",
       "wikitext2_ppl": "QUF beats (7.291 vs 7.465, -2.3%; Q4_K_M +/-0.047)",
       "c4_ppl": "QUF beats (12.154 vs 12.311, -1.3%)",
       "speed": "QUF loses (190.7 vs 236.0 tok/s end-to-end, -19%; steady-state 229.1, -3%)",
+      "speed_steady_state": "equal within noise: steady-state median 229.1 vs llama-bench tg128 236.0 tok/s, but the ranges overlap (218.8-241.3 vs 225.2-244.4)",
       "beat_target": "not reached: smaller-and-better-and-faster not met, QUF is larger and slower"
     }
   }

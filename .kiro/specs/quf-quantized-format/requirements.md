@@ -735,3 +735,104 @@ Task 33.5 measured the 0.4.0 default file at 502 tokens per second on Qwen2.5-0.
 6. WHEN the 1.5B 0.4.0 file is profiled in steady decode, THE profile SHALL show no cuBLAS fp16 GEMV kernel and no neg, cat, or index_copy kernel.
 7. WHEN the 0.4.0 speed is re-measured, THE measurement SHALL alternate runs, take the median of 7, use the same session as the llama.cpp rows, and record the power state.
 8. THE Results_Doc SHALL report the re-measured tokens per second for both models against the targets of 773 (0.5B) and 398 (1.5B) whether or not the targets are reached.
+
+## Deployment README Extension (release 0.4.1)
+
+quf 0.4.0 is on PyPI. pyproject.toml sets `readme = "README.md"`, so one file is both the GitHub README and the PyPI project description, and PyPI shows a new README only after a new release is uploaded. The current README reads like internal notes: it cites task numbers, keeps numbers from older releases in the main flow, and uses relative links such as docs/RESULTS.md that break on PyPI. quf/__init__.py exposes no high-level Python API. quf/convert/converter.py lists Qwen3ForCausalLM in SUPPORTED_ARCHITECTURES, but quf/runtime/model.py applies no q_norm or k_norm, so a converted Qwen3 file would run and produce wrong text without an error. This extension rewrites the README as the public landing page for GitHub and PyPI, adds a small Python API, rejects unsupported architectures at convert time, updates the package metadata and the CI matrix, and prepares release 0.4.1. The README takes every number from docs/bench_accuracy.json and states the axes on which QUF loses as plainly as the axes on which it wins.
+
+### Glossary additions
+
+- **Public_README**: The file README.md. GitHub shows it on the repository page, and PyPI shows it as the project description because pyproject.toml sets `readme = "README.md"`.
+- **Model_Handle**: The class `quf.Model` that `quf.load` returns. It holds a loaded QUFModel and its Tokenizer_Wrapper.
+- **Run_Path**: The steps of `quf run` in `_cmd_run` of quf/cli.py: QUFModel.load, a Tokenizer_Wrapper built from the tokenizer.json embedded in the Header, and quf.runtime.generate.generate.
+- **Bench_JSON**: The file docs/bench_accuracy.json. Its keys pareto_040, speed_040_final, scaling_3b, lm_eval, and models_llama hold the measured results.
+- **Chart_Script**: The development script scripts/make_readme_chart.py. It is not part of the wheel.
+- **Readme_Chart**: The image docs/assets/quf_vs_gguf.png that the Chart_Script writes.
+- **Glance_Table**: The table in the "Results at a glance" section of the Public_README.
+- **Repo_Link_Prefix**: `https://github.com/vtrsharvin-sj/Quantized-Unified-Format/blob/main/` for files and `https://github.com/vtrsharvin-sj/Quantized-Unified-Format/tree/main/` for folders.
+- **Repo_Image_Prefix**: `https://raw.githubusercontent.com/vtrsharvin-sj/Quantized-Unified-Format/main/`.
+- **CI_Matrix**: The operating systems and Python versions of the job matrix in .github/workflows/ci.yml.
+- **Copy_Paste_Test**: The check that installs the built wheel with the `convert` and `fast` extras into a fresh virtual environment and runs every Quickstart command and the Python API snippet of the Public_README exactly as written, from a folder outside the repository.
+- **README_Verification**: The checks that compare the Public_README with its sources before release: the PyPI rendering checks, the Copy_Paste_Test, the `--help` output of each `quf` command, and Bench_JSON.
+- **Release_Procedure**: The steps that update the CHANGELOG and the version, run the tests, build and scan the archives, and commit and push Release_0_4_1.
+- **Release_0_4_1**: The `quf` package version 0.4.1.
+
+### Requirement 43: Public README, Python API, and release 0.4.1
+
+**User Story:** As a new user who finds QUF on GitHub or PyPI, I want an accurate landing page, a small Python API, and a clear error for unsupported models, so that I can install, run, and judge QUF from measured facts.
+
+#### Acceptance Criteria
+
+1. THE QUF_Package SHALL provide the function `quf.load(path, device="auto", backend="auto", cuda_graph=None)`, which returns a Model_Handle.
+2. WHEN `quf.load` is called, THE QUF_Package SHALL load the QUF_File through QUFModel.load with `device` as the device option, `backend` as the backend option that `quf run --backend` accepts, and `cuda_graph` unchanged.
+3. WHEN `quf.load` has loaded the QUF_File, THE QUF_Package SHALL build the Tokenizer_Wrapper of the Model_Handle from the tokenizer.json embedded in the Header, in the same way as the Run_Path.
+4. THE Model_Handle SHALL expose `tokenizer` as its Tokenizer_Wrapper, `backend` as the name of the selected Backend, and `header` as the parsed Header.
+5. WHEN `generate(prompt, max_new_tokens=64, temperature=0.0, top_k=None, top_p=None, seed=0, stream=None)` is called, THE Model_Handle SHALL generate through quf.runtime.generate.generate and SHALL return the generated text as a string.
+6. WHERE a `stream` callback is given to `generate`, THE Model_Handle SHALL pass each new text piece to the callback when quf.runtime.generate.generate emits that piece, and the pieces SHALL concatenate to the returned text.
+7. FOR ALL prompts and generation lengths on tiny models at temperature 0, THE text that the Model_Handle `generate` returns SHALL equal the text that `quf run` prints for the same file, prompt, and options (equivalence property).
+8. WHEN `close()` is called, or a `with` block that holds the Model_Handle exits, THE Model_Handle SHALL release its references to the loaded model and to the Tokenizer_Wrapper.
+9. IF `generate` is called after `close()`, THEN THE Model_Handle SHALL raise a ValueError that states that the model is closed.
+10. IF `generate` receives an empty prompt, a `max_new_tokens` below 1, a negative `temperature`, a `top_k` below 1, or a `top_p` outside the range greater than 0 and at most 1, THEN THE Model_Handle SHALL raise a ValueError that names the argument, using the same limits as `quf run`.
+11. IF `quf.load` receives a `device` or `backend` value that `quf run` does not accept, or a QUF_File without an embedded tokenizer.json, THEN THE QUF_Package SHALL raise a ValueError that names the problem, and for an option value SHALL list the accepted values.
+12. WHEN the `quf` module is imported, THE QUF_Package SHALL defer the import of torch, tokenizers, and quf.runtime until `quf.load` is called, and SHALL resolve `quf.load` and `quf.Model` on first attribute access in the same way as the existing lazy submodules.
+13. THE Converter SHALL accept Qwen2ForCausalLM as its only supported architecture.
+14. IF the source config.json names an architecture other than Qwen2ForCausalLM, including Qwen3ForCausalLM, THEN THE Converter SHALL raise UnsupportedArchitectureError with a message that names the found architecture and Qwen2ForCausalLM, before the Converter loads the tokenizer, the calibration data, or the model weights.
+15. WHEN the Chart_Script runs, THE Chart_Script SHALL read Bench_JSON and SHALL write the Readme_Chart with one panel for each model that has rows in pareto_040 or scaling_3b.
+16. THE Readme_Chart SHALL show each format that Bench_JSON measures for a model as a labelled point, with the file size in MB of 10^6 bytes on the x axis and the WikiText-2 Perplexity under the Llama_Protocol on the y axis.
+17. THE Readme_Chart SHALL draw the QUF point with a color and a marker that no GGUF point uses.
+18. WHERE models_llama in Bench_JSON holds an fp16 WikiText-2 Perplexity for a model, THE Readme_Chart SHALL draw that value as a dashed horizontal reference line in the panel of that model.
+19. IF Bench_JSON holds no fp16 WikiText-2 Perplexity for a model, THEN THE Readme_Chart SHALL show the text "fp16 not measured" in the panel of that model.
+20. THE Readme_Chart SHALL show the note "lower-left is better" and a caption that names Bench_JSON as the data source and the GPU that Bench_JSON records.
+21. THE QUF_Package SHALL keep matplotlib out of the dependencies and the extras that pyproject.toml declares.
+22. IF matplotlib is not installed, THEN THE Chart_Script SHALL exit with a nonzero status and a message that names `pip install matplotlib`.
+23. THE QUF_Package SHALL declare in pyproject.toml a one-line description of at most 100 characters.
+24. THE QUF_Package SHALL declare in pyproject.toml the keywords quantization, llm, gptq, int4, 4-bit, triton, cuda, windows, and qwen.
+25. THE CI_Matrix SHALL run the CPU test suite on Python 3.10, 3.11, 3.12, and 3.13 on ubuntu-latest and on windows-latest.
+26. THE QUF_Package SHALL declare a "Programming Language :: Python :: 3.N" classifier for exactly the Python versions in the CI_Matrix, so that the Python 3.13 classifier is present only while the CI_Matrix runs Python 3.13.
+27. THE QUF_Package SHALL declare exactly the operating system classifiers "Operating System :: Microsoft :: Windows" and "Operating System :: POSIX :: Linux", the operating systems that the CI_Matrix tests.
+28. THE QUF_Package SHALL declare the classifier "Environment :: GPU :: NVIDIA CUDA".
+29. THE QUF_Package SHALL declare only classifiers that the trove-classifiers list accepted by PyPI contains.
+30. THE QUF_Package SHALL declare in [project.urls] the entries Homepage, Repository, Documentation (the docs folder on GitHub), Changelog (CHANGELOG.md on GitHub), and Issues, each as an absolute https URL in the repository https://github.com/vtrsharvin-sj/Quantized-Unified-Format.
+31. THE Public_README SHALL contain these sections in this order: the title with a one-sentence tagline, the badges, "Why QUF", "Results at a glance", "Install", "Quickstart", "Python API", "How it works", "Benchmarks", "CLI reference", "Supported models", "Limitations", "Troubleshooting", "File format", "Development", "Changelog", "License", and "Acknowledgements".
+32. THE Public_README SHALL use plain GitHub-flavoured Markdown without raw HTML, without mermaid blocks, and without alert syntax such as "> [!NOTE]".
+33. THE Public_README SHALL write every link to a repository file or folder with the Repo_Link_Prefix and every repository image with the Repo_Image_Prefix, and the target path of each such link and image SHALL exist in the repository.
+34. THE Public_README SHALL give every fenced code block a language tag.
+35. THE Public_README SHALL show shields.io badges for the PyPI version, the supported Python versions, the license, and the CI workflow status.
+36. THE Public_README SHALL have between 300 and 450 lines.
+37. THE "Why QUF" section SHALL contain 4 or 5 bullets.
+38. THE Glance_Table SHALL compare QUF 0.4.0 with GGUF Q4_K_M, and with Q4_K_M imatrix where Bench_JSON holds that row, for Qwen2.5-0.5B, Qwen2.5-1.5B, and Qwen2.5-3B, in the columns size in MB, WikiText-2 Perplexity, C4 Perplexity, and decode tokens per second, and SHALL show the best value of each model and column in bold.
+39. THE "Results at a glance" section SHALL follow the Glance_Table with one plain sentence that names where QUF wins and where QUF loses, then the Readme_Chart, then a link to the full benchmarks.
+40. THE sentence in 43.39 SHALL name every Glance_Table comparison in which QUF is worse, including the larger file size than Q4_K_M on 1.5B and 3B and the 3B decode equal within noise, with a lower median, and SHALL state that Q4_K_M imatrix and Q5_K_M reach a lower Perplexity than QUF on some rows.
+41. THE "Install" section SHALL show `pip install quf`, `pip install "quf[fast]"`, `pip install "quf[convert]"`, and the install of the CUDA 12.8 PyTorch wheel for RTX 50-series GPUs through the cu128 index URL, and SHALL state that QUF runs on machines with only a CPU.
+42. THE "Quickstart" section SHALL show `quf convert`, `quf info`, `quf run`, and `quf bench` with real abbreviated output from the Copy_Paste_Test.
+43. THE "Quickstart" section SHALL state that `quf bench` scores non-overlapping 2048-token windows, 40 by default, and times end-to-end generation, so that its numbers differ from the numbers in the "Benchmarks" section.
+44. THE "Python API" section SHALL show `quf.load`, `generate`, and streaming through a callback.
+45. THE "How it works" section SHALL describe the file format, the quantization pipeline, the runtime Backends, and the automatic Backend selection in at most 40 lines.
+46. THE "Benchmarks" section SHALL contain one table for each model with the fp16, QUF 0.4.0, Q4_K_M, Q4_K_M imatrix, Q4_K_S, IQ4_XS imatrix, and Q5_K_M rows that Bench_JSON holds.
+47. THE "Benchmarks" section SHALL contain the lm-eval table with the fp16 and QUF 0.4.0 rows and with the Q4_K_M row marked "not run" together with the reason that Bench_JSON records.
+48. THE "Benchmarks" section SHALL state the methodology: the Llama_Protocol with 2048-token windows that score the second half, the WikiText-2 test split and a held-out C4 validation slice, calibration on WikiText-2 train with 128 samples of 1024 tokens, imatrix variants built from the same calibration text, and QUF steady-state decode measured against llama-bench tg128 in one interleaved session.
+49. THE "Benchmarks" section SHALL state the GPU, the operating system, and the power state of each speed measurement as Bench_JSON records them: battery power for the 0.5B and 1.5B speed rows and AC power for the 3B speed rows.
+50. THE "Benchmarks" section SHALL give the commands and the repository scripts that reproduce each table.
+51. IF a result in the Public_README came from a script that is not in the repository, THEN THE "Benchmarks" section SHALL state that fact for that result.
+52. THE "CLI reference" section SHALL list the options and defaults of `quf convert`, `quf run`, `quf bench`, and `quf info` as `quf <command> --help` prints them, the presets with their precision rules with size_f marked as the default, and the environment variables QUF_NO_TRITON, QUF_NO_CUDA_GRAPH, and QUF_NO_FUSED.
+53. THE "Supported models" section SHALL name the Qwen2 architecture Qwen2ForCausalLM and the tested models Qwen2.5-0.5B, Qwen2.5-1.5B, and Qwen2.5-3B, SHALL state that Instruct variants share the architecture while `quf run` performs plain completion without a chat template, and SHALL state that `quf convert` rejects every other architecture.
+54. THE "Limitations" section SHALL list the single supported architecture, the missing chat template, the measurement on one laptop GPU, and each axis on which QUF loses in the Glance_Table.
+55. THE "Troubleshooting" section SHALL cover a missing Triton_Runtime with the fix `pip install "quf[fast]"`, the CPU-only torch hint, triton-windows inside a virtual environment created with --system-site-packages falling back to torch_gpu, turning off the fast paths with the environment variables, format version errors where version 3 files need quf 0.4.0 or later, and GPU out-of-memory errors.
+56. THE "File format" section SHALL contain a table of format versions 1, 2, and 3 that names what each version adds and the first quf release that reads it, and a link to FORMAT.md.
+57. THE "Development" section SHALL show the clone, the editable install with the test extra, and the test markers gpu, triton, realmodel, and convert.
+58. THE "Changelog" section SHALL hold one "Release history" line that links to CHANGELOG.md.
+59. THE "License" section SHALL name the MIT license and link to LICENSE.
+60. THE "Acknowledgements" section SHALL credit the GPTQ paper by Frantar et al., llama.cpp and ggml as the comparison baseline and tools, Triton and triton-windows, gigatoken, the Qwen team, and Hugging Face transformers and datasets.
+61. THE Public_README SHALL take every measured number from Bench_JSON, with sizes in MB of 10^6 bytes to one decimal place, Perplexity to three decimal places, and tokens per second as whole numbers.
+62. THE Public_README SHALL limit comparative claims to comparisons that Bench_JSON measures and SHALL omit the words "fastest", "best", and "state of the art".
+63. THE Public_README SHALL omit internal task numbers, requirement numbers, and the glossary terms of this specification.
+64. THE Public_README SHALL mention numbers from older releases only in the "Release history" line.
+65. WHEN the README_Verification runs, THE README_Verification SHALL run `twine check --strict` on the built sdist and wheel and a readme_renderer Markdown render of README.md, and both SHALL pass without warnings.
+66. WHEN the Copy_Paste_Test runs, THE Copy_Paste_Test SHALL install the built wheel with the `convert` and `fast` extras into a fresh virtual environment, SHALL run every Quickstart command and the Python API snippet exactly as written from a folder outside the repository, and SHALL record whether the virtual environment uses --system-site-packages.
+67. IF a command, option, default, output, or number in the Public_README differs from `quf <command> --help`, the Copy_Paste_Test output, or Bench_JSON, THEN THE README_Verification SHALL change the Public_README to match that source.
+68. WHEN Release_0_4_1 is prepared, THE CHANGELOG SHALL contain a 0.4.1 entry that lists the README rewrite, `quf.load`, the rejection of Qwen3ForCausalLM, and the metadata and CI changes.
+69. WHEN Release_0_4_1 is prepared, THE QUF_Package SHALL carry version 0.4.1 in pyproject.toml, in quf/__init__.py, and in tests/test_pyproject_metadata.py.
+70. WHEN Release_0_4_1 is prepared, THE Release_Procedure SHALL run `python -m pytest -q` with no marker filter and the CI command `python -m pytest -m "not gpu and not convert" -q` with QUF_NO_TRITON=1, and both runs SHALL pass.
+71. WHEN Release_0_4_1 is built, THE build SHALL produce an sdist and a wheel that pass `twine check --strict`.
+72. IF the sdist or the wheel contains a .quf file, eval_cache content, a log file, or a secret such as a `pypi-` token, THEN THE Release_Procedure SHALL stop and report the file.
+73. THE Release_Procedure SHALL commit and push Release_0_4_1 without force-push, SHALL confirm that every CI_Matrix job passes, and SHALL leave the PyPI upload to the orchestrator.

@@ -1,293 +1,448 @@
-# QUF: Quantized Unified Format
+# QUF — Quantized Unified Format
 
-QUF is a single-file container (`.quf`) for a 4-bit quantized decoder-only LLM. One file holds the model config, tokenizer files, quantization scheme and all tensors. This package provides a reference writer and reader, a native GPTQ converter, a runtime with CPU and CUDA backends, and a benchmark suite.
+QUF stores a 4-bit GPTQ-quantized LLM in one `.quf` file and runs it on NVIDIA GPUs or the CPU, natively on Windows and Linux.
 
-QUF runs natively on Windows (and any platform with PyTorch). No WSL or Linux environment is needed.
+[![PyPI version](https://img.shields.io/pypi/v/quf)](https://pypi.org/project/quf/)
+[![Python versions](https://img.shields.io/pypi/pyversions/quf)](https://pypi.org/project/quf/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/vtrsharvin-sj/Quantized-Unified-Format/blob/main/LICENSE)
+[![CI](https://github.com/vtrsharvin-sj/Quantized-Unified-Format/actions/workflows/ci.yml/badge.svg)](https://github.com/vtrsharvin-sj/Quantized-Unified-Format/actions/workflows/ci.yml)
 
-Supported architectures: `Qwen2ForCausalLM` (first), with `Qwen3ForCausalLM` addable through the architecture allow-list. By default, weights are 4-bit with group size 32, act-order and clip search. The default preset is `size_f` (0.4.0): `k_proj`, `v_proj` and the whole last layer are stored at int8 and everything else at int4 (`down_proj` included). The embedding table, and an untied `lm_head`, are stored as per-row int8 with group size 64 (`--embed-precision int8`, QUF format version 3). `--preset size_b` is the 0.3.0 body (last layer int8 only) and `--preset sensitive` reproduces 0.2.0. `--embed-precision fp16` keeps the embedding and `lm_head` as fp16.
+## Why QUF
 
-## Summary
+- **One self-contained file.** A `.quf` file holds the model config, the tokenizer, the quantization scheme and the weights. Tensors are 64-byte aligned and memory-mapped at load.
+- **Native GPTQ** with act-order, MSE clip search and mixed int4/int8 precision. Lower WikiText-2 perplexity than llama.cpp Q4_K_M in our benchmarks on Qwen2.5 0.5B, 1.5B and 3B (the imatrix build of Q4_K_M is ahead on 0.5B).
+- **Triton int4/int8 GPU kernels** with fused decode and CUDA graphs, and a CPU fallback. Faster decode than llama.cpp Q4_K_M in our benchmarks on 0.5B (662 vs 494 tok/s), and equal within noise on 1.5B (283 vs 274 tok/s) and 3B (229 vs 236 tok/s).
+- **Runs natively on Windows and Linux.** No WSL. CI runs the CPU test suite on both.
+- **A pure-Python package.** `pip install quf` needs no compiler; the GPU kernels are compiled by Triton at run time.
 
-Qwen2.5 on an RTX 5080 Laptop GPU, native Windows (the 0.5B and 1.5B speed numbers come from one battery-powered session, and the 3B speed numbers from one session on AC power), QUF 0.4.0 defaults against fp16 and five GGUF variants. Perplexity uses the `llama` protocol over the full WikiText-2 test split and a held-out C4 slice. Full method, per-axis verdicts and caveats: [docs/RESULTS.md](docs/RESULTS.md#quf-040-vs-gguf-task-362).
+## Results at a glance
 
-#### Qwen2.5-0.5B (llama protocol, full WikiText-2 test and the C4 slice)
+Qwen2.5 base models, one RTX 5080 Laptop GPU on Windows. All results on this page were measured with quf 0.4.0, and 0.4.1 changes no conversion output. Size and perplexity: lower is better. Decode: higher is better, measured on battery power for 0.5B and 1.5B and on AC power for 3B. Bold marks the better value per model and column; the 1.5B and 3B decode speeds are equal within noise, so neither is bold.
 
-| Format | Size MB | WikiText-2 PPL | C4 PPL | Decode tok/s (median, min-max) | Δ WikiText-2 vs fp16 | Δ C4 vs fp16 | Pareto front |
-|---|---:|---:|---:|---:|---:|---:|:---:|
-| fp16 (reference) | 988.1 | 11.740 | 18.239 | not measured | 0 | 0 | n/a |
-| QUF 0.4.0 default | 367.9 | 11.987 | 18.777 | 662 (658-666) | +2.10% | +2.94% | yes |
-| GGUF Q4_K_M (no imatrix) | 397.8 | 12.043 | 18.724 | 494 (459-510) | +2.58% | +2.66% | yes |
-| GGUF Q4_K_M-imat | 397.8 | 11.959 | 18.593 | 494 (459-510) † | +1.87% | +1.94% | yes |
-| GGUF Q4_K_S (no imatrix) | 385.5 | 12.207 | 19.002 | 496 (486-538) | +3.98% | +4.18% | no |
-| GGUF IQ4_XS-imat | 349.4 | 12.286 | 19.046 | 496 (489-523) | +4.65% | +4.42% | yes |
-| GGUF Q5_K_M (no imatrix) | 420.1 | 11.961 | 18.505 | 506 (483-534) | +1.88% | +1.46% | yes |
+| Model | Format | Size MB | WikiText-2 PPL | C4 PPL | Decode tok/s |
+|---|---|---:|---:|---:|---:|
+| Qwen2.5-0.5B | QUF 0.4.0 | **367.9** | 11.987 | 18.777 | **662** |
+| Qwen2.5-0.5B | Q4_K_M | 397.8 | 12.043 | 18.724 | 494 |
+| Qwen2.5-0.5B | Q4_K_M imatrix | 397.8 | **11.959** | **18.593** | not measured |
+| Qwen2.5-1.5B | QUF 0.4.0 | 1040.0 | **8.420** | 13.763 | 283 |
+| Qwen2.5-1.5B | Q4_K_M | **986.0** | 8.600 | 13.954 | 274 |
+| Qwen2.5-1.5B | Q4_K_M imatrix | **986.0** | 8.497 | **13.757** | not measured |
+| Qwen2.5-3B | QUF 0.4.0 | 1987.4 | **7.291** | **12.154** | 229 |
+| Qwen2.5-3B | Q4_K_M | **1929.9** | 7.465 | 12.311 | 236 |
 
-QUF against each GGUF variant, Qwen2.5-0.5B (size: smaller wins; perplexity: difference under 0.1% is a tie, otherwise lower wins; speed: overlapping min-max ranges are a tie):
+QUF has a lower WikiText-2 perplexity than Q4_K_M on all three models, a lower C4 perplexity on 1.5B and 3B, and on 0.5B a 7.5% smaller file and faster decode (662 vs 494 tok/s). It has a larger file than Q4_K_M on 1.5B (+5.5%) and 3B (+3.0%), a lower decode median on 3B (229 vs 236 tok/s, within noise) and a higher C4 perplexity on 0.5B (18.777 vs 18.724). Q4_K_M imatrix (0.5B on both sets, 1.5B on C4) and Q5_K_M (0.5B and 1.5B, with larger files) are more accurate than QUF on some rows.
 
-| vs | Size | WikiText-2 | C4 | Speed |
-|---|---|---|---|---|
-| GGUF Q4_K_M (no imatrix) | QUF wins (-7.5%) | QUF wins (-0.46%) | QUF loses (+0.28%) | QUF wins, median ratio 1.340 |
-| GGUF Q4_K_M-imat | QUF wins (-7.5%) | QUF loses (+0.23%) | QUF loses (+0.99%) | QUF wins, median ratio 1.340 † |
-| GGUF Q4_K_S (no imatrix) | QUF wins (-4.6%) | QUF wins (-1.80%) | QUF wins (-1.18%) | QUF wins, median ratio 1.334 |
-| GGUF IQ4_XS-imat | QUF loses (+5.3%) | QUF wins (-2.43%) | QUF wins (-1.41%) | QUF wins, median ratio 1.334 |
-| GGUF Q5_K_M (no imatrix) | QUF wins (-12.4%) | QUF loses (+0.22%) | QUF loses (+1.47%) | QUF wins, median ratio 1.308 |
+![Scatter plots of file size in MB against WikiText-2 perplexity for QUF 0.4.0 and the GGUF variants on Qwen2.5-0.5B, 1.5B and 3B, with the fp16 perplexity as a dashed line; lower-left is better](https://raw.githubusercontent.com/vtrsharvin-sj/Quantized-Unified-Format/main/docs/assets/quf_vs_gguf.png)
 
-Beat_Target (size ≤ Q4_K_M, WikiText-2 ≤ Q4_K_M, decode tok/s ≥ Q4_K_M): **reached** on 0.5B (size ok, WikiText-2 ok, speed ok).
+Every GGUF variant, the lm-eval scores and the methodology are in the Benchmarks section below. Per-axis verdicts are in the "QUF 0.4.0 vs GGUF" and "Scaling check on Qwen2.5-3B" sections of [docs/RESULTS.md](https://github.com/vtrsharvin-sj/Quantized-Unified-Format/blob/main/docs/RESULTS.md).
 
-Pareto front (size, WikiText-2, C4, lower is better on all): QUF 0.4.0 default, GGUF Q4_K_M (no imatrix), GGUF Q4_K_M-imat, GGUF IQ4_XS-imat, GGUF Q5_K_M (no imatrix). Dominated: GGUF Q4_K_S (no imatrix) (by QUF 0.4.0 default).
+## Install
 
-#### Qwen2.5-1.5B (llama protocol, full WikiText-2 test and the C4 slice)
+QUF needs Python 3.10 or newer and PyTorch.
 
-| Format | Size MB | WikiText-2 PPL | C4 PPL | Decode tok/s (median, min-max) | Δ WikiText-2 vs fp16 | Δ C4 vs fp16 | Pareto front |
-|---|---:|---:|---:|---:|---:|---:|:---:|
-| fp16 (reference) | 3087.4 | 8.296 | 13.476 | not measured | 0 | 0 | n/a |
-| QUF 0.4.0 default | 1040.0 | 8.420 | 13.763 | 283 (263-285) | +1.49% | +2.13% | yes |
-| GGUF Q4_K_M (no imatrix) | 986.0 | 8.600 | 13.954 | 274 (268-279) | +3.66% | +3.55% | no |
-| GGUF Q4_K_M-imat | 986.0 | 8.497 | 13.757 | 274 (268-279) † | +2.42% | +2.09% | yes |
-| GGUF Q4_K_S (no imatrix) | 940.3 | 8.679 | 14.075 | 282 (270-287) | +4.61% | +4.45% | no |
-| GGUF IQ4_XS-imat | 895.7 | 8.577 | 13.879 | 274 (270-278) | +3.38% | +3.00% | yes |
-| GGUF Q5_K_M (no imatrix) | 1125.1 | 8.389 | 13.633 | 248 (242-251) | +1.12% | +1.17% | yes |
+**NVIDIA GPU.** Install a CUDA build of PyTorch first, then QUF with the Triton kernels:
 
-QUF against each GGUF variant, Qwen2.5-1.5B (size: smaller wins; perplexity: difference under 0.1% is a tie, otherwise lower wins; speed: overlapping min-max ranges are a tie):
+```bash
+pip install torch --index-url https://download.pytorch.org/whl/cu128
+pip install "quf[fast]"        # or "quf[fast,convert]" to also get what quf convert needs
+```
 
-| vs | Size | WikiText-2 | C4 | Speed |
-|---|---|---|---|---|
-| GGUF Q4_K_M (no imatrix) | QUF loses (+5.5%) | QUF wins (-2.09%) | QUF wins (-1.37%) | tie (ranges overlap), median ratio 1.033 |
-| GGUF Q4_K_M-imat | QUF loses (+5.5%) | QUF wins (-0.91%) | tie (+0.04%) | tie (ranges overlap), median ratio 1.033 † |
-| GGUF Q4_K_S (no imatrix) | QUF loses (+10.6%) | QUF wins (-2.99%) | QUF wins (-2.22%) | tie (ranges overlap), median ratio 1.003 |
-| GGUF IQ4_XS-imat | QUF loses (+16.1%) | QUF wins (-1.84%) | QUF wins (-0.84%) | tie (ranges overlap), median ratio 1.034 |
-| GGUF Q5_K_M (no imatrix) | QUF wins (-7.6%) | QUF loses (+0.37%) | QUF loses (+0.96%) | QUF wins, median ratio 1.142 |
+The cu128 index (CUDA 12.8) is needed for RTX 50-series GPUs, and other NVIDIA GPUs can use the same index. The order matters: an installed CUDA build of torch already satisfies QUF's torch dependency, so pip keeps it, while `pip install quf` on its own takes torch from PyPI, which is CPU-only on Windows.
 
-Beat_Target (size ≤ Q4_K_M, WikiText-2 ≤ Q4_K_M, decode tok/s ≥ Q4_K_M): **not reached** on 1.5B (size FAILS, WikiText-2 ok, speed ok).
+**CPU only.** QUF also runs on machines with only a CPU. It then uses the `cpu` backend, and no GPU or Triton is needed:
 
-Pareto front (size, WikiText-2, C4, lower is better on all): QUF 0.4.0 default, GGUF Q4_K_M-imat, GGUF IQ4_XS-imat, GGUF Q5_K_M (no imatrix). Dominated: GGUF Q4_K_M (no imatrix) (by GGUF IQ4_XS-imat), GGUF Q4_K_S (no imatrix) (by GGUF IQ4_XS-imat).
-
-**Where QUF wins and loses (Qwen2.5-0.5B).** Size: smaller than every GGUF variant except IQ4_XS (349.4 MB, 5.3% smaller than QUF). WikiText-2: better than Q4_K_M, Q4_K_S and IQ4_XS, worse than Q4_K_M-imat (+0.23%) and Q5_K_M (+0.22%). C4: better than Q4_K_S and IQ4_XS, worse than Q4_K_M (+0.28%), Q4_K_M-imat (+0.99%) and Q5_K_M (+1.47%). Speed: faster than every variant (ranges do not overlap, median 1.31 to 1.34x). Beat_Target is reached on 0.5B, but only on the WikiText-2 definition: QUF's C4 perplexity is 0.28% worse than Q4_K_M's.
-
-**Where QUF wins and loses (Qwen2.5-1.5B).** Size: larger than Q4_K_M, Q4_K_M-imat, Q4_K_S and IQ4_XS (5.5% to 16.1%), smaller than Q5_K_M. WikiText-2: better than every variant except Q5_K_M (+0.37%). C4: better than Q4_K_M, Q4_K_S, IQ4_XS, tie with Q4_K_M-imat (+0.04%), worse than Q5_K_M (+0.96%). Speed: tie with every variant except Q5_K_M, which QUF beats (1.14x). Beat_Target is not reached on 1.5B because the QUF file is 5.5% larger than Q4_K_M.
-
-**Qwen2.5-3B scaling check (one model, one run per row).** QUF 0.4.0 defaults against GGUF Q4_K_M (no imatrix), llama protocol, full WikiText-2 test split and the C4 slice. This session ran on **AC power**, unlike the 0.5B and 1.5B speed session, so its speed numbers are not comparable with the tables above.
-
-| Format | Size MB | WikiText-2 PPL | C4 PPL | Decode tok/s (median, min-max) |
-|---|---:|---:|---:|---|
-| GGUF Q4_K_M (no imatrix) | 1929.9 | 7.465 (±0.047) | 12.311 | 236.0 (225.2-244.4), llama-bench tg128 |
-| QUF 0.4.0 default | 1987.4 | 7.291 | 12.154 | 190.7 end-to-end (180.5-198.5); 229.1 steady-state |
-
-Per axis against Q4_K_M: size QUF loses (+3.0%); WikiText-2 QUF wins (-2.3%); C4 QUF wins (-1.3%); speed QUF loses (the ranges do not overlap; the end-to-end median is 19% lower and the steady-state median 3% lower). Beat_Target is **not reached** on 3B: the QUF file is larger and decode is slower. Both rows drifted down over the session (probably thermal), so the absolute speeds are indicative only.
-
-**Other caveats.** On 0.5B the only variant QUF beats on size, both perplexities and speed at once is Q4_K_S. On 1.5B no GGUF variant is beaten on all four axes: IQ4_XS and Q4_K_M are smaller and tie on speed. Every tie and win above rests on one speed session and one perplexity run per row (no seeds are involved, but the speed was measured on battery). The QUF file stores `k_proj`, `v_proj` and the last layer at int8 and the embedding at int8, and uses group size 32, which accounts for part of its size against Q4_K_M and IQ4_XS. The 0.5B and 1.5B speed numbers come from one battery-powered session and the 3B speed numbers from one AC session; none was repeated in another session.
-
-- † Q4_K_M-imat speed was not measured; it is given Q4_K_M's speed because the tensor types are the same.
-- tok/s is from one interleaved session on battery power with throttled clocks; a tie means the min-max ranges overlap. The perplexity tie band is 0.1%.
-- Earlier 0.3.0 numbers are in git history and in the 0.3.0 sections of [docs/RESULTS.md](docs/RESULTS.md).
-- **lm-evaluation-harness** (hellaswag and arc_easy, 0-shot, 500 examples each): the 0.4.0 default files are within one standard error of fp16 on every score (largest gap: 1.5B hellaswag acc, 0.470 against 0.486). The older 0.2.1 `size_b` files were within one standard error except 0.5B arc_easy acc (0.612 against 0.636, 1.1 standard errors). The 0.2.0 `sensitive` files were within one standard error everywhere. Table below.
-
-| Model | Variant | hellaswag acc | hellaswag acc_norm | arc_easy acc | arc_easy acc_norm |
-|---|---|---|---|---|---|
-| Qwen2.5-0.5B | fp16 | 0.410 | 0.502 | 0.636 | 0.586 |
-| Qwen2.5-0.5B | QUF 0.4.0 default | 0.416 | 0.504 | 0.636 | 0.578 |
-| Qwen2.5-0.5B | QUF 0.2.1 `size_b` | 0.410 | 0.500 | 0.612 | 0.588 |
-| Qwen2.5-0.5B | QUF 0.2.0 `sensitive` | 0.424 | 0.496 | 0.620 | 0.564 |
-| Qwen2.5-1.5B | fp16 | 0.486 | 0.602 | 0.750 | 0.710 |
-| Qwen2.5-1.5B | QUF 0.4.0 default | 0.470 | 0.588 | 0.740 | 0.730 |
-| Qwen2.5-1.5B | QUF 0.2.1 `size_b` | 0.480 | 0.590 | 0.744 | 0.704 |
-| Qwen2.5-1.5B | QUF 0.2.0 `sensitive` | 0.484 | 0.608 | 0.748 | 0.724 |
-
-(stderr is about 0.022 for hellaswag and 0.019 to 0.022 for arc_easy.)
-- Not evaluated: int6 and int5 storage. A `torch.compile` decode path was tried and skipped (see [docs/BACKENDS.md](docs/BACKENDS.md)).
-
-Sources: `docs/bench_accuracy.json`, `docs/size_study.json`, [docs/ACCURACY.md](docs/ACCURACY.md), [docs/BACKENDS.md](docs/BACKENDS.md). More tables in [Measured results](#measured-results).
-
-**Format version 3.** The 0.4.0 defaults write QUF format version 3 files, because the embedding table is quantized. Readers of 0.3.0 and older reject them with an unsupported version error. Version 1 and 2 files still open, and `--embed-precision fp16` writes a version 1 or 2 file again. See [docs/FORMAT.md](docs/FORMAT.md).
+```bash
+pip install quf
+pip install "quf[convert]"     # adds transformers, datasets and the rest of what quf convert needs
+```
 
 ## Quickstart
 
-```
-pip install quf
-quf convert Qwen/Qwen2.5-0.5B out.quf
-quf run out.quf --prompt "The capital of France is" --max-new-tokens 32 --temperature 0
-quf bench out.quf --out results.json
-```
+Convert a Hugging Face checkpoint (about 3 minutes for 0.5B on an RTX 5080 Laptop GPU):
 
-`quf convert` needs the convert extra: `pip install "quf[convert]"`.
-
-## Status: what is and is not verified
-
-| Component | Status |
-| --- | --- |
-| Format writer/reader, quantizer, packer, CPU backend | Implemented. Covered by the CPU test suite. |
-| Native GPTQ converter (`quf convert`) | Verified on native Windows with Qwen/Qwen2.5-0.5B and 1.5B ([docs/RESULTS.md](docs/RESULTS.md)). |
-| `torch_gpu` backend on RTX 5080 Laptop (compute capability 12.0) | Verified: `quf run` and `quf bench` work on CUDA with a real converted Qwen2.5-0.5B. |
-| `torch_fused` backend | Verified, but slower than `torch_gpu` on this GPU (uses less memory). |
-| gigatoken on Windows | Verified: gigatoken 0.11.0 installs and runs, 36.8x faster than HF `tokenizers` on WikiText-2 with identical ids. |
-| `triton_int4` backend | Verified: default on GPU with `pip install "quf[fast]"`. 0.4.0 adds the fused decode kernels, an int8 GEMV and a mixed int4/int8 fast path: 662 tok/s (0.5B) and 283 (1.5B) steady-state, one battery session (see Summary). Older 0.3.0 figures: 1.21x (0.5B) and 1.46x (1.5B) faster than `torch_gpu` in graph mode, about half the GPU memory, same perplexity. Slower in eager mode, so `auto` avoids it with `--no-cuda-graph`. |
-| Fused decode kernels (0.4.0) | Verified: add+RMSNorm, RoPE+KV-cache write, flash-decode and on-device greedy argmax with a lazy EOS check, on `triton_int4`. `QUF_NO_FUSED=1` turns them off and keeps the 0.3.0 decode path. |
-| Quantized embedding and `lm_head` (format v3) | Verified: int8 per-row, group size 64 by default (`--embed-precision`). Files with the 0.4.0 defaults: 367.9 MB (0.5B), 1040.0 MB (1.5B), 1987.4 MB (3B). |
-| CUDA graph decode | Verified: default on GPU. 0.4.0 default files, `triton_int4`, graph, steady-state, one battery session: 662 tok/s on 0.5B and 283 on 1.5B, against llama.cpp Q4_K_M at 494 and 274 in the same session (faster on 0.5B, tie within noise on 1.5B). Older 0.3.0 figures (`size_b` files, a different session where llama.cpp ran 756.5 and 422.8): 284.2 and 145.6 tok/s with the int4 backend, 46.7 and 30.9 eager, and 234.4 and 99.7 with `torch_gpu` (58.4 and 40.6 eager). The 0.2.1 `torch_gpu` figures (255.2 and 82.7 graph) are in Measured results. |
-| Perplexity target (3 percent) | `llama` protocol, 0.4.0 default (`size_f`, int8 embedding): reached on WikiText-2 for 0.5B (+2.10%) and 1.5B (+1.49%) and on C4 for 0.5B (+2.94%) and 1.5B (+2.13%). The 0.3.0 `size_b` default missed it on C4 for 0.5B (+4.43%), and the 0.1.0 settings missed it. |
-| GGUF comparison | Verified on 0.5B and 1.5B against five GGUF variants and on 3B against Q4_K_M: perplexity from `llama-perplexity` on the GPU, same text and protocol (see Summary). Beat_Target is reached on 0.5B, not reached on 1.5B (file 5.5% larger) or 3B (file 3.0% larger and decode slower). |
-| lm-evaluation-harness scores | Verified on the 0.4.0 default files: within one standard error of fp16 on hellaswag and arc_easy for both models. Older `size_b` and `sensitive` rows are kept for comparison. |
-| `torch.compile` decode | Skipped. It needs Triton, and with Triton it measured about 11% slower than the CUDA graph. |
-| int6 / int5 storage | Not evaluated. |
-| Qwen2.5-3B | Converted and evaluated once, on AC power (see Summary): better perplexity than Q4_K_M, larger file, slower decode. |
-| Marlin backend | Optional, never selected automatically, not verified on this hardware. |
-
-Details are in [docs/ENV.md](docs/ENV.md) and [docs/RESULTS.md](docs/RESULTS.md).
-
-## Installation
-
-Requires Python 3.10 or newer.
-
-```
-pip install quf             # core: format, quantizer, runtime (torch is a base dependency)
-pip install "quf[cuda]"     # same as core; kept so the extra name resolves
-pip install "quf[convert]"  # adds transformers, datasets, accelerate, gigatoken, tokenizers,
-                            # safetensors, huggingface_hub for `quf convert`
-pip install "quf[fast]"     # adds Triton; enables the default int4 GPU backend
-pip install "quf[test]"     # pytest and hypothesis
+```bash
+quf convert Qwen/Qwen2.5-0.5B qwen2.5-0.5b.quf
 ```
 
-From a source checkout, use `pip install .` and the same extras.
-
-The `quf` console script is installed with the package. Run `quf --help` to list subcommands: `info`, `convert`, `run`, `bench`.
-
-For a CUDA build of PyTorch on an RTX 50-series GPU, install a CUDA 12.8 wheel (the version recorded in ENV.md is `2.11.0+cu128`). With no GPU, everything works on CPU.
-
-## Convert
-
-`quf convert` loads a Hugging Face Qwen checkpoint with transformers and quantizes it with QUF's own GPTQ implementation. It runs on native Windows, Linux and macOS.
-
-```
-quf convert Qwen/Qwen2.5-0.5B out.quf
-quf convert ./local-model out.quf --dataset calib.txt --samples 128 --seq-len 512 --seed 0
+```text
+quf: converting Qwen/Qwen2.5-0.5B (loading the model and calibration data, then quantizing; this can take several minutes)
+Wrote qwen2.5-0.5b.quf: 367911680 bytes (0.3724 of the fp16 checkpoint size, 988065536 bytes)
+Size by precision:
+  int4: 195976192 bytes (115 modules: down_proj x23, gate_proj x23, up_proj x23, o_proj x23, q_proj x23)
+  int8: 160611072 bytes (54 modules: embed_tokens x1, k_proj x24, v_proj x24, down_proj x1, gate_proj x1, …)
+  …
 ```
 
-**Defaults (0.4.0).** Group size 32, act-order on, clip search on, the `size_f` precision preset (`k_proj`, `v_proj` and the whole last layer at int8, the rest int4), an int8 embedding table and `lm_head` with group size 64 (`--embed-precision int8 --embed-group-size 64 --embed-method clip`), and calibration on the wikitext-2 train split, 128 samples of 1024 tokens. These defaults were chosen from measured runs in [docs/ACCURACY.md](docs/ACCURACY.md).
+Inspect the file:
 
-**Opt-outs and options.**
-
-| Option | Effect |
-| --- | --- |
-| `--group-size {32,64,128}` | Quantization group size (default 32). `--group-size 128` is the 0.1.0 group size. Pair it with `--no-clip-search`, because clip search alone made the g128 model worse. |
-| `--no-act-order` | Turn off act-order (on by default). Act-order writes `g_idx` tensors and needs format version 2. |
-| `--no-clip-search` | Turn off the MSE clip search (on by default). |
-| `--preset {down_proj,sensitive,size_a,size_b,size_c,size_d,size_e,size_f,size_g,none}` | Precision preset. Default is `size_f`: `k_proj`, `v_proj` and the last layer at int8, the rest int4. `size_b` is the 0.3.0 default (last layer int8 only). `size_d` to `size_g` add more int8 attention or `down_proj` modules. `sensitive` reproduces 0.2.0 (`down_proj` and the last layer at int8). `size_c` is the smallest candidate (+1.59% and +1.61% C4 perplexity against `sensitive`, so it was not made the default). `none` stores every quantized module at int4. `down_proj` stores only `down_proj` at int8. See [docs/ACCURACY.md](docs/ACCURACY.md). |
-| `--embed-precision {fp16,int8,int4}` | Storage of the embedding table and an untied `lm_head` (per-row, with group scales). Default `int8`. `fp16` keeps them unquantized and writes a version 1 or 2 file. The size study chose int8 over int4 because an int4 embedding cost accuracy on 1.5B (WikiText-2 8.93 against 8.45, see [docs/ACCURACY.md](docs/ACCURACY.md)). |
-| `--embed-group-size {32,64}` | Group size of a quantized embedding (default 64). |
-| `--embed-method {clip,rtn}` | Rounding of a quantized embedding: `clip` (MSE-optimal clipping per group, default) or `rtn`. The header has no `clip` method: the format only allows `rtn` and `gptq` for an embedding, so `--embed-method clip` is written as `"method": "rtn"` plus `"clip_search": true`, and `quf info` shows it as "rtn + clip search". The stored data is plain per-group round-to-nearest with a clip-searched scale. |
-| `--mixed PATTERN=PRECISION`, `--int8-modules PATTERN` | Per-module precision (int4, int8, fp16) by glob. When given, the default preset is not applied. |
-| `--legacy-calibration` | 0.1.0 calibration: wikitext-2 only, 128 samples of 512 tokens. |
-| `--multi-source-calibration` | Calibrate on wikitext-2 train and English C4 (50/50), 128 samples of 2048 tokens. It is not the default: it measured worse on WikiText-2 perplexity and took longer to convert (see RESULTS.md). It may rank differently on other evaluations. |
-| `--dataset`, `--samples` (128), `--seq-len` (1024), `--seed` (0) | Calibration source and size. |
-| `--overwrite` | Replace an existing output file. |
-
-To reproduce the 0.1.0 output (a version 1 file), use `quf convert MODEL out.quf --group-size 128 --no-act-order --no-clip-search --preset none --embed-precision fp16 --legacy-calibration`.
-
-The command prints the output size and compression ratio. It refuses to replace an existing output unless `--overwrite` is given, rejects unsupported architectures before heavy work, and deletes a partial file if conversion fails.
-
-**Format versions.** A quantized embedding (the 0.4.0 default) needs format version 3. Otherwise group size 32 or 64, act-order (`g_idx`) and int8 or fp16 modules need version 2. The writer picks the version from the features a file uses, so the opt-out command above still produces a version 1 file. Older readers reject a higher version with an unsupported version error. This is intended. Conversion output also changed in 0.4.0: the clip search now ranks candidates by the error of the fp16-rounded weights, so a file converted with 0.4.0 differs from one converted with 0.3.0 using the same options.
-
-**Multi-source calibration.** With `--multi-source-calibration`, the sample count is split by share between wikitext-2 train and the first 4000 non-empty documents of the English C4 train split (streamed from `allenai/c4`). Each source is shuffled with `seed + source index`. Leftover samples go to the largest fractional parts, and the same sources and seed give identical samples. A source with too few tokens raises an error that names the source and the shortfall.
-
-Inspect the result:
-
-```
-quf info out.quf
+```bash
+quf info qwen2.5-0.5b.quf
 ```
 
-This prints the model config, quantization scheme, tensor count and file size. A corrupt file exits with status 1 and an error message.
-
-## Run
-
-```
-quf run out.quf --prompt "Hello" --max-new-tokens 64 --temperature 0
-```
-
-Options: `--max-new-tokens` (64), `--temperature` (0 means greedy), `--top-k`, `--top-p`, `--seed` (0), `--no-stream`, `--device {auto,cpu,cuda}` (auto), `--backend {auto,int4,cached,fused,marlin}` (auto), `--prefer-fused`, `--no-cuda-graph`.
-
-**Fused decode kernels (0.4.0).** On `triton_int4`, decode uses fused add+RMSNorm, RoPE+KV-cache write, flash-decode and on-device greedy argmax (the end-of-sequence check is lazy). `QUF_NO_FUSED=1` turns them off and decodes with the 0.3.0 path; the output tokens are the same except at near-ties in the fp16 logits.
-
-**CUDA graph decode.** On a CUDA device, decoding replays a captured CUDA graph by default. `--no-cuda-graph` or the environment variable `QUF_NO_CUDA_GRAPH=1` turns it off and decodes eagerly. If graph capture fails, one INFO line gives the reason and decoding continues eagerly. 0.4.0 default files, `triton_int4`, steady-state, median of 7 runs, 128 new tokens, RTX 5080 Laptop, one battery session: 662 tok/s on 0.5B and 283 on 1.5B (3B, on AC: 229, steady-state). Older 0.3.0 measurement (median of 7 runs, 128 new tokens, default `size_b` files): `triton_int4`: 0.5B 46.7 tok/s eager and 284.2 with the graph, 1.5B 30.9 eager and 145.6 with the graph. `torch_gpu`: 0.5B 58.4 eager and 234.4 with the graph, 1.5B 40.6 eager and 99.7 with the graph.
-
-Backends:
-
-- `cpu`: used when no NVIDIA GPU is present.
-- `triton_int4` (`--backend int4`): keeps packed int4 on the GPU and reads it with Triton kernels. **Default on GPU** when Triton imports and its self-test passes. Install it with `pip install "quf[fast]"`. It is faster than `torch_gpu` in the default CUDA graph mode (0.3.0 measurement: 1.21x on 0.5B, 1.46x on 1.5B) and uses about half the GPU memory. In 0.4.0 it also holds the quantized embedding packed and runs the int8 modules (`k_proj`, `v_proj`, last layer) on an int8 GEMV. Without the extra, with `QUF_NO_TRITON=1`, or when the self-test fails, `auto` uses `torch_gpu`. `--backend int4` reports an error with the reason when it is unavailable. Eager decode is slower with int4 than with `torch_gpu`, so `auto` picks `torch_gpu` when `--no-cuda-graph` or `QUF_NO_CUDA_GRAPH=1` is set, and a failed graph capture logs a hint to use `--backend cached`.
-- `torch_gpu` (`--backend cached`): dequantizes weights to fp16 at load. Default on GPU when the int4 backend is unavailable and the weights fit in free GPU memory.
-- `torch_fused` (`--backend fused`): keeps packed int4 on the GPU. Chosen automatically when the cached weights do not fit, or with `--prefer-fused`.
-- `marlin`: optional, only with `--backend marlin`, never automatic. Unverified on this hardware.
-
-The choice and its reason are logged to stderr. `--device cuda` without an NVIDIA GPU exits with status 1. A prompt that exceeds the context length and GPU out-of-memory also exit with status 1.
-
-## Benchmark
-
-```
-quf bench out.quf --out results.json
-quf bench out.quf --out results.json --fp16-ref Qwen/Qwen2.5-0.5B --gguf model-q4.gguf --device auto
+```text
+File: qwen2.5-0.5b.quf
+File size: 367911680 bytes
+Model config:
+{
+  "architecture": "Qwen2ForCausalLM",
+  "hidden_size": 896,
+  …
+}
+Quantization scheme:
+{
+  "act_order": true,
+  "bits": 4,
+  "embedding": {
+    "bits": 8,
+    …
+  },
+  "group_size": 32,
+  "method": "gptq",
+  …
+}
+Tensor count: 689
+…
+Triton gate: ok (triton 3.9.0)
+Selected backend (auto): triton_int4
 ```
 
-The results JSON records WikiText perplexity, file size, tokens per second, backend, device name and software versions. With `--fp16-ref`, the relative perplexity increase over fp16 is printed next to the documented target of at most 3 percent. The target is reported, not enforced. `--gguf` adds a GGUF Q4 comparison. The GGUF rows in this README were verified against `llama-perplexity` (see [docs/RESULTS.md](docs/RESULTS.md)). An lm-evaluation-harness adapter is in `quf/bench/lm_eval_adapter.py`; its scores are in [docs/RESULTS.md](docs/RESULTS.md).
+Generate text (greedy by default):
 
-## Measured results
-
-Machine: RTX 5080 Laptop GPU, native Windows, PyTorch 2.11.0+cu128. Perplexity uses 2048-token windows. WikiText-2 is the test split. C4 is the first ~1.3M characters of the English validation split, never used for calibration. Source: `docs/bench_accuracy.json`. Details: [docs/RESULTS.md](docs/RESULTS.md). The sections below this one are older releases unless they say 0.4.0.
-
-**A 4-bit model does not beat fp16.** Every quantized row has higher perplexity than fp16.
-
-The two tables below use the earlier **full protocol** (every position of each 2048-token window scored), so their perplexities are not comparable with the Summary above. They show the 0.2.0 `sensitive` preset ("0.2.0 defaults"), an older release, not the current `size_f` default. The default was changed afterwards to cut file size; against `sensitive`, `size_b` (0.3.0) is 7.8% smaller on 0.5B and 11.0% smaller on 1.5B, at +0.37% and +0.58% WikiText-2 perplexity (`llama` protocol, [docs/ACCURACY.md](docs/ACCURACY.md)). The 0.4.0 numbers are in the Summary.
-
-Qwen/Qwen2.5-0.5B (fp16 perplexity: WikiText-2 13.0703, C4 19.7930):
-
-| Run | WikiText-2 ppl | vs fp16 | C4 ppl | vs fp16 | File size (bytes) | Tokens/s |
-| --- | --- | --- | --- | --- | --- | --- |
-| fp16 | 13.0703 | n/a | 19.7930 | n/a | 988,065,536 (computed) | 15.50 |
-| RTN g128 | 15.5417 | +18.91% | 23.5073 | +18.77% | 469,483,072 | 22.92 |
-| RTN g32 | 14.3826 | +10.04% | 21.6024 | +9.14% | 490,449,792 | 24.13 |
-| 0.1.0 settings (GPTQ g128) | 14.0401 | +7.42% | 21.7476 | +9.87% | 469,483,072 | 26.66 |
-| **0.2.0 defaults (g32 + clip + act-order + sensitive int8)** | **13.3775** | **+2.35%** | **20.4453** | **+3.30%** | 539,605,632 | 16.54 |
-
-Qwen/Qwen2.5-1.5B (fp16 perplexity: WikiText-2 9.2650, C4 14.6605):
-
-| Run | WikiText-2 ppl | vs fp16 | C4 ppl | vs fp16 | File size (bytes) | Tokens/s |
-| --- | --- | --- | --- | --- | --- | --- |
-| fp16 | 9.2650 | n/a | 14.6605 | n/a | 3,087,428,608 (computed) | 13.40 |
-| RTN g128 | 10.3555 | +11.77% | 16.1390 | +10.09% | 1,158,904,640 | 22.44 |
-| RTN g32 | 9.8572 | +6.39% | 15.4676 | +5.51% | 1,235,674,048 | 22.28 |
-| 0.1.0 settings (GPTQ g128) | 9.8434 | +6.24% | 15.6935 | +7.05% | 1,158,904,640 | 21.86 |
-| **0.2.0 defaults** | **9.3585** | **+1.01%** | **14.8997** | **+1.63%** | 1,413,323,520 | 22.19 |
-
-What this shows:
-
-- Against the 3% target (full protocol), the 0.2.0 defaults are within it on WikiText-2 for both models and on C4 for 1.5B. On C4 for 0.5B they are at +3.30%, so the target is **missed** there.
-- The calibration data is WikiText-2 train, so the WikiText-2 column is closer to the calibration domain than C4. The C4 column is the held-out check.
-- Sizes: the 0.2.0 file is 539.6 MB for 0.5B (0.5461 of fp16) and 1,413.3 MB for 1.5B (0.4578 of fp16). The 0.1.0 file was 469.5 MB and 1,158.9 MB.
-- The Tokens/s column in the tables above is from earlier single short runs on the pre-fast-path decoder (the fp16 row uses Hugging Face generate). Do not read an order into small differences. Current decode speed is in the paragraph below.
-- GGUF Q4_K_M and lm-evaluation-harness results are in the Summary and in [docs/RESULTS.md](docs/RESULTS.md).
-
-Decode speed of the 0.2.1 `torch_gpu` fast path (these are old 0.2.1 figures, measured before the int4 backend; the 0.4.0 figures are in the Summary and the status table; default `size_b` files, 128 new tokens, median of 7 runs after 2 warm-ups, RTX 5080 Laptop): Qwen2.5-0.5B 57.8 tokens/s eager and 255.2 with the CUDA graph (6.23x the earlier 40.9); Qwen2.5-1.5B 46.6 eager and 82.7 with the CUDA graph (2.70x the earlier 30.7, **below the 3x target**). CPU backend on 0.5B: 22.8. llama.cpp Q4_K_M on the same GPU ran 764 (0.5B) and 451 (1.5B) tokens/s in that earlier session (757 and 423 in the 0.3.0 session), so QUF 0.2.1 was slower; it is also a different engine, so the numbers are not like for like. With 0.4.0 the 0.5B default file is faster than Q4_K_M in the Summary session and the 1.5B file ties. See [docs/BACKENDS.md](docs/BACKENDS.md). gigatoken tokenized WikiText-2 train in 0.23 s against 8.44 s for HF tokenizers (36.8x, identical ids).
-
-## Documentation
-
-- [docs/FORMAT.md](docs/FORMAT.md): byte layout, header fields, tensor naming, dtypes and the canonical Packed_Int4 order.
-- [docs/ENV.md](docs/ENV.md): environment results for native Windows and the backend selection rules.
-- [docs/RESULTS.md](docs/RESULTS.md): measured accuracy, size and speed.
-- [docs/ACCURACY.md](docs/ACCURACY.md): accuracy diagnosis, upgrade evaluation and the size study behind the `size_b` default.
-- [docs/BACKENDS.md](docs/BACKENDS.md): backend and decode speed measurements, including the CUDA graph path.
-
-README.md, docs/ENV.md and docs/FORMAT.md ship with the package: they are in the source distribution and are installed to `share/doc/quf` by the wheel.
-
-## Tests
-
-```
-pytest -m "not gpu and not convert"   # CPU suite, no NVIDIA GPU needed
-pytest -m gpu                         # needs an NVIDIA GPU
-pytest -m convert                     # needs the convert extra and downloads a model
+```bash
+quf run qwen2.5-0.5b.quf --prompt "The capital of France is" --max-new-tokens 24
 ```
 
-Tests marked `gpu` are skipped automatically when no NVIDIA GPU is available.
+```text
+quf: Selected backend triton_int4: Triton works and the int4 self-test passed; reads packed 4-bit weights
+ Paris. The capital of Germany is Berlin. The capital of Italy is Rome. The capital of Spain is Madrid. The
+```
 
-## Links and license
+Benchmark perplexity, size and speed:
 
-Source and issues: https://github.com/vtrsharvin-sj/Quantized-Unified-Format
+```bash
+quf bench qwen2.5-0.5b.quf --out results.json
+```
 
-Released under the MIT license. See [LICENSE](LICENSE).
+```text
+quf: Selected backend triton_int4: Triton works and the int4 self-test passed; reads packed 4-bit weights
+Backend: triton_int4 (NVIDIA GeForce RTX 5080 Laptop GPU)
+Perplexity scope: first 40 windows of 2048 tokens
+Perplexity (wikitext-2-raw-v1): 12.4822
+File size: 367911680 bytes
+Tokens per second: 282.37 (median of 7, min 276.31, max 291.29)
+Results written to results.json
+```
+
+`quf bench` is a quick check. It scores non-overlapping 2048-token WikiText-2 windows, 40 by default (`--max-windows 0` scores the whole test split), and times end-to-end generation of 32 tokens including prefill. The Benchmarks section uses a different perplexity protocol and steady-state decode speed, so its numbers differ from these.
+
+## Python API
+
+```python
+import quf
+
+with quf.load("qwen2.5-0.5b.quf") as model:
+    print(model.backend)
+    print(model.generate("The capital of France is", max_new_tokens=24, temperature=0))
+```
+
+```text
+triton_int4
+ Paris. The capital of Germany is Berlin. The capital of Italy is Rome. The capital of Spain is Madrid. The
+```
+
+Streaming: pass a callback that receives each new piece of text as it is decoded. `generate` still returns the whole text.
+
+```python
+import quf
+
+with quf.load("qwen2.5-0.5b.quf") as model:
+    text = model.generate(
+        "The three primary colors are",
+        max_new_tokens=24,
+        stream=lambda piece: print(piece, end="", flush=True),
+    )
+print()
+```
+
+```text
+ red, green, and blue. When these colors are mixed in various proportions, they can produce various colors. Which of
+```
+
+`quf.load(path, device="auto", backend="auto", cuda_graph=None)` takes the `quf run` values: `device` is `auto`, `cpu` or `cuda`, and `backend` is `auto`, `int4`, `cached`, `fused` or `marlin`. `cuda_graph=False` decodes eagerly. The returned `quf.Model` has `backend` (the backend in use, for example `triton_int4`), `tokenizer` and `header`. `close()`, or leaving the `with` block, releases the model.
+
+| `generate()` parameter | Default | Meaning |
+|---|---|---|
+| `prompt` | required | Non-empty text. Plain completion: no chat template is applied. |
+| `max_new_tokens` | `64` | At least 1. Generation also stops at the end-of-sequence token. |
+| `temperature` | `0.0` | 0 is greedy decoding; above 0 samples. |
+| `top_k` | `None` | At least 1 when given. |
+| `top_p` | `None` | Greater than 0 and at most 1 when given. |
+| `seed` | `0` | Sampling seed. |
+| `stream` | `None` | Callable that receives each new text piece; the pieces join to the returned text. |
+
+Arguments outside these limits raise `ValueError`, with the same limits as `quf run`.
+
+## How it works
+
+**File layout.** A `.quf` file starts with the magic `QUF1`, a uint32 format version (1, 2 or 3) and the length of a JSON header. The header holds the model config, the tokenizer files, the quantization scheme and a tensor table. Tensor data follows, each tensor at a 64-byte aligned offset, and the reader memory-maps it without copying. The byte layout is in [docs/FORMAT.md](https://github.com/vtrsharvin-sj/Quantized-Unified-Format/blob/main/docs/FORMAT.md).
+
+**Conversion.** `quf convert` runs this pipeline with its default options:
+
+```text
+Hugging Face checkpoint (Qwen2ForCausalLM, fp16)
+  -> calibration: WikiText-2 train, 128 samples x 1024 tokens
+  -> GPTQ, one decoder layer at a time: act-order, MSE clip search per group
+  -> size_f precision: k_proj, v_proj and the whole last layer int8, the rest int4 at group size 32
+  -> embedding and tied lm_head: int8 per row, group size 64
+  -> model.quf (format version 3)
+```
+
+**Runtime backends.** The default `--backend auto` picks one backend at load and logs the choice and its reason:
+
+| Backend | Selected when | How it runs |
+|---|---|---|
+| `triton_int4` | An NVIDIA GPU is present, Triton imports and its int4 self-test passes | Packed int4/int8 weights read by Triton kernels |
+| `torch_gpu` | GPU without working Triton, or eager decode requested, and the fp16 weights fit | Weights dequantized to fp16 at load |
+| `torch_fused` | GPU, and the fp16 weights do not fit (or `--prefer-fused`) | Packed int4 weights on the GPU |
+| `cpu` | No NVIDIA GPU, or `--device cpu` | PyTorch on the CPU |
+| `marlin` | Only with `--backend marlin` (needs the optional gptqmodel package) | Marlin kernels |
+
+**Fused decode.** On `triton_int4`, each decode step runs fused add+RMSNorm, RoPE with the KV-cache write, flash-decode attention and an on-device greedy argmax with a lazy end-of-sequence check. After prefill the whole step is captured once as a CUDA graph and replayed for every new token.
+
+## Benchmarks
+
+Qwen2.5 base models. Size is in MB of 10^6 bytes. Decode is the median tok/s of 7 rounds (0.5B, 1.5B) or 5 rounds (3B), with the min–max range in parentheses.
+
+**Qwen2.5-0.5B** (speed on battery power)
+
+| Format | Size MB | WikiText-2 PPL | C4 PPL | Decode tok/s |
+|---|---:|---:|---:|---:|
+| fp16 | 988.1 | 11.740 | 18.239 | not measured |
+| QUF 0.4.0 | 367.9 | 11.987 | 18.777 | 662 (658–666) |
+| Q4_K_M | 397.8 | 12.043 | 18.724 | 494 (459–510) |
+| Q4_K_M imatrix | 397.8 | 11.959 | 18.593 | not measured |
+| Q4_K_S | 385.5 | 12.207 | 19.002 | 496 (486–538) |
+| IQ4_XS imatrix | 349.4 | 12.286 | 19.046 | 496 (489–523) |
+| Q5_K_M | 420.1 | 11.961 | 18.505 | 506 (483–534) |
+
+**Qwen2.5-1.5B** (speed on battery power)
+
+| Format | Size MB | WikiText-2 PPL | C4 PPL | Decode tok/s |
+|---|---:|---:|---:|---:|
+| fp16 | 3087.4 | 8.296 | 13.476 | not measured |
+| QUF 0.4.0 | 1040.0 | 8.420 | 13.763 | 283 (263–285) |
+| Q4_K_M | 986.0 | 8.600 | 13.954 | 274 (268–279) |
+| Q4_K_M imatrix | 986.0 | 8.497 | 13.757 | not measured |
+| Q4_K_S | 940.3 | 8.679 | 14.075 | 282 (270–287) |
+| IQ4_XS imatrix | 895.7 | 8.577 | 13.879 | 274 (270–278) |
+| Q5_K_M | 1125.1 | 8.389 | 13.633 | 248 (242–251) |
+
+**Qwen2.5-3B** (one conversion and one perplexity run per row, decode the median of 5 rounds, speed on AC power; fp16 and the other GGUF variants were not measured)
+
+| Format | Size MB | WikiText-2 PPL | C4 PPL | Decode tok/s |
+|---|---:|---:|---:|---:|
+| QUF 0.4.0 | 1987.4 | 7.291 | 12.154 | 229 (219–241) |
+| Q4_K_M | 1929.9 | 7.465 | 12.311 | 236 (225–244) |
+
+**lm-evaluation-harness** (lm_eval 0.4.13, 0-shot, 500 examples per task, seed 1234). Accuracy in percent ± standard error.
+
+| Model | Format | hellaswag acc | hellaswag acc_norm | arc_easy acc | arc_easy acc_norm |
+|---|---|---:|---:|---:|---:|
+| Qwen2.5-0.5B | fp16 | 41.0 ± 2.2 | 50.2 ± 2.2 | 63.6 ± 2.2 | 58.6 ± 2.2 |
+| Qwen2.5-0.5B | QUF 0.4.0 | 41.6 ± 2.2 | 50.4 ± 2.2 | 63.6 ± 2.2 | 57.8 ± 2.2 |
+| Qwen2.5-1.5B | fp16 | 48.6 ± 2.2 | 60.2 ± 2.2 | 75.0 ± 1.9 | 71.0 ± 2.0 |
+| Qwen2.5-1.5B | QUF 0.4.0 | 47.0 ± 2.2 | 58.8 ± 2.2 | 74.0 ± 2.0 | 73.0 ± 2.0 |
+| both | Q4_K_M | not run | not run | not run | not run |
+
+Q4_K_M was not run because the gguf backend of lm_eval 0.4.13 needs the log-probabilities of the prompt tokens (`echo=true`), and the local llama-server build returns only those of the generated tokens, so it cannot score the answer choices.
+
+**Methodology**
+
+- Perplexity uses the llama protocol: 2048-token windows, scoring the second half of each window, as `llama-perplexity` does. Both sets are scored in full: the WikiText-2 test split and a held-out slice of the C4 English validation split that no calibration used. The GGUF rows come from `llama-perplexity` on the GPU (`-ngl 99`) over the same text.
+- QUF calibrates on WikiText-2 train, 128 samples of 1024 tokens. The imatrix variants were built from the same calibration text (`llama-imatrix -c 1024 --chunks 128`).
+- The llama.cpp b12567 CUDA build scored the GGUF rows and built the imatrix, Q4_K_S, IQ4_XS and Q5_K_M files. The 3B Q4_K_M file was made with b6100 (`convert_hf_to_gguf.py` to f16, then `llama-quantize Q4_K_M`, no imatrix).
+- Decode speed compares QUF steady-state tok/s (`triton_int4`, CUDA graph, 128 new tokens, prompt "The quick brown fox", no prefill and no graph capture) with `llama-bench` tg128 (`-p 0 -n 128 -ngl 99 -r 1`), with QUF and GGUF rows interleaved in the same session. The 0.5B and 1.5B rows shared one session (2 warm-up and 7 measured rounds, rotated order), and 3B had its own (1 warm-up and 5 measured rounds). A result counts as faster or slower only when the min–max ranges do not overlap; otherwise it is equal within noise.
+- End-to-end QUF medians, including prefill and graph capture, are lower: 371 tok/s on 0.5B, 200 on 1.5B and 191 on 3B. This is closer to what `quf run` and `quf bench` time.
+- Hardware: NVIDIA GeForce RTX 5080 Laptop GPU, Windows 11, PyTorch 2.11.0+cu128. The 0.5B and 1.5B speed rows were measured on battery power with power-throttled clocks, and the 3B speed rows on AC power, so the two sessions are not comparable with each other.
+
+**Reproduce.** The scripts are in [scripts/](https://github.com/vtrsharvin-sj/Quantized-Unified-Format/tree/main/scripts) and write their results into [docs/bench_accuracy.json](https://github.com/vtrsharvin-sj/Quantized-Unified-Format/blob/main/docs/bench_accuracy.json). They expect a local llama.cpp build and the model files under `eval_cache/`.
+
+| Result | Script |
+|---|---|
+| fp16 perplexity rows | `scripts/bench_accuracy.py` |
+| GGUF variants and imatrix files | `scripts/make_gguf_variants.py` |
+| QUF and GGUF perplexity (0.5B, 1.5B) | `scripts/pareto040.py` |
+| Decode speed session (0.5B, 1.5B) | `scripts/bench_final040.py` |
+| lm-eval scores | `scripts/run_lmeval.py` |
+| Chart | `scripts/make_readme_chart.py` |
+
+The 3B scaling run was driven by a script that is not in the repository. Its results are stored under `scaling_3b` in the same JSON file.
+
+## CLI reference
+
+`quf --help` lists the commands `info`, `convert`, `run` and `bench`, and `quf --version` prints the version. Every command accepts `--verbose`, which shows library warnings, debug messages and error details.
+
+**`quf convert SOURCE OUTPUT`** quantizes a Hugging Face model id or local directory into a `.quf` file. It needs `pip install "quf[convert]"`.
+
+| Option | Default | Meaning |
+|---|---|---|
+| `--dataset DATASET` | WikiText-2 train | Calibration data: a text file, a wikitext config or a Hugging Face dataset id |
+| `--samples N` | 128 | Number of calibration samples |
+| `--seq-len N` | 1024 | Calibration sequence length (512 with `--legacy-calibration`) |
+| `--legacy-calibration` | off | WikiText-2 only, 128 samples of 512 tokens |
+| `--multi-source-calibration` | off | WikiText-2 train and English C4, 50/50, 128 x 2048 tokens |
+| `--seed N` | 0 | Calibration shuffle seed |
+| `--group-size {32,64,128}` | 32 | int4 group size |
+| `--act-order` / `--no-act-order` | on | Quantize columns by descending Hessian diagonal (writes `g_idx`) |
+| `--clip-search` / `--no-clip-search` | on | MSE-optimal clipping ratio per group |
+| `--preset NAME` | `size_f` | Precision preset, see below |
+| `--mixed PATTERN=PRECISION` | none | int4, int8 or fp16 for modules matching a glob, for example `"*.down_proj=int8"`; repeatable, last match wins |
+| `--int8-modules PATTERN` | none | Shortcut for `--mixed "PATTERN=int8"` |
+| `--embed-precision {fp16,int8,int4}` | int8 | Storage of the embedding table and an untied `lm_head` |
+| `--embed-group-size {32,64}` | 64 | Group size of a quantized embedding |
+| `--embed-method {clip,rtn}` | clip | Rounding of a quantized embedding |
+| `--overwrite` | off | Replace an existing output file |
+
+Presets (the default applies when no `--preset`, `--mixed` or `--int8-modules` is given):
+
+| Preset | int8 modules (everything else int4) |
+|---|---|
+| `size_f` (default) | `k_proj`, `v_proj` and the whole last layer |
+| `size_b` | the last layer (the 0.3.0 default body) |
+| `sensitive` | every `down_proj` and the last layer (the 0.2.0 default) |
+| `none` | none: every quantized module is int4 |
+| `down_proj` | every `down_proj` |
+| `size_a` | every `down_proj`, with the last layer int4 |
+| `size_c` | none (all int4 by plan) |
+| `size_d` | every attention projection and the last layer |
+| `size_e` | `size_d` plus `down_proj` in the last quarter of the layers |
+| `size_g` | `size_f` plus `o_proj` |
+
+A quantized embedding (`int8` or `int4`) makes the file format version 3, and `--embed-precision fp16` writes a version 1 or 2 file that older readers open. The format records only `rtn` or `gptq` as an embedding method, so `--embed-method clip` is stored in the header as `"method": "rtn"` plus `"clip_search": true`: round-to-nearest with a clip-searched scale per group. `quf info` shows it as "rtn + clip search".
+
+**`quf run PATH --prompt TEXT`** generates text.
+
+| Option | Default | Meaning |
+|---|---|---|
+| `--max-new-tokens N` | 64 | Maximum number of new tokens |
+| `--temperature T` | 0 | 0 is greedy decoding |
+| `--top-k K`, `--top-p P` | off | Sampling cutoffs |
+| `--seed N` | 0 | Sampling seed |
+| `--no-stream` | off | Print the text at the end instead of streaming it |
+| `--no-cuda-graph` | off | Decode eagerly instead of replaying a CUDA graph |
+| `--device {auto,cpu,cuda}` | auto | Device to run on |
+| `--backend {auto,cached,fused,marlin,int4}` | auto | `int4` is `triton_int4`, `cached` is `torch_gpu`, `fused` is `torch_fused`, `marlin` needs gptqmodel |
+| `--prefer-fused` | off | In auto mode, use the fused backend |
+
+**`quf bench PATH --out FILE`** writes perplexity, file size and tokens per second to a JSON file. It accepts `--device` and `--backend` as `quf run` does, `--prefer-fused`, `--max-windows N` (default 40, 0 for the whole WikiText-2 test split), `--fp16-ref MODEL` for an fp16 reference perplexity, and `--gguf FILE` for a GGUF comparison.
+
+**`quf info PATH`** prints the model config, the quantization scheme, the tensor count, the size by precision, the Triton check and the backend that `auto` would select.
+
+Environment variables (set to `1`):
+
+| Variable | Effect |
+|---|---|
+| `QUF_NO_TRITON` | Never import Triton; on a GPU, `auto` uses `torch_gpu` or `torch_fused` |
+| `QUF_NO_CUDA_GRAPH` | Decode eagerly, like `--no-cuda-graph`; `auto` then prefers `torch_gpu` |
+| `QUF_NO_FUSED` | Keep `triton_int4` but turn off the fused decode kernels |
+
+## Supported models
+
+QUF supports the Qwen2 architecture, `Qwen2ForCausalLM`. It is tested on Qwen2.5-0.5B, Qwen2.5-1.5B and Qwen2.5-3B. The Instruct variants share the architecture, but `quf run` and `generate()` do plain completion and apply no chat template. `quf convert` rejects every other architecture, Qwen3 included, before it loads any weights:
+
+```text
+quf: error: Unsupported model architecture 'Qwen3ForCausalLM'. Supported: Qwen2ForCausalLM.
+```
+
+## Limitations
+
+- One architecture: Qwen2 (`Qwen2ForCausalLM`).
+- The runtime targets batch-1 decoding. There is no server and no batching.
+- No chat template: prompts are completed as plain text.
+- The fast GPU path needs an NVIDIA GPU and Triton. Other GPUs use the `cpu` backend.
+- A file uses one int4 group size (32 by default) and keeps some modules at int8, which is why the 1.5B and 3B files are larger than Q4_K_M.
+- QUF has a higher C4 perplexity than Q4_K_M on 0.5B (18.777 vs 18.724). Its 3B decode median is lower than Q4_K_M's (229 vs 236 tok/s), within noise because the ranges overlap.
+- All speed numbers come from one laptop GPU, partly on battery power.
+- Format version 3 files, the default, need quf 0.4.0 or later.
+- The `marlin` backend is optional and has not been verified on this hardware.
+- Conversion loads the fp16 model into RAM and uses the GPU when there is one. Measured on the RTX 5080 Laptop GPU: about 3, 10 and 15 minutes for 0.5B, 1.5B and 3B.
+
+## Troubleshooting
+
+**Triton is not available.** The `quf:` log line says `int4 unavailable`, or `--backend int4` fails with the reason. Install the extra, then check that `quf info` prints `Triton gate: ok`:
+
+```bash
+pip install "quf[fast]"
+```
+
+**No GPU is used on an NVIDIA machine.** pip may have installed a CPU-only PyTorch build. This prints a `+cpu` version and `False` in that case:
+
+```bash
+python -c "import torch; print(torch.__version__, torch.cuda.is_available())"
+```
+
+Run `pip uninstall -y torch` first, because pip keeps any installed torch, then install the CUDA build as shown under Install.
+
+**triton-windows in a `--system-site-packages` venv.** When triton-windows is installed only in the base Python, it looks for its bundled C compiler and CUDA files in the venv and fails with `Failed to find C compiler`, so `auto` falls back to `torch_gpu`. Create the venv without `--system-site-packages`, or install triton-windows inside the venv with the version that the base Python has. `pip show` run by the base interpreter prints that version:
+
+```powershell
+deactivate                                 # leave the venv, so python is the base Python
+python -m pip show triton-windows          # note the Version line, for example 3.9.0.post30
+.venv\Scripts\Activate.ps1                 # back into the venv (your venv's path)
+python -m pip install --ignore-installed --no-deps triton-windows==3.9.0.post30   # that version
+```
+
+**Turning off the fast paths.** `--backend cached` uses `torch_gpu`, and `--no-cuda-graph` decodes eagerly. The environment variables in the CLI reference do the same for every command and for the Python API (in PowerShell, `$env:QUF_NO_FUSED = "1"`; QUF_NO_TRITON and QUF_NO_CUDA_GRAPH work the same way):
+
+```bash
+QUF_NO_FUSED=1 quf run qwen2.5-0.5b.quf --prompt "Hello"
+```
+
+**`unsupported version` error.** The file uses a newer format version than the installed quf reads. Version 3 files need quf 0.4.0 or later: `pip install -U quf`. To make a file for an older reader, convert with `--embed-precision fp16`.
+
+**GPU out of memory.** `quf run` exits with status 1 and a GPU memory error. Close other GPU programs, keep `--backend auto` (`triton_int4` and `torch_fused` keep the weights packed, while `--backend cached` holds fp16 copies), or use `--device cpu`.
+
+## File format
+
+| Version | Adds | First quf release that reads it |
+|---|---|---|
+| 1 | int4 GPTQ weights with group size 128, config and tokenizer in the header | 0.1.0 |
+| 2 | Group sizes 32 and 64, act-order `g_idx` tensors, per-module int8 and fp16 | 0.2.0 |
+| 3 | Quantized embedding and `lm_head` (int8 or int4 per row) | 0.4.0 |
+
+The writer picks the lowest version that holds the features a file uses. A reader rejects a version that is higher than it supports. The full specification is [docs/FORMAT.md](https://github.com/vtrsharvin-sj/Quantized-Unified-Format/blob/main/docs/FORMAT.md).
+
+## Development
+
+```bash
+git clone https://github.com/vtrsharvin-sj/Quantized-Unified-Format.git
+cd Quantized-Unified-Format
+pip install -e ".[test,fast,convert]"
+python -m pytest -m "not gpu and not convert" -q
+```
+
+The last command is the CPU suite that CI runs on Python 3.10 to 3.13 on ubuntu-latest and windows-latest. `python -m pytest -q` runs everything. Test markers:
+
+| Marker | Needs |
+|---|---|
+| `gpu` | An NVIDIA GPU (skipped when none is available) |
+| `triton` | A working Triton (skipped when unavailable) |
+| `realmodel` | A real converted model file (skipped when missing) |
+| `convert` | The convert extra and a real model download and conversion |
+
+## Changelog
+
+Release history: 0.1.0 introduced the format, 0.2.0 GPTQ act-order, clip search and mixed precision, 0.2.1 CUDA graph decoding, 0.3.0 the Triton int4 backend, 0.4.0 the int8 embedding (format version 3), the `size_f` default and the fused decode kernels, and 0.4.1 the `quf.load` Python API; details per release are in [CHANGELOG.md](https://github.com/vtrsharvin-sj/Quantized-Unified-Format/blob/main/CHANGELOG.md).
+
+## License
+
+QUF is released under the MIT license. See [LICENSE](https://github.com/vtrsharvin-sj/Quantized-Unified-Format/blob/main/LICENSE).
+
+## Acknowledgements
+
+- GPTQ: Elias Frantar, Saleh Ashkboos, Torsten Hoefler and Dan Alistarh, [GPTQ: Accurate Post-Training Quantization for Generative Pre-trained Transformers](https://arxiv.org/abs/2210.17323) (2022).
+- [llama.cpp](https://github.com/ggml-org/llama.cpp) and [ggml](https://github.com/ggml-org/ggml): the comparison baseline, and the tools (`llama-quantize`, `llama-imatrix`, `llama-perplexity`, `llama-bench`) that produced the GGUF rows.
+- [Triton](https://github.com/triton-lang/triton) and [triton-windows](https://github.com/woct0rdho/triton-windows), which compile the GPU kernels.
+- [gigatoken](https://github.com/marcelroed/gigatoken) for fast tokenization of the calibration and evaluation text.
+- The [Qwen team](https://huggingface.co/Qwen) for the Qwen2.5 models.
+- Hugging Face [transformers](https://github.com/huggingface/transformers) and [datasets](https://github.com/huggingface/datasets).

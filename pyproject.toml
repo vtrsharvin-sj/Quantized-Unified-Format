@@ -4,24 +4,28 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "quf"
-version = "0.4.0"
-description = "QUF: Quantized Unified Format for 4-bit quantized decoder-only LLMs"
+version = "0.4.1"
+description = "Single-file 4-bit LLM format with a native GPTQ converter and a fast CUDA/CPU runtime"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [{ name = "vtrsharvin-sj" }]
-keywords = ["quantization", "llm", "gptq", "4-bit", "pytorch"]
+keywords = ["quantization", "llm", "gptq", "int4", "4-bit", "triton", "cuda", "windows", "qwen"]
+# The license is declared by the SPDX expression above (PEP 639), so no "License ::" classifier.
+# The operating systems and the Python 3.N versions mirror the matrix in .github/workflows/ci.yml.
 classifiers = [
     "Development Status :: 3 - Alpha",
+    "Environment :: GPU :: NVIDIA CUDA",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
     "Operating System :: Microsoft :: Windows",
-    "Operating System :: OS Independent",
+    "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 dependencies = [
@@ -33,6 +37,8 @@ dependencies = [
 [project.urls]
 Homepage = "https://github.com/vtrsharvin-sj/Quantized-Unified-Format"
 Repository = "https://github.com/vtrsharvin-sj/Quantized-Unified-Format"
+Documentation = "https://github.com/vtrsharvin-sj/Quantized-Unified-Format/tree/main/docs"
+Changelog = "https://github.com/vtrsharvin-sj/Quantized-Unified-Format/blob/main/CHANGELOG.md"
 Issues = "https://github.com/vtrsharvin-sj/Quantized-Unified-Format/issues"
 
 [project.optional-dependencies]

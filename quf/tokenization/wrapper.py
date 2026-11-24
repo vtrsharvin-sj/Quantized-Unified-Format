@@ -79,3 +79,19 @@ class TokenizerWrapper:
     def decode(self, ids: list[int]) -> str:
         """Return the text for ``ids`` (special tokens are kept)."""
         return self._hf.decode([int(i) for i in ids], skip_special_tokens=False)
+
+
+def tokenizer_from_header(header: Any) -> TokenizerWrapper:
+    """Build the Tokenizer_Wrapper from the tokenizer.json embedded in a QUF Header.
+
+    ``quf run`` and ``quf.load`` both call this, so they always build the same tokenizer.
+
+    Raises:
+        ValueError: if the file has no embedded tokenizer.json.
+    """
+    tok_json = ((header.tokenizer or {}).get("files") or {}).get("tokenizer.json")
+    if tok_json is None:
+        raise ValueError("the .quf file does not contain tokenizer.json")
+    from tokenizers import Tokenizer  # noqa: PLC0415
+
+    return TokenizerWrapper(hf_tokenizer=Tokenizer.from_str(tok_json))

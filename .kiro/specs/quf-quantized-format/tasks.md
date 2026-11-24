@@ -715,7 +715,7 @@ The implementation language is Python (as used in the design). Property-based te
 - [x] 37. Release 0.4.0
   - Update the CHANGELOG, bump the version to 0.4.0, build, run `twine check`, smoke test in a fresh virtual environment with and without the fast extra, commit, push, and confirm CI passes; do not upload to PyPI
   - _Requirements: 41.1, 41.2, 41.3, 41.4, 41.5_
-- [-] 38. Final checkpoint - Ensure all tests pass
+- [x] 38. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 - [x] 39. Fast decode path for int8 modules
   - Demo: the 0.4.0 default file decodes with no cuBLAS fp16 GEMV and no neg/cat/index_copy kernels in steady decode, and docs/BACKENDS.md holds the before and after tokens per second.
@@ -742,6 +742,57 @@ The implementation language is Python (as used in the design). Property-based te
     - If the int4 GEMV then dominates, tune _int4_gemv1_kernel for the in-model shapes and record before and after
     - Record the measured numbers in docs/BACKENDS.md whether or not the targets are reached
     - _Requirements: 42.7, 42.8_
+- [ ] 40. Deployment README and release 0.4.1
+  - Demo: README.md renders the same on GitHub and in the PyPI preview with absolute links and the QUF-versus-GGUF chart, `quf.load(path).generate(prompt)` returns the text that `quf run` prints, `quf convert` rejects a Qwen3 checkpoint before any heavy work, and version 0.4.1 is built, checked, committed, and pushed without a PyPI upload.
+  - Context: quf 0.4.0 is on PyPI. pyproject.toml has `readme = "README.md"`, so README.md is both the GitHub README and the PyPI description, and PyPI shows the new README only after 0.4.1 is uploaded. Measured results are in docs/bench_accuracy.json (pareto_040, speed_040_final, scaling_3b, lm_eval quf_0_4_0, and models_llama for the fp16 rows), and the GGUF build details are in docs/gguf_variants.json.
+  - [x] 40.1 Reject non-Qwen2 architectures and add the `quf.load` Python API
+    - In quf/convert/converter.py, set SUPPORTED_ARCHITECTURES to ("Qwen2ForCausalLM",), rewrite the comment (an architecture is added only after the runtime supports it; Qwen3 first needs q_norm and k_norm in quf/runtime/model.py), and let UnsupportedArchitectureError also derive from ValueError so that `quf convert` prints only "Unsupported model architecture 'X'. Supported: Qwen2ForCausalLM."; check_architecture already runs before the tokenizer, the calibration data, and the weights, so keep that order
+    - Replace test_qwen3_accepted_and_non_qwen_rejected in tests/test_converter_unit.py: Qwen3ForCausalLM, LlamaForCausalLM, and a config without `architectures` are rejected with a message that names Qwen2ForCausalLM before a failing tokenizer stub is reached, Qwen2ForCausalLM is accepted, and a CLI test with `_check_convert_extras` patched out checks the single `quf: error:` line
+    - Add quf/api.py with `load(path, device="auto", backend="auto", cuda_graph=None)` and the `Model` handle (`generate`, `tokenizer`, `backend`, `header`, `close`, and context-manager support) as in the design, built only from QUFModel.load, the header tokenizer construction of `_cmd_run`, and quf.runtime.generate.generate; leave `quf run` unchanged
+    - Expose `quf.load` and `quf.Model` lazily in quf/__init__.py next to the lazy submodules (and add `api` to them), so that `import quf` still imports no torch, tokenizers, or quf.runtime module
+    - Write CPU unit tests in tests/test_api.py: the attributes, streaming, argument errors and boundary values, `close` twice, the context manager, a file without tokenizer.json, the device and backend checks, and the lazy import in a subprocess
+    - **Property 44: The Python API returns the same text as `quf run`**
+    - Write it in tests/test_api.py with Hypothesis (at least 100 examples, CPU, runs in CI), tiny files from tests/test_runtime_unit.make_quf including one whose EOS id greedy decoding emits, and stdout captured with contextlib.redirect_stdout
+    - **Validates: Requirements 43.3, 43.5, 43.6, 43.7**
+    - _Requirements: 43.1, 43.2, 43.3, 43.4, 43.5, 43.6, 43.7, 43.8, 43.9, 43.10, 43.11, 43.12, 43.13, 43.14_
+  - [x] 40.2 Add scripts/make_readme_chart.py and generate the chart
+    - Write a pure `collect_points(bench)` that reads pareto_040, scaling_3b where present, and the fp16 WikiText-2 value from models_llama with the row labels of the design, and a `main` that imports matplotlib (Agg backend) only inside the function and writes docs/assets/quf_vs_gguf.png
+    - One panel per model with data: x = file size in MB (10^6 bytes), y = WikiText-2 Perplexity (llama protocol); every measured format is a labelled point; QUF gets its own color and marker; fp16 is a dashed horizontal line, or the panel says "fp16 not measured" (3B); add the note "lower-left is better" and a small caption that names docs/bench_accuracy.json and the GPU from `environment.device`
+    - Keep matplotlib out of pyproject.toml; when it is missing, exit with status 1 and a message that names `pip install matplotlib`
+    - Run the script to write the PNG, and add tests/test_readme_chart.py: `collect_points` on the real JSON (runs in CI), the missing-matplotlib path, and a PNG smoke test with `pytest.importorskip("matplotlib")`
+    - _Requirements: 43.15, 43.16, 43.17, 43.18, 43.19, 43.20, 43.21, 43.22_
+  - [x] 40.3 Polish the package metadata and the CI matrix
+    - In pyproject.toml: a one-line description of at most 100 characters; the keywords quantization, llm, gptq, int4, 4-bit, triton, cuda, windows, and qwen; Python classifiers 3.10, 3.11, 3.12, and 3.13 (3.13 only because CI runs it); "Environment :: GPU :: NVIDIA CUDA"; "Operating System :: Microsoft :: Windows" and "Operating System :: POSIX :: Linux", with "Operating System :: OS Independent" removed because CI tests only those two; and [project.urls] Homepage, Repository, Documentation (`tree/main/docs`), Changelog (`blob/main/CHANGELOG.md`), and Issues
+    - In .github/workflows/ci.yml, set the matrix to Python 3.10, 3.11, 3.12, and 3.13 on ubuntu-latest and windows-latest, and keep the wheel artifact upload on the ubuntu-latest Python 3.12 job only
+    - Check every classifier against the trove-classifiers package
+    - Extend tests/test_pyproject_metadata.py: the description length, the keywords, the URLs, the CUDA and operating system classifiers, no matplotlib dependency, and the Python classifiers against the ci.yml versions (skipped when the workflow file is absent); leave the version assertion to 40.6
+    - _Requirements: 43.21, 43.23, 43.24, 43.25, 43.26, 43.27, 43.28, 43.29, 43.30_
+  - [x] 40.4 Rewrite README.md as the public landing page for GitHub and PyPI
+    - Sections in this order: title and one-sentence tagline; badges (shields.io: PyPI version, Python versions, license, CI workflow status); Why QUF (4 or 5 bullets); Results at a glance; Install; Quickstart; Python API; How it works; Benchmarks; CLI reference; Supported models; Limitations; Troubleshooting; File format; Development; Changelog; License; Acknowledgements
+    - Rendering rules: plain GitHub-flavoured Markdown only (no raw HTML, no mermaid, no "> [!NOTE]" alerts, no `#anchor` links); every repository link uses `https://github.com/vtrsharvin-sj/Quantized-Unified-Format/blob/main/<path>` (or `tree/main/<folder>`); every repository image uses `https://raw.githubusercontent.com/vtrsharvin-sj/Quantized-Unified-Format/main/<path>`; every code block has a language tag
+    - Results at a glance: QUF 0.4.0 against Q4_K_M, and Q4_K_M imatrix where measured, for 0.5B, 1.5B, and 3B, with the columns size MB, WikiText-2 PPL, C4 PPL, and decode tok/s; bold the best value per model and column except comparisons marked "equal within noise"; then one plain sentence that names the wins and every loss in the design's glance verdict table (0.5B C4 against Q4_K_M and both Q4_K_M imatrix Perplexities, 1.5B and 3B file size, 1.5B C4 against Q4_K_M imatrix, 3B decode, and Q5_K_M being more accurate on 0.5B and 1.5B); then the chart; then a link to the full benchmarks
+    - Install: quf, quf[fast], and quf[convert]; the CUDA 12.8 PyTorch wheel for RTX 50-series through the cu128 index URL; CPU-only works. Quickstart: convert, info, run, and bench with real abbreviated output, plus the note that `quf bench` scores non-overlapping 2048-token windows (40 by default) and times end-to-end generation. Python API: `quf.load`, `generate`, and streaming. How it works: the file format, the quantization pipeline, the runtime backends, and automatic selection in at most 40 lines
+    - Benchmarks: per-model tables with fp16 and every GGUF variant (Q4_K_M, Q4_K_M imatrix, Q4_K_S, IQ4_XS imatrix, Q5_K_M); the lm-eval table with Q4_K_M "not run" and its reason; the methodology (llama protocol, 2048-token windows scoring the second half, WikiText-2 test plus a held-out C4 validation slice, calibration on WikiText-2 train 128x1024, imatrix variants from the same calibration text, QUF steady-state decode against llama-bench tg128 in one interleaved session, with the end-to-end medians next to it); the GPU, the OS, and the power state (battery for the 0.5B and 1.5B speed rows, AC for 3B); and how to reproduce, saying so where a result came from a script that is not in the repository
+    - CLI reference: concise option tables for convert, run, bench, and info that match `--help`; the presets with their rules (size_f default: k_proj, v_proj, and the last layer int8, the rest int4; size_b, sensitive, none, and the others); and QUF_NO_TRITON, QUF_NO_CUDA_GRAPH, and QUF_NO_FUSED
+    - Supported models (Qwen2ForCausalLM; tested Qwen2.5 0.5B, 1.5B, and 3B; Instruct variants share the architecture but `quf run` does plain completion with no chat template; other architectures are rejected at convert time), Limitations (an honest list), Troubleshooting (missing Triton, the CPU-only torch hint, triton-windows in a --system-site-packages venv falling back to torch_gpu, turning off the fast paths, format version errors where v3 files need quf 0.4.0 or later, GPU out of memory), File format (versions 1, 2, and 3 with a link to FORMAT.md), Development (clone, editable install, test markers gpu, triton, realmodel, and convert), Changelog (one "Release history" line linking to CHANGELOG.md), License (MIT), and Acknowledgements (GPTQ by Frantar et al., llama.cpp and ggml, Triton and triton-windows, gigatoken, the Qwen team, and Hugging Face transformers and datasets)
+    - Honesty: every number from docs/bench_accuracy.json in the formats and source keys of the design; no unmeasured superlatives ("fastest", "best", "state of the art"); no internal task numbers or spec terms; older-release numbers only in the Release history line; 300 to 450 lines. Use real output from runs on this machine for now; 40.5 replaces it with the Copy_Paste_Test output where it differs
+    - _Requirements: 43.31, 43.32, 43.33, 43.34, 43.35, 43.36, 43.37, 43.38, 43.39, 43.40, 43.41, 43.42, 43.43, 43.44, 43.45, 43.46, 43.47, 43.48, 43.49, 43.50, 43.51, 43.52, 43.53, 43.54, 43.55, 43.56, 43.57, 43.58, 43.59, 43.60, 43.61, 43.62, 43.63, 43.64_
+  - [x] 40.5 Verify the README end to end and fix every mismatch
+    - Add tests/test_readme.py with the static checks of the design (section order, rendering rules, absolute links and images with existing targets, language tags, badges, the Why QUF and How it works limits, line count, no banned superlatives, no task numbers or spec terms, and every `--option` exists in `quf.cli._build_parser()`), and make it pass in the CPU suite
+    - Build the sdist and the wheel, run `twine check --strict dist/*` and a readme_renderer Markdown render of README.md, and fix every warning
+    - Copy_Paste_Test: create a fresh virtual environment (--system-site-packages is allowed to reuse torch; record whether it was used), install the built wheel with `[convert,fast]`, and from a folder outside the repository run every Quickstart command and the Python API snippet exactly as written; put the real abbreviated output into the README
+    - Compare every option and default in the README with `quf <command> --help` and every number with docs/bench_accuracy.json; fix each mismatch in the README and re-run the checks until all pass
+    - _Requirements: 43.31, 43.32, 43.33, 43.34, 43.35, 43.36, 43.37, 43.38, 43.42, 43.45, 43.52, 43.61, 43.62, 43.63, 43.65, 43.66, 43.67_
+  - [-] 40.6 Release 0.4.1
+    - Add a 0.4.1 CHANGELOG entry: the README rewrite, `quf.load` and `quf.Model`, the rejection of Qwen3ForCausalLM, and the metadata and CI changes
+    - Bump the version to 0.4.1 in pyproject.toml, quf/__init__.py, and tests/test_pyproject_metadata.py
+    - Run the full `python -m pytest -q` with no marker filter on this machine, and the CI command `python -m pytest -m "not gpu and not convert" -q` with QUF_NO_TRITON=1; both must pass
+    - Build with `python -m build`, run `twine check --strict dist/*`, and scan the sdist and wheel members for .quf files, eval_cache, logs, and secrets (for example `pypi-`); stop and report on any hit
+    - Commit and push normally (no force-push) and confirm that every CI job passes; do not upload to PyPI, which the orchestrator does
+    - _Requirements: 43.68, 43.69, 43.70, 43.71, 43.72, 43.73_
+- [~] 41. Final checkpoint - Ensure all tests pass (GitHub Actions green on every job)
+  - Ensure all tests pass, ask the user if questions arise.
+  - Confirm that every GitHub Actions job of the CI matrix (Python 3.10 to 3.13 on ubuntu-latest and windows-latest) is green for the release commit.
 
 ## Notes
 
@@ -825,7 +876,12 @@ The implementation language is Python (as used in the design). Property-based te
     { "id": 62, "tasks": ["36.2"] },
     { "id": 63, "tasks": ["36.3"] },
     { "id": 64, "tasks": ["37"] },
-    { "id": 65, "tasks": ["38"] }
+    { "id": 65, "tasks": ["38"] },
+    { "id": 66, "tasks": ["40.1", "40.2", "40.3"] },
+    { "id": 67, "tasks": ["40.4"] },
+    { "id": 68, "tasks": ["40.5"] },
+    { "id": 69, "tasks": ["40.6"] },
+    { "id": 70, "tasks": ["41"] }
   ]
 }
 ```

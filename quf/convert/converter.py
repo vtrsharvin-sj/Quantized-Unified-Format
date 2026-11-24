@@ -25,8 +25,11 @@ from quf.tokenization.wrapper import TokenizerWrapper
 
 logger = logging.getLogger("quf.convert")
 
-# Extend this tuple to support more decoder-only architectures (e.g. Qwen3).
-SUPPORTED_ARCHITECTURES: tuple[str, ...] = ("Qwen2ForCausalLM", "Qwen3ForCausalLM")
+# Only architectures that quf/runtime/model.py runs correctly. Add one here only after the
+# runtime supports it. Qwen3ForCausalLM, for example, first needs q_norm and k_norm (the
+# per-head RMSNorm on queries and keys) in quf/runtime/model.py; without them a converted
+# Qwen3 file would load and generate wrong text with no error.
+SUPPORTED_ARCHITECTURES: tuple[str, ...] = ("Qwen2ForCausalLM",)
 
 DEFAULT_DATASET = "wikitext-2-raw-v1"
 # Calibration defaults (task 16.8): wikitext-2 train only, 128 x 1024 tokens. The two-source
@@ -59,7 +62,12 @@ class ConvertError(Exception):
     """Base class for converter errors."""
 
 
-class UnsupportedArchitectureError(ConvertError):
+class UnsupportedArchitectureError(ConvertError, ValueError):
+    """config.json names an architecture outside SUPPORTED_ARCHITECTURES.
+
+    Also a ValueError, so ``quf convert`` prints the message alone on one ``quf: error:`` line.
+    """
+
     def __init__(self, architecture: str):
         self.architecture = architecture
         super().__init__(
@@ -125,6 +133,11 @@ def read_source_config(source: str) -> dict[str, Any]:
 
 
 def check_architecture(config: dict[str, Any]) -> str:
+    """Return the architecture named in config.json, or raise UnsupportedArchitectureError.
+
+    convert_checkpoint calls this right after reading config.json, before the tokenizer,
+    the calibration data, and the weights are loaded.
+    """
     archs = config.get("architectures") or []
     name = archs[0] if archs else "<unknown>"
     if name not in SUPPORTED_ARCHITECTURES:

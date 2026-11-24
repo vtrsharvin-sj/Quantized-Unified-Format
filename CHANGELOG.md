@@ -1,4 +1,18 @@
 # Changelog
+## 0.4.1
+Documentation, Python API and packaging release. The file format and the quantization are unchanged: 0.4.1 changes no conversion output for Qwen2 models and reads the same format versions (1, 2 and 3), so the README results, measured with 0.4.0, still apply.
+### Python API
+- **New `quf.load(path, device="auto", backend="auto", cuda_graph=None)`**, which returns a `quf.Model`. `Model.generate(prompt, max_new_tokens=64, temperature=0.0, top_k=None, top_p=None, seed=0, stream=None)` returns the generated text, and an optional `stream` callback receives each new piece as it is decoded. The handle also has `backend` (the selected backend, for example `triton_int4`), `tokenizer`, `header`, `close()` and `with` support. It runs the same steps as `quf run` (model load, the tokenizer embedded in the file, the same generation loop), so it returns the text that `quf run` prints. `device`, `backend` and the `generate` arguments accept the values and limits of `quf run`; anything outside them raises `ValueError`. `import quf` still imports no torch, tokenizers or `quf.runtime`; `quf.load` and `quf.Model` resolve on first use.
+### Conversion
+- **Qwen3 is rejected at convert time.** `Qwen2ForCausalLM` is now the only supported architecture. 0.4.0 accepted `Qwen3ForCausalLM`, but the runtime does not apply Qwen3's q_norm and k_norm, so a converted Qwen3 file loaded and generated wrong text without an error. `quf convert` now stops after reading config.json, before it loads the tokenizer, the calibration data or the weights, with one line: `quf: error: Unsupported model architecture 'Qwen3ForCausalLM'. Supported: Qwen2ForCausalLM.` `UnsupportedArchitectureError` now also derives from `ValueError`.
+### Runtime
+- **Silenced the Triton `TRITON_DEFAULT_FP_FUSION` warning.** Triton 3.9 emits a one-time `UserWarning` when that environment variable is unset. `quf.runtime.kernels` now sets it to `1`, Triton's own default, before any Triton import, so the generated kernels do not change. A value that the user set is kept.
+### Documentation
+- **README rewritten** as the public landing page for GitHub and PyPI: results at a glance against Q4_K_M with every loss named, install, a quickstart with real output, the Python API, how it works, the full benchmark tables with the methodology and how to reproduce them, a CLI reference, supported models, limitations and troubleshooting. All links and images are absolute, so the page renders the same on PyPI. `tests/test_readme.py` checks the structure, the links, the badges and that every `--option` shown exists in the CLI.
+- **Size/perplexity chart** `docs/assets/quf_vs_gguf.png` in the README, drawn from `docs/bench_accuracy.json` by `scripts/make_readme_chart.py`. The script needs matplotlib, which is not a quf dependency.
+### Packaging and CI
+- **Metadata polish:** a one-line description, the keywords quantization, llm, gptq, int4, 4-bit, triton, cuda, windows and qwen, the classifiers "Environment :: GPU :: NVIDIA CUDA", "Operating System :: POSIX :: Linux" (with "Operating System :: Microsoft :: Windows", replacing "Operating System :: OS Independent") and Python 3.13, and project URLs for the documentation and the changelog next to the homepage, repository and issues.
+- **CI** runs the CPU test suite on Python 3.10, 3.11, 3.12 and 3.13 on ubuntu-latest and windows-latest (before: 3.10 and 3.12). The Python classifiers are tested against this matrix.
 ## 0.4.0
 Fused decode, quantized embedding and new defaults release. The default `quf convert` output is now QUF format version 3, so 0.3.0 and older readers reject it. Versions 1 and 2 still open.
 ### Format and conversion
